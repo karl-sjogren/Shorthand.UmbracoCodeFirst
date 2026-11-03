@@ -4,8 +4,8 @@ namespace Shorthand.UmbracoCodeFirst.Metadata;
 
 public static class CodeFirstDefinitionRegistryDiscovery {
     public static ICodeFirstDefinitionRegistry Discover() {
-        Type registryType = typeof(ICodeFirstDefinitionRegistry);
-        Type? implementation = AppDomain.CurrentDomain.GetAssemblies()
+        var registryType = typeof(ICodeFirstDefinitionRegistry);
+        var implementation = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(GetLoadableTypes)
             .FirstOrDefault(type =>
                 !type.IsAbstract &&

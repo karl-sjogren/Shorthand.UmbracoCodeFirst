@@ -45,7 +45,7 @@ public class CodeFirstStatusMappingTests {
             ]));
 
         // Act
-        CodeFirstStatusResponse result = CodeFirstStatusMapping.Map(
+        var result = CodeFirstStatusMapping.Map(
             registry,
             reports,
             new Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string> {

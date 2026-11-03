@@ -30,8 +30,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
         Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string> urls = [];
 
-        foreach(CodeFirstDefinition definition in registry.Definitions) {
-            Guid? key = definition.Kind switch {
+        foreach(var definition in registry.Definitions) {
+            var key = definition.Kind switch {
                 CodeFirstDefinitionKind.DataType => dataTypes
                     .FirstOrDefault(dataType =>
                         dataType.ConfigurationData.TryGetValue(

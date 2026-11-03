@@ -50,7 +50,7 @@ public static class CodeFirstStatusMapping {
         ICodeFirstDefinitionRegistry registry,
         ISynchronizationReportStore reportStore,
         IReadOnlyDictionary<(CodeFirstDefinitionKind Kind, string Alias), string>? backofficeUrls = null) {
-        SynchronizationReport report = reportStore.Current;
+        var report = reportStore.Current;
         Dictionary<(CodeFirstDefinitionKind Kind, string Alias), SynchronizationItem> results =
             report.Items.ToDictionary(item => (item.Kind, item.Alias));
 
@@ -58,7 +58,7 @@ public static class CodeFirstStatusMapping {
             .OrderBy(definition => definition.Kind)
             .ThenBy(definition => definition.Alias)
             .Select(definition => {
-                results.TryGetValue((definition.Kind, definition.Alias), out SynchronizationItem? result);
+                results.TryGetValue((definition.Kind, definition.Alias), out var result);
                 return new CodeFirstStatusItem(
                     definition.Kind.ToString(),
                     definition.Alias,

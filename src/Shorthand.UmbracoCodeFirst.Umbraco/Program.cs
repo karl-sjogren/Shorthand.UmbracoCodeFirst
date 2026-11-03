@@ -1,14 +1,14 @@
 
 using Shorthand.UmbracoCodeFirst.Synchronization;
 
-WebApplication app = await Program.CreateApplicationAsync(args);
+var app = await Program.CreateApplicationAsync(args);
 await app.RunAsync();
 
 public partial class Program {
     public static async Task<WebApplication> CreateApplicationAsync(
         string[] args,
         Action<WebApplicationBuilder>? configureBuilder = null) {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
             Args = args,
             ApplicationName = typeof(Program).Assembly.GetName().Name,
         });
@@ -24,11 +24,11 @@ public partial class Program {
             .AddComposers()
             .Build();
 
-        WebApplication app = builder.Build();
+        var app = builder.Build();
 
         await app.BootUmbracoAsync();
 
-        using(IServiceScope scope = app.Services.CreateScope()) {
+        using(var scope = app.Services.CreateScope()) {
             await scope.ServiceProvider
                 .GetRequiredService<CodeFirstSynchronizer>()
                 .SynchronizeAsync();

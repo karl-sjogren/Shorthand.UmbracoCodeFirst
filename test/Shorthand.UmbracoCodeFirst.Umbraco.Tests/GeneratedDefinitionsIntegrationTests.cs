@@ -15,11 +15,11 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         }
 
         // Act
-        using IServiceScope scope = fixture.Services.CreateScope();
-        IDataTypeService dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
-        IContentTypeService contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
+        using var scope = fixture.Services.CreateScope();
+        var dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
+        var contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToList();
-        IContentType? productPage = contentTypeService.Get("productPage");
+        var productPage = contentTypeService.Get("productPage");
 
         // Assert
         dataTypes.Select(dataType => dataType.EditorAlias).ShouldContain("Umbraco.TextBox");
@@ -27,5 +27,6 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         productPage.ShouldNotBeNull();
         productPage!.PropertyTypes.Select(property => property.Alias).ShouldContain("description");
         productPage.PropertyGroups.Select(group => group.Alias).ShouldContain("pricing");
+        productPage.CompositionAliases().ShouldContain("article");
     }
 }

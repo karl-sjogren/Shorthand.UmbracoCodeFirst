@@ -17,6 +17,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     public const string DuplicateValidationId = "UCF103";
     public const string UnsupportedPropertyTypeId = "UCF104";
     public const string PropertyOutsideContentTypeId = "UCF105";
+    public const string InvalidCompositionTargetId = "UCF106";
+    public const string InvalidCompositionGraphId = "UCF107";
 
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _invalidAlias = new(
@@ -76,6 +78,26 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
         helpLinkUri: _documentationBaseUrl + "/UCF105.md");
+
+    private static readonly DiagnosticDescriptor _invalidCompositionTarget = new(
+        InvalidCompositionTargetId,
+        "Invalid content composition target",
+        "Composition target '{0}' must have UCFContentTypeAttribute",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF106.md",
+        customTags: new[] { "CompilationEnd" });
+
+    private static readonly DiagnosticDescriptor _invalidCompositionGraph = new(
+        InvalidCompositionGraphId,
+        "Invalid content composition graph",
+        "Composition from '{0}' to '{1}' is duplicated or creates a composition cycle",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF107.md",
+        customTags: new[] { "CompilationEnd" });
 #pragma warning restore RS2008
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -86,6 +108,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             _duplicateValidation,
             _unsupportedPropertyType,
             _propertyOutsideContentType,
+            _invalidCompositionTarget,
+            _invalidCompositionGraph,
         ];
 
     public override void Initialize(AnalysisContext context) {
@@ -95,13 +119,24 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             var occurrences = new ConcurrentBag<AliasOccurrence>();
             var validations = new ConcurrentBag<ValidationOccurrence>();
             var propertyDiagnostics = new ConcurrentBag<PropertyDiagnosticOccurrence>();
+            var compositions = new ConcurrentBag<CompositionOccurrence>();
 
             compilationContext.RegisterSymbolAction(
-                symbolContext => Collect(symbolContext.Symbol, occurrences, validations, propertyDiagnostics),
+                symbolContext => Collect(
+                    symbolContext.Symbol,
+                    occurrences,
+                    validations,
+                    propertyDiagnostics,
+                    compositions),
                 SymbolKind.NamedType,
                 SymbolKind.Property);
             compilationContext.RegisterCompilationEndAction(
-                endContext => Report(endContext, occurrences, validations, propertyDiagnostics));
+                endContext => Report(
+                    endContext,
+                    occurrences,
+                    validations,
+                    propertyDiagnostics,
+                    compositions));
         });
     }
 
@@ -109,11 +144,15 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ISymbol symbol,
         ConcurrentBag<AliasOccurrence> occurrences,
         ConcurrentBag<ValidationOccurrence> validations,
-        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics) {
-        foreach(AttributeData attribute in symbol.GetAttributes()) {
+        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics,
+        ConcurrentBag<CompositionOccurrence> compositions) {
+        foreach(var attribute in symbol.GetAttributes()) {
             string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
             if(attributeName is "UCFContentTypeAttribute" or "UCFDataTypeAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.Global);
+            } else if(attributeName == "UCFCompositeAttribute"
+                      && symbol is INamedTypeSymbol contentType) {
+                CollectComposition(contentType, attribute, compositions);
             } else if(attributeName is "UCFPropertyAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.ContainingType);
                 if(symbol is IPropertySymbol property) {
@@ -126,6 +165,22 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                 AddValidation(attribute, symbol, validations);
             }
         }
+    }
+
+    private static void CollectComposition(
+        INamedTypeSymbol source,
+        AttributeData attribute,
+        ConcurrentBag<CompositionOccurrence> compositions) {
+        if(attribute.ConstructorArguments.Length == 0
+            || attribute.ConstructorArguments[0].Value is not INamedTypeSymbol target) {
+            return;
+        }
+
+        compositions.Add(new CompositionOccurrence(
+            source,
+            target,
+            attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+            target.GetAttributes().Any(HasContentTypeAttribute)));
     }
 
     private static void CollectPropertyContractDiagnostics(
@@ -222,29 +277,32 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         CompilationAnalysisContext context,
         ConcurrentBag<AliasOccurrence> occurrences,
         ConcurrentBag<ValidationOccurrence> validations,
-        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics) {
-        foreach(PropertyDiagnosticOccurrence diagnostic in propertyDiagnostics) {
+        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics,
+        ConcurrentBag<CompositionOccurrence> compositions) {
+        ReportCompositionDiagnostics(context, compositions);
+
+        foreach(var diagnostic in propertyDiagnostics) {
             context.ReportDiagnostic(Diagnostic.Create(
                 diagnostic.Descriptor,
                 diagnostic.Property.Locations.FirstOrDefault(),
                 diagnostic.Arguments));
         }
 
-        foreach(AliasOccurrence occurrence in occurrences.Where(static occurrence => !occurrence.IsValid)) {
+        foreach(var occurrence in occurrences.Where(static occurrence => !occurrence.IsValid)) {
             context.ReportDiagnostic(Diagnostic.Create(
                 _invalidAlias,
                 occurrence.Location ?? occurrence.Symbol.Locations.FirstOrDefault(),
                 occurrence.Alias));
         }
 
-        foreach(IGrouping<string, AliasOccurrence> group in occurrences
+        foreach(var group in occurrences
                     .GroupBy(static occurrence => $"{occurrence.Scope}:{GetScopeName(occurrence)}:{occurrence.Alias}")) {
-            AliasOccurrence[] entries = group.ToArray();
+            var entries = group.ToArray();
             if(entries.Length < 2) {
                 continue;
             }
 
-            AliasOccurrence first = entries[0];
+            var first = entries[0];
             if(first.LayoutKind is not null) {
                 context.ReportDiagnostic(Diagnostic.Create(
                     _duplicateLayout,
@@ -259,9 +317,9 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             }
         }
 
-        foreach(IGrouping<string, ValidationOccurrence> group in validations
+        foreach(var group in validations
                     .GroupBy(static validation => $"{validation.ContainingType.ToDisplayString()}:{validation.Expression}:{validation.Message}")) {
-            ValidationOccurrence[] entries = group.ToArray();
+            var entries = group.ToArray();
             if(entries.Length > 1) {
                 context.ReportDiagnostic(Diagnostic.Create(
                     _duplicateValidation,
@@ -269,6 +327,89 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                     entries[0].Expression));
             }
         }
+    }
+
+    private static void ReportCompositionDiagnostics(
+        CompilationAnalysisContext context,
+        ConcurrentBag<CompositionOccurrence> compositions) {
+        foreach(var occurrence in compositions.Where(
+                    static occurrence => !occurrence.TargetHasContentType)) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                _invalidCompositionTarget,
+                occurrence.Location ?? occurrence.Source.Locations.FirstOrDefault(),
+                occurrence.Target.Name));
+        }
+
+        var validCompositions = compositions
+            .Where(static occurrence => occurrence.TargetHasContentType)
+            .ToArray();
+        foreach(var duplicate in validCompositions
+                    .GroupBy(static occurrence =>
+                        $"{occurrence.Source.ToDisplayString()}:{occurrence.Target.ToDisplayString()}")) {
+            var entries = duplicate.ToArray();
+            if(entries.Length > 1) {
+                ReportInvalidComposition(context, entries[1]);
+            }
+        }
+
+        foreach(var occurrence in validCompositions.Where(
+                    static occurrence => SymbolEqualityComparer.Default.Equals(
+                        occurrence.Source,
+                        occurrence.Target))) {
+            ReportInvalidComposition(context, occurrence);
+        }
+
+        Dictionary<INamedTypeSymbol, List<CompositionOccurrence>> graph =
+            new(SymbolEqualityComparer.Default);
+        foreach(var occurrence in validCompositions) {
+            if(!graph.TryGetValue(occurrence.Source, out var edges)) {
+                edges = [];
+                graph.Add(occurrence.Source, edges);
+            }
+
+            edges.Add(occurrence);
+        }
+
+        HashSet<INamedTypeSymbol> visiting = new(SymbolEqualityComparer.Default);
+        HashSet<INamedTypeSymbol> visited = new(SymbolEqualityComparer.Default);
+        foreach(var source in graph.Keys) {
+            VisitCompositionGraph(source, graph, visiting, visited, context);
+        }
+    }
+
+    private static void VisitCompositionGraph(
+        INamedTypeSymbol source,
+        IReadOnlyDictionary<INamedTypeSymbol, List<CompositionOccurrence>> graph,
+        HashSet<INamedTypeSymbol> visiting,
+        HashSet<INamedTypeSymbol> visited,
+        CompilationAnalysisContext context) {
+        if(visited.Contains(source) || !visiting.Add(source)) {
+            return;
+        }
+
+        if(graph.TryGetValue(source, out var edges)) {
+            foreach(var edge in edges) {
+                if(visiting.Contains(edge.Target)) {
+                    ReportInvalidComposition(context, edge);
+                    continue;
+                }
+
+                VisitCompositionGraph(edge.Target, graph, visiting, visited, context);
+            }
+        }
+
+        visiting.Remove(source);
+        visited.Add(source);
+    }
+
+    private static void ReportInvalidComposition(
+        CompilationAnalysisContext context,
+        CompositionOccurrence occurrence) {
+        context.ReportDiagnostic(Diagnostic.Create(
+            _invalidCompositionGraph,
+            occurrence.Location ?? occurrence.Source.Locations.FirstOrDefault(),
+            occurrence.Source.Name,
+            occurrence.Target.Name));
     }
 
     private static string GetScopeName(AliasOccurrence occurrence) =>
@@ -284,7 +425,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                                       || IsCombiningMark(character));
 
     private static bool IsCombiningMark(char character) {
-        UnicodeCategory category = char.GetUnicodeCategory(character);
+        var category = char.GetUnicodeCategory(character);
         return category is UnicodeCategory.NonSpacingMark
             or UnicodeCategory.SpacingCombiningMark
             or UnicodeCategory.EnclosingMark;
@@ -327,6 +468,17 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         public DiagnosticDescriptor Descriptor { get; } = descriptor;
         public IPropertySymbol Property { get; } = property;
         public object[] Arguments { get; } = arguments;
+    }
+
+    private sealed class CompositionOccurrence(
+        INamedTypeSymbol source,
+        INamedTypeSymbol target,
+        Location? location,
+        bool targetHasContentType) {
+        public INamedTypeSymbol Source { get; } = source;
+        public INamedTypeSymbol Target { get; } = target;
+        public Location? Location { get; } = location;
+        public bool TargetHasContentType { get; } = targetHasContentType;
     }
 
     private enum AliasScope {

@@ -48,7 +48,8 @@ public sealed record CodeFirstDefinition(
     CodeFirstTypeSettings? Settings = null,
     IReadOnlyList<CodeFirstGroupDefinition>? Groups = null,
     string? ConfigurationJson = null,
-    string? EditorUiAlias = null) {
+    string? EditorUiAlias = null,
+    IReadOnlyList<string>? CompositionAliases = null) {
     public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups =>
         Groups ?? Properties
             .Where(property => property.GroupAlias is not null)

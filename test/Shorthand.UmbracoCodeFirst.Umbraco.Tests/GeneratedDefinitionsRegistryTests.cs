@@ -10,7 +10,7 @@ public class GeneratedDefinitionsRegistryTests {
         GeneratedCodeFirstDefinitionRegistry registry = new();
 
         // Act
-        IReadOnlyList<CodeFirstDefinition> definitions = registry.Definitions;
+        var definitions = registry.Definitions;
 
         // Assert
         definitions
@@ -22,9 +22,10 @@ public class GeneratedDefinitionsRegistryTests {
             .Select(definition => definition.Alias)
             .ShouldContain("productPage");
 
-        CodeFirstDefinition productPage = definitions.Single(definition => definition.Alias == "productPage");
+        var productPage = definitions.Single(definition => definition.Alias == "productPage");
         productPage.Properties.ShouldContain(property => property.DataTypeAlias == "codeFirstLongText");
         productPage.EffectiveTabs.Select(tab => tab.Alias).ShouldContain("marketing");
         productPage.EffectiveGroups.Select(group => group.Alias).ShouldContain("pricing");
+        (productPage.CompositionAliases ?? []).ShouldContain("article");
     }
 }

@@ -2,12 +2,10 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
-using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Serialization;
 using Umbraco.Cms.Core.Services;
-using Umbraco.Cms.Core.Services.OperationStatus;
 using Umbraco.Cms.Core.Strings;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
@@ -32,7 +30,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
-        IDataType? existing = await FindOwnedDataTypeAsync(definition.Alias);
+        var existing = await FindOwnedDataTypeAsync(definition.Alias);
         if(existing is not null) {
             if(!IsOwned(existing)) {
                 return SynchronizationStatus.Skipped;
@@ -53,7 +51,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         if(definition.EditorAlias is null ||
-            !propertyEditors.TryGet(definition.EditorAlias, out IDataEditor? editor)) {
+            !propertyEditors.TryGet(definition.EditorAlias, out var editor)) {
             throw new InvalidOperationException(
                 $"The data type '{definition.Alias}' references unknown editor '{definition.EditorAlias}'.");
         }
@@ -66,7 +64,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             },
         };
         ApplyConfiguration(dataType, definition.ConfigurationJson);
-        Attempt<IDataType, DataTypeOperationStatus> result =
+        var result =
             await dataTypeService.CreateAsync(dataType, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
         if(!result.Success) {
             throw new InvalidOperationException(
@@ -78,7 +76,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<SynchronizationStatus> UpdateDataTypeAsync(IDataType dataType, CodeFirstDefinition definition) {
-        Attempt<IDataType, DataTypeOperationStatus> result =
+        var result =
             await dataTypeService.UpdateAsync(dataType, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
         if(!result.Success) {
             throw new InvalidOperationException(
@@ -90,7 +88,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<SynchronizationStatus> ApplyDocumentTypeAsync(CodeFirstDefinition definition) {
-        IContentType? contentType = contentTypeService.Get(definition.Alias);
+        var contentType = contentTypeService.Get(definition.Alias);
         if(contentType is null) {
             ContentType created = new(shortStringHelper, -1) {
                 Alias = definition.Alias,
@@ -98,6 +96,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 Description = BuildDescription(definition.Settings?.Description, definition.Alias),
             };
             ApplyTypeSettings(created, definition.Settings, definition.Alias);
+            ApplyCompositions(created, definition);
             await ApplyGroupsAndPropertiesAsync(created, definition);
             return await CreateContentTypeAsync(created);
         }
@@ -109,6 +108,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         bool changed = contentType.Name != definition.Name;
         contentType.Name = definition.Name;
         changed |= ApplyTypeSettings(contentType, definition.Settings, definition.Alias);
+        changed |= ApplyCompositions(contentType, definition);
         changed |= await ApplyGroupsAndPropertiesAsync(contentType, definition);
 
         if(!changed) {
@@ -133,11 +133,11 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         value is string;
 
     private async Task<IDataType?> FindOwnedDataTypeAsync(string alias) {
-        if(_ownedDataTypes.TryGetValue(alias, out IDataType? cached)) {
+        if(_ownedDataTypes.TryGetValue(alias, out var cached)) {
             return cached;
         }
 
-        IDataType? existing = (await dataTypeService.GetAllAsync())
+        var existing = (await dataTypeService.GetAllAsync())
             .FirstOrDefault(dataType =>
                 dataType.ConfigurationData.TryGetValue(_ownershipKey, out object? value) &&
                 string.Equals(value as string, alias, StringComparison.Ordinal));
@@ -148,28 +148,106 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         return existing;
     }
 
+    private bool ApplyCompositions(
+        IContentType contentType,
+        CodeFirstDefinition definition) {
+        bool changed = false;
+        var desiredAliases = definition.CompositionAliases ?? [];
+        HashSet<string> desired = desiredAliases.ToHashSet(StringComparer.Ordinal);
+
+        foreach(string compositionAlias in desiredAliases) {
+            var composition = contentTypeService.Get(compositionAlias);
+            if(composition is null) {
+                throw new InvalidOperationException(
+                    $"The document type '{definition.Alias}' references unknown composition '{compositionAlias}'.");
+            }
+
+            if(!contentType.ContentTypeCompositionExists(compositionAlias)) {
+                contentType.AddContentType(composition);
+                changed = true;
+            }
+
+            string marker = CompositionOwnershipMarker(compositionAlias);
+            if(!HasMarker(contentType.Description, marker)) {
+                contentType.Description = AppendMarker(contentType.Description, marker);
+                changed = true;
+            }
+        }
+
+        foreach(string existingAlias in contentType.CompositionAliases().ToArray()) {
+            if(desired.Contains(existingAlias)
+                || !HasMarker(contentType.Description, CompositionOwnershipMarker(existingAlias))) {
+                continue;
+            }
+
+            contentType.RemoveContentType(existingAlias);
+            contentType.Description = RemoveMarker(
+                contentType.Description,
+                CompositionOwnershipMarker(existingAlias));
+            changed = true;
+        }
+
+        return changed;
+    }
+
     private static bool IsOwned(IContentType contentType, string alias) =>
         contentType.Description?.Contains(OwnershipMarker(alias), StringComparison.Ordinal) == true;
 
     private static string OwnershipMarker(string alias) => $"{_ownershipKey}:{alias}";
 
-    private static string BuildDescription(string? description, string alias) =>
+    private static string BuildDescription(
+        string? description,
+        string alias,
+        string? existingDescription = null) {
+        string result = string.IsNullOrWhiteSpace(description) ? string.Empty : description;
+        if(!HasMarker(result, OwnershipMarker(alias))) {
+            result = AppendMarker(result, OwnershipMarker(alias));
+        }
+
+        foreach(string marker in ExtractCompositionMarkers(existingDescription)) {
+            if(!HasMarker(result, marker)) {
+                result = AppendMarker(result, marker);
+            }
+        }
+
+        return result;
+    }
+
+    private static string CompositionOwnershipMarker(string alias) =>
+        $"{_ownershipKey}:composition:{alias}";
+
+    private static bool HasMarker(string? description, string marker) =>
+        description?.Contains(marker, StringComparison.Ordinal) == true;
+
+    private static string AppendMarker(string? description, string marker) =>
         string.IsNullOrWhiteSpace(description)
-            ? OwnershipMarker(alias)
-            : $"{description}{Environment.NewLine}{OwnershipMarker(alias)}";
+            ? marker
+            : $"{description}{Environment.NewLine}{marker}";
+
+    private static string RemoveMarker(string? description, string marker) =>
+        string.Join(
+            Environment.NewLine,
+            (description ?? string.Empty)
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !string.Equals(line, marker, StringComparison.Ordinal)));
+
+    private static IEnumerable<string> ExtractCompositionMarkers(string? description) =>
+        (description ?? string.Empty)
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith($"{_ownershipKey}:composition:", StringComparison.Ordinal));
 
     private static bool ApplyConfiguration(IDataType dataType, string? configurationJson) {
         if(string.IsNullOrWhiteSpace(configurationJson)) {
             return false;
         }
 
-        Dictionary<string, JsonElement>? configuration =
+        var configuration =
             JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(configurationJson);
         if(configuration is null) {
             throw new InvalidOperationException("The Data Type configuration JSON must be a JSON object.");
         }
 
-        foreach(KeyValuePair<string, JsonElement> item in configuration) {
+        foreach(var item in configuration) {
             dataType.ConfigurationData[item.Key] = ConvertJsonElement(item.Value);
         }
 
@@ -199,22 +277,22 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         IContentType contentType,
         CodeFirstDefinition definition) {
         bool changed = false;
-        foreach(CodeFirstGroupDefinition tab in definition.EffectiveTabs) {
+        foreach(var tab in definition.EffectiveTabs) {
             changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab);
         }
 
-        foreach(CodeFirstGroupDefinition group in definition.EffectiveGroups) {
+        foreach(var group in definition.EffectiveGroups) {
             changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group);
         }
 
-        foreach(CodeFirstPropertyDefinition property in definition.Properties) {
-            IDataType? dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
+        foreach(var property in definition.Properties) {
+            var dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
             if(dataType is null) {
                 throw new InvalidOperationException(
                     $"The document type '{definition.Alias}' references unknown data type '{property.DataTypeAlias}'.");
             }
 
-            IPropertyType? existingProperty = contentType.PropertyTypes
+            var existingProperty = contentType.PropertyTypes
                 .FirstOrDefault(candidate => candidate.Alias == property.Alias);
             string? desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
             if(existingProperty is not null) {
@@ -264,7 +342,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         CodeFirstGroupDefinition definition,
         PropertyGroupType type) {
         bool changed = false;
-        PropertyGroup? existingGroup = contentType.PropertyGroups
+        var existingGroup = contentType.PropertyGroups
             .FirstOrDefault(candidate => candidate.Alias == definition.Alias);
         if(existingGroup is null) {
             if(!contentType.AddPropertyGroup(definition.Alias, definition.Name)) {
@@ -304,7 +382,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         bool changed = false;
-        string description = BuildDescription(settings.Description, alias);
+        string description = BuildDescription(settings.Description, alias, contentType.Description);
         if(contentType.Description != description) {
             contentType.Description = description;
             changed = true;

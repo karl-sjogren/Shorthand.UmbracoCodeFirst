@@ -5,6 +5,57 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_ContentTypeComposition_EmitsReferencedAlias() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                {
+                    public UCFContentTypeAttribute(string name) { }
+                    public UCFContentTypeAttribute(string alias, string name) { }
+                }
+
+                [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
+                public sealed class UCFCompositeAttribute(global::System.Type contentType)
+                    : global::System.Attribute { }
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Base")]
+                public partial class Base;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFComposite(typeof(Base))]
+                public partial class Article;
+            }
+            """;
+
+        // Act
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+        CSharpCompilation compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var result = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            ;
+        string generatedSource = result
+            .GeneratedSources
+            .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        // Assert
+        generatedSource.ShouldContain("new global::System.String[] { \"base\" }");
+    }
+
+    [Fact]
     public void GenerateRegistry_AttributedPartialClasses_EmitsExpectedDefinitionsAndModels() {
         // Arrange
         const string source = """
@@ -50,8 +101,8 @@ public class CodeFirstRegistryGeneratorTests {
             ],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        GeneratorDriver result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
-        GeneratorRunResult generatorResult = result.GetRunResult().Results
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
+        var generatorResult = result.GetRunResult().Results
             .Single()
             ;
         string generatedSource = generatorResult.GeneratedSources
@@ -114,7 +165,7 @@ public class CodeFirstRegistryGeneratorTests {
                 OutputKind.DynamicallyLinkedLibrary,
                 allowUnsafe: true));
 
-        GeneratorDriver result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
 
         // Assert
         result.GetRunResult().Diagnostics.ShouldContain(diagnostic => diagnostic.Id == "UCF001");
@@ -183,7 +234,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        GeneratorRunResult generatorResult = driver
+        var generatorResult = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -342,7 +393,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        GeneratorRunResult generatorResult = driver
+        var generatorResult = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -407,7 +458,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        GeneratorRunResult generatorResult = driver
+        var generatorResult = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results

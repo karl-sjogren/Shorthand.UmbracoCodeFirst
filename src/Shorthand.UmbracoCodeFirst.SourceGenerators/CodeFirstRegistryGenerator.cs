@@ -16,6 +16,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private const string _groupAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFGroupAttribute";
     private const string _tabAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFTabAttribute";
     private const string _validationAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFValidationAttribute";
+    private const string _compositeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFCompositeAttribute";
 
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
@@ -28,7 +29,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 #pragma warning restore RS2008
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
-        IncrementalValuesProvider<INamedTypeSymbol> definitions = context.SyntaxProvider.CreateSyntaxProvider(
+        var definitions = context.SyntaxProvider.CreateSyntaxProvider(
                 static (node, _) => node is ClassDeclarationSyntax classDeclaration
                     && classDeclaration.Modifiers.Any(SyntaxKind.PartialKeyword),
                 static (syntaxContext, _) => {
@@ -71,8 +72,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.AppendLine("Definitions { get; } = [");
         builder.Indent++;
 
-        IReadOnlyDictionary<string, string> dataTypeAliases = BuildDataTypeAliasMap(definitionSymbols);
-        foreach (INamedTypeSymbol definition in definitions) {
+        var dataTypeAliases = BuildDataTypeAliasMap(definitionSymbols);
+        foreach (var definition in definitions) {
             AppendDefinition(builder, definition, compilation, dataTypeAliases);
         }
 
@@ -87,7 +88,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static void EmitPublishedModels(
         SourceProductionContext context,
         ImmutableArray<INamedTypeSymbol> definitions) {
-        foreach (INamedTypeSymbol definition in definitions) {
+        foreach (var definition in definitions) {
             if (FindAttribute(definition, _documentTypeAttributeMetadataName) is not AttributeData documentTypeAttribute) {
                 continue;
             }
@@ -105,7 +106,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static void EmitDataTypeAliases(
         SourceProductionContext context,
         ImmutableArray<INamedTypeSymbol> definitions) {
-        foreach (INamedTypeSymbol definition in definitions) {
+        foreach (var definition in definitions) {
             if (FindAttribute(definition, _dataTypeAttributeMetadataName) is not AttributeData dataTypeAttribute) {
                 continue;
             }
@@ -215,7 +216,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.AppendLine("}");
         builder.AppendLine();
 
-        foreach (IPropertySymbol property in definition.GetMembers().OfType<IPropertySymbol>()
+        foreach (var property in definition.GetMembers().OfType<IPropertySymbol>()
                      .Where(static property => FindAttribute(property, _propertyAttributeMetadataName) is not null)
                      .OrderBy(static property => property.Name, StringComparer.Ordinal)) {
             if (!IsSupportedPublishedPropertyType(property.Type)) {
@@ -228,13 +229,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 continue;
             }
 
-            AttributeData propertyAttribute = FindAttribute(property, _propertyAttributeMetadataName)!;
+            var propertyAttribute = FindAttribute(property, _propertyAttributeMetadataName)!;
             string propertyName = GetNameArgument(propertyAttribute);
             string propertyAlias = GetAliasArgument(propertyAttribute, propertyName);
             string propertyType = property.Type.ToDisplayString(
                 SymbolDisplayFormat.FullyQualifiedFormat
                     .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
-            AttributeData? descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
+            var descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
             string summary = descriptionAttribute is null
                 ? propertyName
                 : $"{propertyName}: {GetStringArgument(descriptionAttribute, 0)}";
@@ -281,7 +282,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static IReadOnlyDictionary<string, string> BuildDataTypeAliasMap(
         ImmutableArray<INamedTypeSymbol> definitions) {
         var aliases = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (INamedTypeSymbol definition in definitions) {
+        foreach (var definition in definitions) {
             if (FindAttribute(definition, _dataTypeAttributeMetadataName) is not AttributeData dataTypeAttribute) {
                 continue;
             }
@@ -299,7 +300,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         INamedTypeSymbol definition,
         Compilation compilation,
         IReadOnlyDictionary<string, string> dataTypeAliases) {
-        AttributeData? documentTypeAttribute = definition.GetAttributes().FirstOrDefault(
+        var documentTypeAttribute = definition.GetAttributes().FirstOrDefault(
             attribute => IsAttribute(attribute, _documentTypeAttributeMetadataName));
         if (documentTypeAttribute is not null) {
             string name = GetNameArgument(documentTypeAttribute);
@@ -314,14 +315,14 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             builder.AppendLine(", null, [");
             builder.Indent++;
 
-            foreach (IPropertySymbol property in definition.GetMembers().OfType<IPropertySymbol>()) {
-                AttributeData? propertyAttribute = property.GetAttributes().FirstOrDefault(
+            foreach (var property in definition.GetMembers().OfType<IPropertySymbol>()) {
+                var propertyAttribute = property.GetAttributes().FirstOrDefault(
                     attribute => IsAttribute(attribute, _propertyAttributeMetadataName));
                 if (propertyAttribute is null) {
                     continue;
                 }
 
-                AttributeSyntax? propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
+                var propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
                 string propertyName = GetNameArgument(propertyAttribute);
                 if (propertyName.Length == 0) {
                     propertyName = GetSyntaxStringArgument(propertySyntax, 1);
@@ -332,13 +333,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     propertyAlias = GetSyntaxStringArgument(propertySyntax, 0);
                 }
 
-                AttributeData? descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
-                AttributeData? groupAttribute = FindLayoutAttribute(property, _groupAttributeMetadataName);
-                GroupMetadata? groupMetadata = GetLayoutMetadata(groupAttribute, compilation);
-                AttributeData? tabAttribute = FindLayoutAttribute(property, _tabAttributeMetadataName);
-                GroupMetadata? tabMetadata = GetLayoutMetadata(tabAttribute, compilation);
-                AttributeData? validationAttribute = FindValidationAttribute(property);
-                ValidationMetadata? validationMetadata = GetValidationMetadata(validationAttribute, compilation);
+                var descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
+                var groupAttribute = FindLayoutAttribute(property, _groupAttributeMetadataName);
+                var groupMetadata = GetLayoutMetadata(groupAttribute, compilation);
+                var tabAttribute = FindLayoutAttribute(property, _tabAttributeMetadataName);
+                var tabMetadata = GetLayoutMetadata(tabAttribute, compilation);
+                var validationAttribute = FindValidationAttribute(property);
+                var validationMetadata = GetValidationMetadata(validationAttribute, compilation);
                 builder.Append("new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstPropertyDefinition(");
                 builder.Append(
                     SymbolDisplay.FormatLiteral(propertyAlias, true));
@@ -392,11 +393,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             builder.Indent--;
             builder.Append("], ");
             builder.Append(BuildTypeSettings(documentTypeAttribute, definition));
-            builder.AppendLine(", null),");
+            builder.Append(", null, null, null, ");
+            builder.Append(BuildCompositionAliases(definition));
+            builder.AppendLine("),");
             return;
         }
 
-        AttributeData? dataTypeAttribute = definition.GetAttributes().FirstOrDefault(
+        var dataTypeAttribute = definition.GetAttributes().FirstOrDefault(
             attribute => IsAttribute(attribute, _dataTypeAttributeMetadataName));
         if (dataTypeAttribute is null) {
             return;
@@ -561,13 +564,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             return Array.Empty<object?>();
         }
 
-        foreach (SyntaxReference syntaxReference in attribute.AttributeClass.DeclaringSyntaxReferences) {
+        foreach (var syntaxReference in attribute.AttributeClass.DeclaringSyntaxReferences) {
             if (syntaxReference.GetSyntax() is not ClassDeclarationSyntax classDeclaration) {
                 continue;
             }
 
-            SemanticModel semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-            ArgumentListSyntax? primaryConstructorArguments = classDeclaration.BaseList?
+            var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+            var primaryConstructorArguments = classDeclaration.BaseList?
                 .Types
                 .SelectMany(static baseType => baseType.ChildNodes().OfType<ArgumentListSyntax>())
                 .FirstOrDefault();
@@ -579,7 +582,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     .ToArray();
             }
 
-            ConstructorDeclarationSyntax? constructor = classDeclaration.Members
+            var constructor = classDeclaration.Members
                 .OfType<ConstructorDeclarationSyntax>()
                 .FirstOrDefault(candidate => candidate.Initializer?.Kind() == SyntaxKind.BaseConstructorInitializer);
             if (constructor?.Initializer is not ConstructorInitializerSyntax initializer) {
@@ -597,7 +600,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     }
 
     private static bool IsDerivedAttribute(AttributeData attribute, string metadataName) {
-        INamedTypeSymbol? attributeClass = attribute.AttributeClass;
+        var attributeClass = attribute.AttributeClass;
         while (attributeClass is not null) {
             if (string.Equals(
                     attributeClass.ToDisplayString(),
@@ -647,7 +650,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         attribute.NamedArguments.FirstOrDefault(argument => argument.Key == name).Value.Value?.ToString() ?? string.Empty;
 
     private static string GetNamedStringLiteral(AttributeData attribute, string name) {
-        KeyValuePair<string, TypedConstant> argument =
+        var argument =
             attribute.NamedArguments.FirstOrDefault(candidate => candidate.Key == name);
         return argument.Key is null || argument.Value.IsNull
             ? "null"
@@ -663,7 +666,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static string BuildTypeSettings(AttributeData attribute, INamedTypeSymbol definition) {
         string allowedTemplates = BuildStringArray(attribute, "AllowedTemplateAliases");
         string allowedChildren = BuildStringArray(attribute, "AllowedChildAliases");
-        AttributeData? descriptionAttribute = FindAttribute(definition, _descriptionAttributeMetadataName);
+        var descriptionAttribute = FindAttribute(definition, _descriptionAttributeMetadataName);
         return $$"""
             new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstTypeSettings(
                 {{GetConstructorStringLiteral(descriptionAttribute)}},
@@ -679,8 +682,35 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             """;
     }
 
+    private static string BuildCompositionAliases(INamedTypeSymbol definition) {
+        string[] aliases = definition.GetAttributes()
+            .Where(attribute => IsAttribute(attribute, _compositeAttributeMetadataName))
+            .Select(attribute => attribute.ConstructorArguments.FirstOrDefault())
+            .Where(argument => argument.Kind == TypedConstantKind.Type
+                               && argument.Value is INamedTypeSymbol)
+            .Select(argument => {
+                INamedTypeSymbol target = (INamedTypeSymbol)argument.Value!;
+                var contentTypeAttribute = FindAttribute(target, _documentTypeAttributeMetadataName);
+                string targetName = contentTypeAttribute is null
+                    ? target.Name
+                    : GetNameArgument(contentTypeAttribute);
+                return contentTypeAttribute is null
+                    ? ToAlias(targetName)
+                    : GetAliasArgument(contentTypeAttribute, targetName);
+            })
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToArray();
+
+        if (aliases.Length == 0) {
+            return "global::System.Array.Empty<string>()";
+        }
+
+        return $"new global::System.String[] {{ {string.Join(", ", aliases.Select(alias => SymbolDisplay.FormatLiteral(alias, true)))} }}";
+    }
+
     private static string BuildStringArray(AttributeData attribute, string name) {
-        TypedConstant value = attribute.NamedArguments.FirstOrDefault(argument => argument.Key == name).Value;
+        var value = attribute.NamedArguments.FirstOrDefault(argument => argument.Key == name).Value;
         if(value.Kind != TypedConstantKind.Array) {
             return "global::System.Array.Empty<string>()";
         }

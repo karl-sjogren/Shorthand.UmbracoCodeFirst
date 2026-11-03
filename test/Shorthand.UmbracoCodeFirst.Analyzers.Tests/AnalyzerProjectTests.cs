@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -13,12 +12,12 @@ public class AnalyzerProjectTests {
         const string documentationBaseUrl =
             "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/" +
             "feature/initial-implementation/docs/analyzers";
-        DiagnosticDescriptor[] descriptors = new CodeFirstAttributeAnalyzer()
+        var descriptors = new CodeFirstAttributeAnalyzer()
             .SupportedDiagnostics
             .ToArray();
 
         // Act
-        Dictionary<string, string> links = descriptors.ToDictionary(
+        var links = descriptors.ToDictionary(
             descriptor => descriptor.Id,
             descriptor => descriptor.HelpLinkUri);
 
@@ -30,6 +29,8 @@ public class AnalyzerProjectTests {
             ["UCF103"] = $"{documentationBaseUrl}/UCF103.md",
             ["UCF104"] = $"{documentationBaseUrl}/UCF104.md",
             ["UCF105"] = $"{documentationBaseUrl}/UCF105.md",
+            ["UCF106"] = $"{documentationBaseUrl}/UCF106.md",
+            ["UCF107"] = $"{documentationBaseUrl}/UCF107.md",
         });
     }
 
@@ -39,7 +40,7 @@ public class AnalyzerProjectTests {
         const string expectedName = "Shorthand.UmbracoCodeFirst.Analyzers.Tests";
 
         // Act
-        Assembly assembly = typeof(AnalyzerProjectTests).Assembly;
+        var assembly = typeof(AnalyzerProjectTests).Assembly;
 
         // Assert
         assembly.GetName().Name.ShouldBe(expectedName);
@@ -55,7 +56,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.InvalidAliasId);
@@ -71,7 +72,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldNotContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.InvalidAliasId);
@@ -89,7 +90,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
@@ -112,7 +113,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateLayoutId);
@@ -135,7 +136,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateValidationId);
@@ -154,7 +155,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(
@@ -173,11 +174,48 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(
             diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.PropertyOutsideContentTypeId);
+    }
+
+    [Fact]
+    public void Analyze_CompositionTargetWithoutContentType_ReportsInvalidTargetDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("product", "Product")]
+            [UCFComposite(typeof(NotAContentType))]
+            public partial class Product;
+            public partial class NotAContentType;
+            """;
+
+        // Act
+        var diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.InvalidCompositionTargetId);
+    }
+
+    [Fact]
+    public void Analyze_SelfComposition_ReportsInvalidCompositionGraphDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("product", "Product")]
+            [UCFComposite(typeof(Product))]
+            public partial class Product;
+            """;
+
+        // Act
+        var diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.InvalidCompositionGraphId);
     }
 
     private static ImmutableArray<Diagnostic> Analyze(string source) {
@@ -205,6 +243,8 @@ public class AnalyzerProjectTests {
         public sealed class UCFContentTypeAttribute(string alias, string name) : global::System.Attribute;
         public sealed class UCFDataTypeAttribute(string alias, string name) : global::System.Attribute;
         public sealed class UCFPropertyAttribute(string alias, string name, string dataTypeAlias) : global::System.Attribute;
+        [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
+        public sealed class UCFCompositeAttribute(global::System.Type contentType) : global::System.Attribute;
         public class UCFGroupAttribute(string alias, string name) : global::System.Attribute;
         public sealed class UCFTabAttribute(string alias, string name) : global::System.Attribute;
         public class UCFValidationAttribute(string expression, string? message = null) : global::System.Attribute;

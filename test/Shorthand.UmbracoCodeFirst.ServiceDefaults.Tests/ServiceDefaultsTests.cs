@@ -8,9 +8,9 @@ public class ServiceDefaultsTests {
     [Fact]
     public async Task AddServiceDefaultsAsync_DevelopmentEnvironment_RegistersHealthyChecks_Async() {
         // Arrange
-        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        var builder = WebApplication.CreateBuilder();
         builder.AddServiceDefaults();
-        WebApplication app = builder.Build();
+        var app = builder.Build();
 
         // Act
         app.MapDefaultEndpoints();

@@ -37,6 +37,40 @@ public class CodeFirstSynchronizerTests {
         store.AppliedAliases.ShouldBe(["codeFirstDecimal", "productPage"]);
     }
 
+    [Fact]
+    public async Task SynchronizeAsync_ComposedDocumentTypes_AppliesCompositionFirst_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(
+                CodeFirstDefinitionKind.DocumentType,
+                "productPage",
+                "Product Page",
+                null,
+                [],
+                CompositionAliases: ["article"]),
+            new(
+                CodeFirstDefinitionKind.DocumentType,
+                "article",
+                "Article",
+                null,
+                []),
+        ]);
+        var store = new RecordingStore();
+        var reportStore = new SynchronizationReportStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry,
+            store,
+            reportStore,
+            TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.AppliedAliases.ShouldBe(["article", "productPage"]);
+    }
+
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)
         : ICodeFirstDefinitionRegistry {
         public IReadOnlyList<CodeFirstDefinition> Definitions { get; } = definitions;
