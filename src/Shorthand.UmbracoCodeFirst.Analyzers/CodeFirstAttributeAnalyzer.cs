@@ -8,6 +8,9 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
+    private const string _documentationBaseUrl =
+        "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/feature/initial-implementation/docs/analyzers";
+
     public const string InvalidAliasId = "UCF100";
     public const string DuplicateAliasId = "UCF101";
     public const string DuplicateLayoutId = "UCF102";
@@ -23,6 +26,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF100.md",
         customTags: new[] { "CompilationEnd" });
 
     private static readonly DiagnosticDescriptor _duplicateAlias = new(
@@ -32,6 +36,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF101.md",
         customTags: new[] { "CompilationEnd" });
 
     private static readonly DiagnosticDescriptor _duplicateLayout = new(
@@ -41,6 +46,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF102.md",
         customTags: new[] { "CompilationEnd" });
 
     private static readonly DiagnosticDescriptor _duplicateValidation = new(
@@ -50,6 +56,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "CodeFirst",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF103.md",
         customTags: new[] { "CompilationEnd" });
 
     private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
@@ -58,7 +65,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "Property '{0}' has type '{1}', which is not supported by the code-first contract",
         "CodeFirst",
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF104.md");
 
     private static readonly DiagnosticDescriptor _propertyOutsideContentType = new(
         PropertyOutsideContentTypeId,
@@ -66,7 +74,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         "Property '{0}' uses UCFProperty but its containing class is not a UCFContentType",
         "CodeFirst",
         DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF105.md");
 #pragma warning restore RS2008
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>

@@ -8,6 +8,32 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class AnalyzerProjectTests {
     [Fact]
+    public void AnalyzerDescriptors_HaveDocumentationLinks_ReturnFeatureBranchUris() {
+        // Arrange
+        const string documentationBaseUrl =
+            "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/" +
+            "feature/initial-implementation/docs/analyzers";
+        DiagnosticDescriptor[] descriptors = new CodeFirstAttributeAnalyzer()
+            .SupportedDiagnostics
+            .ToArray();
+
+        // Act
+        Dictionary<string, string> links = descriptors.ToDictionary(
+            descriptor => descriptor.Id,
+            descriptor => descriptor.HelpLinkUri);
+
+        // Assert
+        links.ShouldBe(new Dictionary<string, string> {
+            ["UCF100"] = $"{documentationBaseUrl}/UCF100.md",
+            ["UCF101"] = $"{documentationBaseUrl}/UCF101.md",
+            ["UCF102"] = $"{documentationBaseUrl}/UCF102.md",
+            ["UCF103"] = $"{documentationBaseUrl}/UCF103.md",
+            ["UCF104"] = $"{documentationBaseUrl}/UCF104.md",
+            ["UCF105"] = $"{documentationBaseUrl}/UCF105.md",
+        });
+    }
+
+    [Fact]
     public void AnalyzerAssembly_LoadProjectAssembly_LoadsSuccessfully() {
         // Arrange
         const string expectedName = "Shorthand.UmbracoCodeFirst.Analyzers.Tests";
