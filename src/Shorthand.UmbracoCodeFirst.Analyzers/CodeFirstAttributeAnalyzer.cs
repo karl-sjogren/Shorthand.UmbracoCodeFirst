@@ -12,6 +12,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     public const string DuplicateAliasId = "UCF101";
     public const string DuplicateLayoutId = "UCF102";
     public const string DuplicateValidationId = "UCF103";
+    public const string UnsupportedPropertyTypeId = "UCF104";
+    public const string PropertyOutsideContentTypeId = "UCF105";
 
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _invalidAlias = new(
@@ -49,10 +51,33 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         DiagnosticSeverity.Info,
         isEnabledByDefault: true,
         customTags: new[] { "CompilationEnd" });
+
+    private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
+        UnsupportedPropertyTypeId,
+        "Unsupported code-first property type",
+        "Property '{0}' has type '{1}', which is not supported by the code-first contract",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _propertyOutsideContentType = new(
+        PropertyOutsideContentTypeId,
+        "Code-first property requires a content type",
+        "Property '{0}' uses UCFProperty but its containing class is not a UCFContentType",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 #pragma warning restore RS2008
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [_invalidAlias, _duplicateAlias, _duplicateLayout, _duplicateValidation];
+        [
+            _invalidAlias,
+            _duplicateAlias,
+            _duplicateLayout,
+            _duplicateValidation,
+            _unsupportedPropertyType,
+            _propertyOutsideContentType,
+        ];
 
     public override void Initialize(AnalysisContext context) {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
@@ -60,32 +85,57 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         context.RegisterCompilationStartAction(static compilationContext => {
             var occurrences = new ConcurrentBag<AliasOccurrence>();
             var validations = new ConcurrentBag<ValidationOccurrence>();
+            var propertyDiagnostics = new ConcurrentBag<PropertyDiagnosticOccurrence>();
 
             compilationContext.RegisterSymbolAction(
-                symbolContext => Collect(symbolContext.Symbol, occurrences, validations),
+                symbolContext => Collect(symbolContext.Symbol, occurrences, validations, propertyDiagnostics),
                 SymbolKind.NamedType,
                 SymbolKind.Property);
             compilationContext.RegisterCompilationEndAction(
-                endContext => Report(endContext, occurrences, validations));
+                endContext => Report(endContext, occurrences, validations, propertyDiagnostics));
         });
     }
 
     private static void Collect(
         ISymbol symbol,
         ConcurrentBag<AliasOccurrence> occurrences,
-        ConcurrentBag<ValidationOccurrence> validations) {
+        ConcurrentBag<ValidationOccurrence> validations,
+        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics) {
         foreach(AttributeData attribute in symbol.GetAttributes()) {
             string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
             if(attributeName is "UCFContentTypeAttribute" or "UCFDataTypeAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.Global);
             } else if(attributeName is "UCFPropertyAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.ContainingType);
+                if(symbol is IPropertySymbol property) {
+                    CollectPropertyContractDiagnostics(property, propertyDiagnostics);
+                }
             } else if(attributeName is "UCFGroupAttribute" or "UCFTabAttribute") {
                 AddLayout(attribute, symbol, occurrences, attributeName == "UCFGroupAttribute");
             } else if(attributeName == "UCFValidationAttribute"
                       || attribute.AttributeClass?.BaseType?.Name == "UCFValidationAttribute") {
                 AddValidation(attribute, symbol, validations);
             }
+        }
+    }
+
+    private static void CollectPropertyContractDiagnostics(
+        IPropertySymbol property,
+        ConcurrentBag<PropertyDiagnosticOccurrence> diagnostics) {
+        if(property.ContainingType is null
+            || !property.ContainingType.GetAttributes().Any(HasContentTypeAttribute)) {
+            diagnostics.Add(new PropertyDiagnosticOccurrence(
+                _propertyOutsideContentType,
+                property,
+                [property.Name]));
+        }
+
+        if(property.Type.TypeKind is TypeKind.Pointer or TypeKind.FunctionPointer
+            || property.Type.SpecialType == SpecialType.System_Void) {
+            diagnostics.Add(new PropertyDiagnosticOccurrence(
+                _unsupportedPropertyType,
+                property,
+                [property.Name, property.Type.ToDisplayString()]));
         }
     }
 
@@ -162,7 +212,15 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     private static void Report(
         CompilationAnalysisContext context,
         ConcurrentBag<AliasOccurrence> occurrences,
-        ConcurrentBag<ValidationOccurrence> validations) {
+        ConcurrentBag<ValidationOccurrence> validations,
+        ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics) {
+        foreach(PropertyDiagnosticOccurrence diagnostic in propertyDiagnostics) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                diagnostic.Descriptor,
+                diagnostic.Property.Locations.FirstOrDefault(),
+                diagnostic.Arguments));
+        }
+
         foreach(AliasOccurrence occurrence in occurrences.Where(static occurrence => !occurrence.IsValid)) {
             context.ReportDiagnostic(Diagnostic.Create(
                 _invalidAlias,
@@ -207,6 +265,9 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     private static string GetScopeName(AliasOccurrence occurrence) =>
         occurrence.Symbol.ContainingType?.ToDisplayString() ?? string.Empty;
 
+    private static bool HasContentTypeAttribute(AttributeData attribute) =>
+        attribute.AttributeClass?.Name == "UCFContentTypeAttribute";
+
     private static bool IsValidAlias(string alias) =>
         alias.All(static character => char.IsLetterOrDigit(character)
                                       || char.IsWhiteSpace(character)
@@ -248,6 +309,15 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         public string Message { get; } = message;
         public INamedTypeSymbol ContainingType { get; } = containingType;
         public Location? Location { get; } = location;
+    }
+
+    private sealed class PropertyDiagnosticOccurrence(
+        DiagnosticDescriptor descriptor,
+        IPropertySymbol property,
+        object[] arguments) {
+        public DiagnosticDescriptor Descriptor { get; } = descriptor;
+        public IPropertySymbol Property { get; } = property;
+        public object[] Arguments { get; } = arguments;
     }
 
     private enum AliasScope {

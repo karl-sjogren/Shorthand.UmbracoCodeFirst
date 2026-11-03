@@ -115,6 +115,45 @@ public class AnalyzerProjectTests {
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateValidationId);
     }
 
+    [Fact]
+    public void Analyze_UnsupportedPropertyType_ReportsUnsupportedPropertyDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("product", "Product")]
+            public partial class Product {
+                [UCFProperty("value", "Value", "text")]
+                public partial void Value { get; }
+            }
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.UnsupportedPropertyTypeId);
+    }
+
+    [Fact]
+    public void Analyze_PropertyOutsideContentType_ReportsContainingTypeDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            public partial class Product {
+                [UCFProperty("name", "Name", "text")]
+                public partial string Name { get; }
+            }
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.PropertyOutsideContentTypeId);
+    }
+
     private static ImmutableArray<Diagnostic> Analyze(string source) {
         source = _attributeDefinitions + source;
         CSharpCompilation compilation = CSharpCompilation.Create(
