@@ -1,4 +1,6 @@
 
+using Shorthand.UmbracoCodeFirst.Synchronization;
+
 var builder = WebApplication.CreateBuilder(args);
 
 #if DEBUG
@@ -14,6 +16,12 @@ builder.CreateUmbracoBuilder()
 WebApplication app = builder.Build();
 
 await app.BootUmbracoAsync();
+
+using(IServiceScope scope = app.Services.CreateScope()) {
+    await scope.ServiceProvider
+        .GetRequiredService<CodeFirstSynchronizer>()
+        .SynchronizeAsync();
+}
 
 app.UseUmbraco()
     .WithMiddleware(u => {

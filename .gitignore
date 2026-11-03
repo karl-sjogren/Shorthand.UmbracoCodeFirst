@@ -406,3 +406,6 @@ FodyWeavers.xsd
 
 # GitHub Actions scripts stuff
 /package-lock.json
+
+# MCP stuff
+.playwright-mcp/
