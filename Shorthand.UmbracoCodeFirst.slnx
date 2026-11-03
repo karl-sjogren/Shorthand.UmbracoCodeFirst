@@ -13,8 +13,12 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Shorthand.UmbracoCodeFirst.Analyzers.Tests/Shorthand.UmbracoCodeFirst.Analyzers.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.AppHost.Tests/Shorthand.UmbracoCodeFirst.AppHost.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Backoffice.Tests/Shorthand.UmbracoCodeFirst.Backoffice.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.Tests/Shorthand.UmbracoCodeFirst.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.TestHelpers/Shorthand.UmbracoCodeFirst.TestHelpers.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.ServiceDefaults.Tests/Shorthand.UmbracoCodeFirst.ServiceDefaults.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Umbraco.Tests/Shorthand.UmbracoCodeFirst.Umbraco.Tests.csproj" />
   </Folder>
 </Solution>

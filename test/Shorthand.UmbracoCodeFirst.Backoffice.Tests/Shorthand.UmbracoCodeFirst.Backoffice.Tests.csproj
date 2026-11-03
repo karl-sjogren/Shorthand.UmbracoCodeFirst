@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Backoffice\Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst\Shorthand.UmbracoCodeFirst.csproj" />
+  </ItemGroup>
+
+</Project>

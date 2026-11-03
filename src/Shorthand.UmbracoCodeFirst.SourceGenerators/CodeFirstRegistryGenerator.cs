@@ -321,8 +321,17 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     continue;
                 }
 
+                AttributeSyntax? propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
                 string propertyName = GetNameArgument(propertyAttribute);
+                if (propertyName.Length == 0) {
+                    propertyName = GetSyntaxStringArgument(propertySyntax, 1);
+                }
+
                 string propertyAlias = GetAliasArgument(propertyAttribute, propertyName);
+                if (propertyAlias.Length == 0) {
+                    propertyAlias = GetSyntaxStringArgument(propertySyntax, 0);
+                }
+
                 AttributeData? descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
                 AttributeData? groupAttribute = FindLayoutAttribute(property, _groupAttributeMetadataName);
                 GroupMetadata? groupMetadata = GetLayoutMetadata(groupAttribute, compilation);
@@ -338,7 +347,9 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     SymbolDisplay.FormatLiteral(propertyName, true));
                 builder.Append(", ");
                 builder.Append(
-                    SymbolDisplay.FormatLiteral(GetDataTypeArgument(propertyAttribute, dataTypeAliases), true));
+                    SymbolDisplay.FormatLiteral(
+                        GetDataTypeArgument(propertyAttribute, dataTypeAliases, propertySyntax),
+                        true));
                 builder.Append(", ");
                 builder.Append(GetConstructorStringLiteral(descriptionAttribute));
                 builder.Append(", ");
@@ -433,7 +444,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private static string GetDataTypeArgument(
         AttributeData attribute,
-        IReadOnlyDictionary<string, string> dataTypeAliases) {
+        IReadOnlyDictionary<string, string> dataTypeAliases,
+        AttributeSyntax? syntax = null) {
         int argumentIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
         if (attribute.ConstructorArguments.Length > argumentIndex) {
             string? value = attribute.ConstructorArguments[argumentIndex].Value?.ToString();
@@ -442,8 +454,10 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             }
         }
 
-        if (attribute.ApplicationSyntaxReference?.GetSyntax() is AttributeSyntax syntax
-            && syntax.ArgumentList?.Arguments.LastOrDefault()?.Expression is MemberAccessExpressionSyntax memberAccess
+        syntax ??= attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
+        if (syntax?.ArgumentList?.Arguments
+                .Where(static argument => argument.NameColon is null && argument.NameEquals is null)
+                .LastOrDefault()?.Expression is MemberAccessExpressionSyntax memberAccess
             && memberAccess.Name.Identifier.ValueText == "Alias") {
             string typeName = memberAccess.Expression.ToString();
             string simpleTypeName = typeName.Substring(typeName.LastIndexOf('.') + 1);
@@ -454,6 +468,25 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         }
 
         return string.Empty;
+    }
+
+    private static AttributeSyntax? FindAttributeSyntax(ISymbol symbol, string metadataName) =>
+        symbol.DeclaringSyntaxReferences
+            .SelectMany(static reference => reference.GetSyntax().DescendantNodes().OfType<AttributeSyntax>())
+            .FirstOrDefault(attribute => attribute.Name.ToString().EndsWith(
+                metadataName.Substring(metadataName.LastIndexOf('.') + 1).Replace("Attribute", string.Empty),
+                StringComparison.Ordinal));
+
+    private static string GetSyntaxStringArgument(AttributeSyntax? syntax, int index) {
+        if (syntax?.ArgumentList?.Arguments
+                .Where(static argument => argument.NameColon is null && argument.NameEquals is null)
+                .ElementAtOrDefault(index)?.Expression is not ExpressionSyntax expression) {
+            return string.Empty;
+        }
+
+        return expression is LiteralExpressionSyntax literal
+            ? literal.Token.ValueText
+            : string.Empty;
     }
 
     private static string GetDataTypeEditorArgument(AttributeData attribute) =>

@@ -5,7 +5,8 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
-    public void Generates_registry_for_attributed_partial_classes() {
+    public void GenerateRegistry_AttributedPartialClasses_EmitsExpectedDefinitionsAndModels() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -38,6 +39,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -59,18 +61,23 @@ public class CodeFirstRegistryGeneratorTests {
             .Single(source => source.HintName.Contains("Example_Article", StringComparison.Ordinal))
             .SourceText.ToString();
 
+        // Assert
         generatedSource.ShouldContain("CodeFirstDefinitionKind.DocumentType");
         generatedSource.ShouldContain("\"article\"");
         generatedSource.ShouldContain("\"title\"");
         generatedSource.ShouldNotContain("NotAModel");
         modelSource.ShouldContain("[PublishedModel(\"article\")]");
         modelSource.ShouldContain("public partial class Article : PublishedContentModel");
+        modelSource.ShouldContain("public new const string ModelTypeAlias = \"article\";");
+        modelSource.ShouldContain("public new static IPublishedContentType GetModelContentType");
+        modelSource.ShouldContain("public static IPublishedPropertyType GetModelPropertyType<TValue>");
         modelSource.ShouldContain("public partial global::System.String Title => this.Value<global::System.String>");
         modelSource.ShouldContain("[ImplementPropertyType(\"title\")]");
     }
 
     [Fact]
-    public void Reports_diagnostic_for_unsupported_published_property_types() {
+    public void GeneratePublishedModels_UnsupportedPropertyType_ReportsDiagnostic() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -96,6 +103,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -108,11 +116,13 @@ public class CodeFirstRegistryGeneratorTests {
 
         GeneratorDriver result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
 
+        // Assert
         result.GetRunResult().Diagnostics.ShouldContain(diagnostic => diagnostic.Id == "UCF001");
     }
 
     [Fact]
-    public void Reads_group_and_tab_metadata_from_derived_attributes() {
+    public void GenerateRegistry_DerivedGroupAndTabAttributes_EmitsLayoutMetadata() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -164,6 +174,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -181,6 +192,7 @@ public class CodeFirstRegistryGeneratorTests {
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText.ToString();
 
+        // Assert
         generatedSource.ShouldContain("\"marketing\"");
         generatedSource.ShouldContain("\"Marketing\"");
         generatedSource.ShouldContain("3, \"marketingTab\"");
@@ -188,7 +200,8 @@ public class CodeFirstRegistryGeneratorTests {
     }
 
     [Fact]
-    public void Reads_data_type_editor_ui_alias() {
+    public void GenerateRegistry_DataTypeEditorUiAlias_EmitsSeparateAliases() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -209,6 +222,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -227,12 +241,14 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("\"Umbraco.TextBox\"");
         generatedSource.ShouldContain("\"Umb.PropertyEditorUi.TextBox\"");
     }
 
     [Fact]
-    public void Generates_static_alias_for_data_type_classes() {
+    public void GenerateDataTypeAlias_DataTypeDeclaration_EmitsCompileTimeConstant() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -252,6 +268,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -270,11 +287,13 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("public const string Alias = \"codeFirstBoolean\";");
     }
 
     [Fact]
-    public void Resolves_generated_data_type_aliases_in_property_attributes() {
+    public void GenerateRegistry_GeneratedDataTypeAliasReference_ResolvesReferencedAlias() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -314,6 +333,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -327,17 +347,19 @@ public class CodeFirstRegistryGeneratorTests {
             .GetRunResult()
             .Results
             .Single();
+        // Assert
         generatorResult.Diagnostics.ShouldBeEmpty();
         string generatedSource = generatorResult.GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText
             .ToString();
 
-        generatedSource.ShouldContain("\"codeFirstLongText\"");
+        generatedSource.ShouldContain("\"description\", \"Description\", \"codeFirstLongText\"");
     }
 
     [Fact]
-    public void Reads_validation_metadata_from_derived_attributes() {
+    public void GenerateRegistry_DerivedValidationAttribute_EmitsValidationMetadata() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -376,6 +398,7 @@ public class CodeFirstRegistryGeneratorTests {
             }
             """;
 
+        // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         CSharpCompilation compilation = CSharpCompilation.Create(
@@ -393,6 +416,7 @@ public class CodeFirstRegistryGeneratorTests {
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText.ToString();
 
+        // Assert
         generatedSource.ShouldContain("\"^[A-Z]{3}-[0-9]{4}$\"");
         generatedSource.ShouldContain("\"Use the ABC-1234 format.\"");
     }

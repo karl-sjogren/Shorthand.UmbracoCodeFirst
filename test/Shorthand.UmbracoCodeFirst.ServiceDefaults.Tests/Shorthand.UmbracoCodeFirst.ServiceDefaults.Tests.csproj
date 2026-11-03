@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.ServiceDefaults\Shorthand.UmbracoCodeFirst.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -5,7 +5,8 @@ namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class CodeFirstSynchronizerTests {
     [Fact]
-    public async Task Synchronizes_data_types_before_document_types_Async() {
+    public async Task SynchronizeAsync_DataTypesBeforeDocumentTypes_AppliesDependenciesFirst_Async() {
+        // Arrange
         var registry = new TestRegistry([
             new(
                 CodeFirstDefinitionKind.DocumentType,
@@ -29,8 +30,10 @@ public class CodeFirstSynchronizerTests {
             TimeProvider.System,
             NullLogger<CodeFirstSynchronizer>.Instance);
 
+        // Act
         await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
 
+        // Assert
         store.AppliedAliases.ShouldBe(["codeFirstDecimal", "productPage"]);
     }
 
