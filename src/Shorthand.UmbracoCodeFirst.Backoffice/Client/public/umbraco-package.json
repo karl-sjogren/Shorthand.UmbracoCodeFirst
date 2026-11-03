@@ -1,0 +1,14 @@
+{
+  "id": "Shorthand.UmbracoCodeFirst.Backoffice",
+  "name": "Shorthand.UmbracoCodeFirst.Backoffice",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Shorthand Umbraco Code First Backoffice Bundle",
+      "alias": "Shorthand.UmbracoCodeFirst.Backoffice.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/ShorthandUmbracoCodeFirstBackoffice/shorthand-umbraco-code-first-backoffice.js"
+    }
+  ]
+}

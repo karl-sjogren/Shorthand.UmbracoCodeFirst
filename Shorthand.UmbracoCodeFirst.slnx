@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Shorthand.UmbracoCodeFirst.Benchmarks/Shorthand.UmbracoCodeFirst.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Shorthand.UmbracoCodeFirst.AppHost/Shorthand.UmbracoCodeFirst.AppHost.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst/Shorthand.UmbracoCodeFirst.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst.Backoffice/Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst.ServiceDefaults/Shorthand.UmbracoCodeFirst.ServiceDefaults.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst.SourceGenerators/Shorthand.UmbracoCodeFirst.SourceGenerators.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst.Umbraco/Shorthand.UmbracoCodeFirst.Umbraco.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Tests/Shorthand.UmbracoCodeFirst.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.TestHelpers/Shorthand.UmbracoCodeFirst.TestHelpers.csproj" />
+  </Folder>
+</Solution>
