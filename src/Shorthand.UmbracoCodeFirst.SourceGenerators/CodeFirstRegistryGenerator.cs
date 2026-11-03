@@ -33,7 +33,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 static (node, _) => node is ClassDeclarationSyntax classDeclaration
                     && classDeclaration.Modifiers.Any(SyntaxKind.PartialKeyword),
                 static (syntaxContext, _) => {
-                    INamedTypeSymbol symbol = (INamedTypeSymbol)syntaxContext.SemanticModel.GetDeclaredSymbol(syntaxContext.Node)!;
+                    var symbol = (INamedTypeSymbol)syntaxContext.SemanticModel.GetDeclaredSymbol(syntaxContext.Node)!;
                     return symbol.GetAttributes().Any(IsDefinitionAttribute) ? symbol : null;
                 })
             .Where(static symbol => symbol is not null)
@@ -41,7 +41,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         context.RegisterSourceOutput(
             definitions.Collect().Combine(context.CompilationProvider),
             static (productionContext, input) => {
-                ImmutableArray<INamedTypeSymbol> distinctDefinitions = input.Left
+                var distinctDefinitions = input.Left
                     .Distinct(SymbolEqualityComparer.Default)
                     .Cast<INamedTypeSymbol>()
                     .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal)
@@ -689,7 +689,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             .Where(argument => argument.Kind == TypedConstantKind.Type
                                && argument.Value is INamedTypeSymbol)
             .Select(argument => {
-                INamedTypeSymbol target = (INamedTypeSymbol)argument.Value!;
+                var target = (INamedTypeSymbol)argument.Value!;
                 var contentTypeAttribute = FindAttribute(target, _documentTypeAttributeMetadataName);
                 string targetName = contentTypeAttribute is null
                     ? target.Name

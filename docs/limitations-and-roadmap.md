@@ -10,6 +10,7 @@
   properties (mandatory, validation, label position, sort order), compositions
 - Non-destructive, ownership-based reconciliation with per-definition error reporting
 - Backoffice page with split tables, links, property details, errors and localization
+- Explicit backoffice cleanup preview and confirmation for obsolete owned items
 - Analyzers UCF100–UCF107, generator diagnostic UCF001
 
 ## Declared but not yet synchronized
@@ -31,6 +32,8 @@
 - Any deletion/migration (removed definitions, properties, tabs, groups stay in Umbraco)
 - Analyzer code fixes
 - Persisting the synchronization report across restarts; a dry-run mode
+- Per-property/group ownership markers (cleanup currently treats direct structure on an owned
+  Document Type as code-first-managed)
 - Multi-version support: the code targets Umbraco 18.3 and .NET 10 only
 
 ## Known behaviours worth knowing

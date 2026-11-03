@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
@@ -15,5 +16,6 @@ public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<ICodeFirstDefinitionStore, UmbracoCodeFirstDefinitionStore>();
         builder.Services.AddSingleton<CodeFirstSynchronizer>();
+        builder.Services.AddSingleton<CodeFirstCleanupService>();
     }
 }

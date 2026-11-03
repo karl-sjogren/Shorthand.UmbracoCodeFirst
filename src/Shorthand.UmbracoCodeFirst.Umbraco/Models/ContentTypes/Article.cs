@@ -7,6 +7,8 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
     "Article",
     Icon = "icon-document",
     AllowAsRoot = true)]
+[UCFComposite(typeof(HappySparkles))]
+[UCFComposite(typeof(SeoComposite))]
 [UCFDescription("An article managed by the code-first sample model.")]
 public partial class Article {
     [UCFProperty(

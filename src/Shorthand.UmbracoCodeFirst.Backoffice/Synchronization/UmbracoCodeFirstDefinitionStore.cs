@@ -108,6 +108,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         bool changed = contentType.Name != definition.Name;
         contentType.Name = definition.Name;
         changed |= ApplyTypeSettings(contentType, definition.Settings, definition.Alias);
+        changed |= ApplyPropertyGroups(contentType, definition);
         changed |= ApplyCompositions(contentType, definition);
         changed |= await ApplyGroupsAndPropertiesAsync(contentType, definition);
 
@@ -153,7 +154,20 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         CodeFirstDefinition definition) {
         bool changed = false;
         var desiredAliases = definition.CompositionAliases ?? [];
-        HashSet<string> desired = desiredAliases.ToHashSet(StringComparer.Ordinal);
+        var desired = desiredAliases.ToHashSet(StringComparer.Ordinal);
+
+        foreach(string existingAlias in contentType.CompositionAliases().ToArray()) {
+            if(desired.Contains(existingAlias)
+                || !HasMarker(contentType.Description, CompositionOwnershipMarker(existingAlias))) {
+                continue;
+            }
+
+            contentType.RemoveContentType(existingAlias);
+            contentType.Description = RemoveMarker(
+                contentType.Description,
+                CompositionOwnershipMarker(existingAlias));
+            changed = true;
+        }
 
         foreach(string compositionAlias in desiredAliases) {
             var composition = contentTypeService.Get(compositionAlias);
@@ -172,19 +186,6 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 contentType.Description = AppendMarker(contentType.Description, marker);
                 changed = true;
             }
-        }
-
-        foreach(string existingAlias in contentType.CompositionAliases().ToArray()) {
-            if(desired.Contains(existingAlias)
-                || !HasMarker(contentType.Description, CompositionOwnershipMarker(existingAlias))) {
-                continue;
-            }
-
-            contentType.RemoveContentType(existingAlias);
-            contentType.Description = RemoveMarker(
-                contentType.Description,
-                CompositionOwnershipMarker(existingAlias));
-            changed = true;
         }
 
         return changed;
@@ -276,15 +277,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     private async Task<bool> ApplyGroupsAndPropertiesAsync(
         IContentType contentType,
         CodeFirstDefinition definition) {
-        bool changed = false;
-        foreach(var tab in definition.EffectiveTabs) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab);
-        }
-
-        foreach(var group in definition.EffectiveGroups) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group);
-        }
-
+        bool changed = ApplyPropertyGroups(contentType, definition);
         foreach(var property in definition.Properties) {
             var dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
             if(dataType is null) {
@@ -336,6 +329,40 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         return changed;
     }
 
+    private static bool ApplyPropertyGroups(
+        IContentType contentType,
+        CodeFirstDefinition definition) {
+        bool changed = false;
+        var desiredAliases = definition.EffectiveTabs
+            .Concat(definition.EffectiveGroups)
+            .Select(group => group.Alias)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach(var existingGroup in contentType.PropertyGroups.ToArray()) {
+            if(desiredAliases.Contains(existingGroup.Alias)
+                || existingGroup.PropertyTypes?.Any() == true
+                || string.IsNullOrWhiteSpace(existingGroup.Name)
+                || !string.Equals(
+                    existingGroup.Alias,
+                    ToLegacyAlias(existingGroup.Name),
+                    StringComparison.Ordinal)) {
+                continue;
+            }
+
+            contentType.RemovePropertyGroup(existingGroup.Alias);
+            changed = true;
+        }
+
+        foreach(var tab in definition.EffectiveTabs) {
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab);
+        }
+
+        foreach(var group in definition.EffectiveGroups) {
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group);
+        }
+
+        return changed;
+    }
+
     private static bool ApplyPropertyGroup(
         IContentType contentType,
         string definitionAlias,
@@ -344,6 +371,23 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         bool changed = false;
         var existingGroup = contentType.PropertyGroups
             .FirstOrDefault(candidate => candidate.Alias == definition.Alias);
+        if(existingGroup is null) {
+            string legacyAlias = ToLegacyAlias(definition.Name);
+            existingGroup = contentType.PropertyGroups
+                .FirstOrDefault(candidate =>
+                    candidate.Type == type
+                    && (string.Equals(candidate.Alias, legacyAlias, StringComparison.Ordinal)
+                        || (string.Equals(candidate.Name, definition.Name, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(
+                                candidate.Alias,
+                                definition.Name,
+                                StringComparison.OrdinalIgnoreCase))));
+            if(existingGroup is not null && existingGroup.Alias != definition.Alias) {
+                existingGroup.Alias = definition.Alias;
+                changed = true;
+            }
+        }
+
         if(existingGroup is null) {
             if(!contentType.AddPropertyGroup(definition.Alias, definition.Name)) {
                 throw new InvalidOperationException(
@@ -371,6 +415,14 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         return changed;
+    }
+
+    private static string ToLegacyAlias(string value) {
+        if(value.Length == 0) {
+            return value;
+        }
+
+        return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
     private static bool ApplyTypeSettings(

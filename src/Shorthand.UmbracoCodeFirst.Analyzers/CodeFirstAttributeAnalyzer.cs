@@ -208,15 +208,15 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ISymbol symbol,
         ConcurrentBag<AliasOccurrence> occurrences,
         AliasScope scope) {
-        int aliasIndex = attribute.AttributeClass?.Name == "UCFPropertyAttribute"
-            ? 2
-            : 0;
-        if(attribute.AttributeConstructor?.Parameters.Length <= aliasIndex
-            || attribute.ConstructorArguments.Length <= aliasIndex
-            || attribute.ConstructorArguments[aliasIndex].Value is not string alias
-            || attribute.ConstructorArguments.Length == 1
-            || (attribute.AttributeClass?.Name is "UCFContentTypeAttribute" or "UCFDataTypeAttribute"
-                && attribute.ConstructorArguments.Length < 2)) {
+        string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
+        bool hasExplicitAlias = attributeName switch {
+            "UCFContentTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
+            "UCFDataTypeAttribute" => attribute.ConstructorArguments.Length >= 3,
+            "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
+            _ => false,
+        };
+        if(!hasExplicitAlias
+            || attribute.ConstructorArguments[0].Value is not string alias) {
             return;
         }
 
@@ -295,7 +295,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                 occurrence.Alias));
         }
 
-        foreach(var group in occurrences
+        foreach(var group in occurrences.Where(static occurrence =>
+                    occurrence.Symbol is not IPropertySymbol || occurrence.LayoutKind is not null)
                     .GroupBy(static occurrence => $"{occurrence.Scope}:{GetScopeName(occurrence)}:{occurrence.Alias}")) {
             var entries = group.ToArray();
             if(entries.Length < 2) {
@@ -317,6 +318,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             }
         }
 
+        ReportPropertyAliasDiagnostics(context, occurrences, compositions);
+
         foreach(var group in validations
                     .GroupBy(static validation => $"{validation.ContainingType.ToDisplayString()}:{validation.Expression}:{validation.Message}")) {
             var entries = group.ToArray();
@@ -327,6 +330,83 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                     entries[0].Expression));
             }
         }
+    }
+
+    private static void ReportPropertyAliasDiagnostics(
+        CompilationAnalysisContext context,
+        ConcurrentBag<AliasOccurrence> occurrences,
+        ConcurrentBag<CompositionOccurrence> compositions) {
+        var propertyOccurrences = occurrences
+            .Where(static occurrence => occurrence.Symbol is IPropertySymbol)
+            .ToArray();
+
+        foreach(var group in propertyOccurrences
+                    .GroupBy(static occurrence =>
+                        $"{GetScopeName(occurrence)}:{occurrence.Alias}")) {
+            var entries = group.ToArray();
+            if(entries.Length > 1) {
+                ReportDuplicateAlias(context, entries[1]);
+            }
+        }
+
+        Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>> graph =
+            new(SymbolEqualityComparer.Default);
+        foreach(var composition in compositions.Where(static composition => composition.TargetHasContentType)) {
+            if(!graph.TryGetValue(composition.Source, out var targets)) {
+                targets = [];
+                graph.Add(composition.Source, targets);
+            }
+
+            targets.Add(composition.Target);
+        }
+
+        IEnumerable<INamedTypeSymbol> contentTypes = propertyOccurrences
+            .Select(static occurrence => occurrence.Symbol.ContainingType)
+            .OfType<INamedTypeSymbol>()
+            .Where(static type => type.GetAttributes().Any(HasContentTypeAttribute))
+            .Concat(graph.Keys)
+            .Concat(graph.Values.SelectMany(static targets => targets))
+            .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+        foreach(var contentType in contentTypes) {
+            HashSet<INamedTypeSymbol> effectiveTypes = new(SymbolEqualityComparer.Default);
+            CollectEffectiveCompositionTypes(contentType, graph, effectiveTypes);
+
+            foreach(var group in propertyOccurrences
+                        .Where(occurrence => occurrence.Symbol.ContainingType is INamedTypeSymbol containingType
+                                             && effectiveTypes.Contains(containingType))
+                        .GroupBy(static occurrence => occurrence.Alias)) {
+                var entries = group.ToArray();
+                if(entries.Select(static entry => entry.Symbol.ContainingType)
+                    .Distinct(SymbolEqualityComparer.Default)
+                    .Count() > 1) {
+                    ReportDuplicateAlias(context, entries[1]);
+                }
+            }
+        }
+    }
+
+    private static void CollectEffectiveCompositionTypes(
+        INamedTypeSymbol source,
+        IReadOnlyDictionary<INamedTypeSymbol, List<INamedTypeSymbol>> graph,
+        HashSet<INamedTypeSymbol> effectiveTypes) {
+        if(!effectiveTypes.Add(source)
+            || !graph.TryGetValue(source, out var targets)) {
+            return;
+        }
+
+        foreach(var target in targets) {
+            CollectEffectiveCompositionTypes(target, graph, effectiveTypes);
+        }
+    }
+
+    private static void ReportDuplicateAlias(
+        CompilationAnalysisContext context,
+        AliasOccurrence occurrence) {
+        context.ReportDiagnostic(Diagnostic.Create(
+            _duplicateAlias,
+            occurrence.Location ?? occurrence.Symbol.Locations.FirstOrDefault(),
+            occurrence.Alias));
     }
 
     private static void ReportCompositionDiagnostics(

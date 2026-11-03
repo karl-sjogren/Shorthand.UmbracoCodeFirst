@@ -51,7 +51,7 @@ public static class CodeFirstStatusMapping {
         ISynchronizationReportStore reportStore,
         IReadOnlyDictionary<(CodeFirstDefinitionKind Kind, string Alias), string>? backofficeUrls = null) {
         var report = reportStore.Current;
-        Dictionary<(CodeFirstDefinitionKind Kind, string Alias), SynchronizationItem> results =
+        var results =
             report.Items.ToDictionary(item => (item.Kind, item.Alias));
 
         IReadOnlyList<CodeFirstStatusItem> definitions = registry.Definitions

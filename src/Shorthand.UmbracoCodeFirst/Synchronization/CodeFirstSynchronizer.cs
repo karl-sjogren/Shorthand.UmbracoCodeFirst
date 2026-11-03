@@ -35,11 +35,11 @@ public sealed class CodeFirstSynchronizer(
 
     private static IReadOnlyList<CodeFirstDefinition> OrderDefinitions(
         IReadOnlyList<CodeFirstDefinition> definitions) {
-        List<CodeFirstDefinition> ordered = definitions
+        var ordered = definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .OrderBy(definition => definition.Alias, StringComparer.Ordinal)
             .ToList();
-        Dictionary<string, CodeFirstDefinition> contentTypes = definitions
+        var contentTypes = definitions
             .Where(definition => definition.Kind != CodeFirstDefinitionKind.DataType)
             .ToDictionary(definition => definition.Alias, StringComparer.Ordinal);
         HashSet<string> visiting = new(StringComparer.Ordinal);

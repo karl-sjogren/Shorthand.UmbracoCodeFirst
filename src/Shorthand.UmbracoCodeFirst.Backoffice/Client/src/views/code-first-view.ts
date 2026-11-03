@@ -44,6 +44,23 @@ type StatusResponse = {
   contentTypes: StatusItem[];
 };
 
+type CleanupItem = {
+  kind: string;
+  alias: string;
+  name: string;
+  parentAlias?: string;
+};
+
+type CleanupResponse = {
+  items: CleanupItem[];
+};
+
+type CleanupResult = {
+  removedCount: number;
+  removed: CleanupItem[];
+  failed: { item: CleanupItem; message: string }[];
+};
+
 @customElement("shorthand-code-first-view")
 export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   @state()
@@ -51,6 +68,18 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
 
   @state()
   private error?: string;
+
+  @state()
+  private cleanup?: CleanupResponse;
+
+  @state()
+  private cleanupResult?: CleanupResult;
+
+  @state()
+  private cleanupError?: string;
+
+  @state()
+  private cleanupRunning = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -106,6 +135,13 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                 : ""}
             </div>
           </div>
+          <div class="header-action">
+            <uui-button
+              look="secondary"
+              label=${this.localize.term("codeFirst_cleanupButton")}
+              @click=${this.openCleanup}
+            ></uui-button>
+          </div>
         </div>
         <div class="summary">
           ${this.renderSummaryMetric(
@@ -129,6 +165,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
           )}
         </div>
       </uui-box>
+      ${this.cleanup ? this.renderCleanup() : ""}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_dataTypesHeadline"),
         this.status.dataTypes,
@@ -139,6 +176,101 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
         this.status.contentTypes,
         true,
       )}
+    `;
+  }
+
+  private renderCleanup() {
+    const items = this.cleanup?.items ?? [];
+    return html`
+      <uui-box class="cleanup-box" headline=${this.localize.term("codeFirst_cleanupHeadline")}>
+        <p>${this.localize.term("codeFirst_cleanupDescription")}</p>
+        ${this.cleanupError
+          ? html`<p class="cleanup-error">${this.cleanupError}</p>`
+          : ""}
+        ${this.cleanupResult
+          ? html`
+              <p class="cleanup-result">
+                ${this.localize.term(
+                  "codeFirst_cleanupCompleted",
+                  this.cleanupResult.removedCount,
+                )}
+              </p>
+              ${this.cleanupResult.failed.length > 0
+                ? html`
+                    <p class="cleanup-error">
+                      ${this.localize.term(
+                        "codeFirst_cleanupFailed",
+                        this.cleanupResult.failed.length,
+                      )}
+                    </p>
+                    <ul>
+                      ${this.cleanupResult.failed.map(
+                        (failure) =>
+                          html`<li>
+                            ${failure.item.name}: ${failure.message}
+                          </li>`,
+                      )}
+                    </ul>
+                  `
+                : ""}
+              <uui-button
+                look="secondary"
+                label=${this.localize.term("codeFirst_cleanupClose")}
+                @click=${this.closeCleanup}
+              ></uui-button>
+            `
+          : html`
+              <p class="cleanup-count">
+                ${this.localize.term("codeFirst_cleanupItemCount", items.length)}
+              </p>
+              ${items.length > 0
+                ? html`
+                    <uui-table>
+                      <uui-table-head>
+                        <uui-table-head-cell
+                          >${this.localize.term("codeFirst_kind")}</uui-table-head-cell
+                        >
+                        <uui-table-head-cell
+                          >${this.localize.term("codeFirst_name")}</uui-table-head-cell
+                        >
+                        <uui-table-head-cell
+                          >${this.localize.term("codeFirst_alias")}</uui-table-head-cell
+                        >
+                        <uui-table-head-cell
+                          >${this.localize.term("codeFirst_parent")}</uui-table-head-cell
+                        >
+                      </uui-table-head>
+                      ${items.map(
+                        (item) => html`
+                          <uui-table-row>
+                            <uui-table-cell>${item.kind}</uui-table-cell>
+                            <uui-table-cell>${item.name}</uui-table-cell>
+                            <uui-table-cell>${item.alias}</uui-table-cell>
+                            <uui-table-cell>${item.parentAlias ?? ""}</uui-table-cell>
+                          </uui-table-row>
+                        `,
+                      )}
+                    </uui-table>
+                  `
+                : html`<p>${this.localize.term("codeFirst_cleanupNothing")}</p>`}
+              <div class="cleanup-buttons">
+                <uui-button
+                  look="secondary"
+                  label=${this.localize.term("codeFirst_cleanupCancel")}
+                  @click=${this.closeCleanup}
+                ></uui-button>
+                <uui-button
+                  look="primary"
+                  color="danger"
+                  ?disabled=${items.length === 0 || this.cleanupRunning}
+                  label=${this.cleanupRunning
+                    ? this.localize.term("codeFirst_cleanupRunning")
+                    : this.localize.term("codeFirst_cleanupProceed")}
+                  @click=${this.applyCleanup}
+                ></uui-button>
+              </div>
+            `}
+      </uui-box>
     `;
   }
 
@@ -366,6 +498,70 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     }
   }
 
+  private async openCleanup(): Promise<void> {
+    this.cleanupError = undefined;
+    this.cleanupResult = undefined;
+    try {
+      const result = await client.get<CleanupResponse>({
+        security: [{ scheme: "bearer", type: "http" }],
+        url: "/umbraco/management/api/v1/shorthandumbracocodefirstbackoffice/cleanup-preview",
+        throwOnError: false,
+      });
+      if (!result.response?.ok || !result.data) {
+        throw new Error(
+          this.localize.term(
+            "codeFirst_cleanupRequestFailed",
+            result.response?.status ?? 0,
+          ),
+        );
+      }
+
+      this.cleanup = result.data as unknown as CleanupResponse;
+    } catch (error) {
+      this.cleanupError =
+        error instanceof Error
+          ? error.message
+          : this.localize.term("codeFirst_cleanupRequestFailedGeneric");
+      this.cleanup = { items: [] };
+    }
+  }
+
+  private closeCleanup(): void {
+    this.cleanup = undefined;
+    this.cleanupResult = undefined;
+    this.cleanupError = undefined;
+  }
+
+  private async applyCleanup(): Promise<void> {
+    this.cleanupRunning = true;
+    this.cleanupError = undefined;
+    try {
+      const result = await client.post<CleanupResult>({
+        security: [{ scheme: "bearer", type: "http" }],
+        url: "/umbraco/management/api/v1/shorthandumbracocodefirstbackoffice/cleanup",
+        throwOnError: false,
+      });
+      if (!result.response?.ok || !result.data) {
+        throw new Error(
+          this.localize.term(
+            "codeFirst_cleanupRequestFailed",
+            result.response?.status ?? 0,
+          ),
+        );
+      }
+
+      this.cleanupResult = result.data as unknown as CleanupResult;
+      await this.loadStatus();
+    } catch (error) {
+      this.cleanupError =
+        error instanceof Error
+          ? error.message
+          : this.localize.term("codeFirst_cleanupRequestFailedGeneric");
+    } finally {
+      this.cleanupRunning = false;
+    }
+  }
+
   static override styles = css`
     :host {
       display: block;
@@ -386,6 +582,44 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       align-items: flex-start;
       gap: var(--uui-size-4);
       min-width: 0;
+    }
+
+    .header-action {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: flex-start;
+      margin-left: auto;
+    }
+
+    @media (max-width: 600px) {
+      .header-content {
+        flex-wrap: wrap;
+      }
+
+      .header-action {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+
+    .cleanup-box {
+      border: 2px solid var(--uui-color-danger);
+    }
+
+    .cleanup-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--uui-size-3);
+      margin-top: var(--uui-size-layout-1);
+    }
+
+    .cleanup-error {
+      color: var(--uui-color-danger);
+    }
+
+    .cleanup-result {
+      color: var(--uui-color-positive);
+      font-weight: 700;
     }
 
     .header-icon {

@@ -85,7 +85,7 @@ public class AnalyzerProjectTests {
             using Shorthand.UmbracoCodeFirst.Attributes;
             [UCFContentType("product", "Product")]
             public partial class Product;
-            [UCFDataType("product", "Product editor")]
+            [UCFDataType("product", "Product editor", "text")]
             public partial class ProductEditor;
             """;
 
@@ -94,6 +94,106 @@ public class AnalyzerProjectTests {
 
         // Assert
         diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
+    public void Analyze_SharedDataTypeAcrossComposedTypes_DoesNotReportDuplicatePropertyAliasDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("base", "Base")]
+            public partial class Base {
+                [UCFProperty("title", "Title", "text")]
+                public partial string Title { get; }
+            }
+            [UCFContentType("article", "Article")]
+            [UCFComposite(typeof(Base))]
+            public partial class Article {
+                [UCFProperty("summary", "Summary", "text")]
+                public partial string Summary { get; }
+            }
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldNotContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
+    public void Analyze_SameCompositionReusedByMultipleContentTypes_DoesNotReportDuplicatePropertyAliasDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("seo", "SEO")]
+            public partial class Seo {
+                [UCFProperty("description", "Description", "text")]
+                public partial string Description { get; }
+            }
+            [UCFContentType("article", "Article")]
+            [UCFComposite(typeof(Seo))]
+            public partial class Article;
+            [UCFContentType("product", "Product")]
+            [UCFComposite(typeof(Seo))]
+            public partial class Product;
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldNotContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
+    public void Analyze_PropertyAliasConflictingWithComposition_ReportsDuplicateAliasDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("seo", "SEO")]
+            public partial class Seo {
+                [UCFProperty("description", "Description", "text")]
+                public partial string Description { get; }
+            }
+            [UCFContentType("article", "Article")]
+            [UCFComposite(typeof(Seo))]
+            public partial class Article {
+                [UCFProperty("description", "Other description", "text")]
+                public partial string OtherDescription { get; }
+            }
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
+    public void Analyze_DuplicatePropertyAliasesWithinContentType_ReportsDuplicateAliasDiagnostic() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("article", "Article")]
+            public partial class Article {
+                [UCFProperty("title", "Title", "text")]
+                public partial string Title { get; }
+                [UCFProperty("title", "Other title", "text")]
+                public partial string OtherTitle { get; }
+            }
+            """;
+
+        // Act
+        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+
+        // Assert
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
     }
 
     [Fact]
@@ -220,7 +320,7 @@ public class AnalyzerProjectTests {
 
     private static ImmutableArray<Diagnostic> Analyze(string source) {
         source = _attributeDefinitions + source;
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "AnalyzerTests",
             [CSharpSyntaxTree.ParseText(source)],
             [
@@ -241,7 +341,10 @@ public class AnalyzerProjectTests {
     private const string _attributeDefinitions = """
         namespace Shorthand.UmbracoCodeFirst.Attributes;
         public sealed class UCFContentTypeAttribute(string alias, string name) : global::System.Attribute;
-        public sealed class UCFDataTypeAttribute(string alias, string name) : global::System.Attribute;
+        public sealed class UCFDataTypeAttribute : global::System.Attribute {
+            public UCFDataTypeAttribute(string name, string editorAlias) { }
+            public UCFDataTypeAttribute(string alias, string name, string editorAlias) { }
+        }
         public sealed class UCFPropertyAttribute(string alias, string name, string dataTypeAlias) : global::System.Attribute;
         [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
         public sealed class UCFCompositeAttribute(global::System.Type contentType) : global::System.Attribute;

@@ -10,7 +10,8 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
     AllowAsRoot = true,
     IsListView = true,
     Variations = "Invariant")]
-[UCFComposite(typeof(Article))]
+[UCFComposite(typeof(HappySparkles))]
+[UCFComposite(typeof(SeoComposite))]
 [UCFDescription("A deliberately comprehensive product page used to exercise the code-first model generator.")]
 public partial class ProductPage {
     [UCFProperty("productName", "Product name", "codeFirstText", SortOrder = 0, Mandatory = true, LabelOnTop = true)]

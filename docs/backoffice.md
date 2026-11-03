@@ -15,6 +15,8 @@ Umbraco backoffice at **Settings > Advanced > Code First**
   Document Type. Rows expand to show the type's properties (alias, name, Data Type, group/tab,
   mandatory, etc.).
 - **Failure messages** – for a failed item, the exception message from the failed synchronization.
+- **Cleanup** – a button opens a review panel listing obsolete owned types, properties, groups and
+  tabs. The user can cancel or explicitly proceed; cleanup is never automatic.
 
 Links use the persisted Umbraco keys, so they appear once an item has actually been created.
 
@@ -37,6 +39,8 @@ The page reads from a Management API endpoint:
 
 The report is the in-memory report of the current process; restarting the site re-runs the
 synchronization and refreshes it.
+
+See [Explicit cleanup](cleanup.md) for the candidate and ownership rules.
 
 ## Building the client
 

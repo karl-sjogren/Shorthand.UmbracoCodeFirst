@@ -34,7 +34,7 @@ public class CodeFirstRegistryGeneratorTests {
 
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -93,7 +93,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [
@@ -157,7 +157,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -228,7 +228,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -248,6 +248,65 @@ public class CodeFirstRegistryGeneratorTests {
         generatedSource.ShouldContain("\"Marketing\"");
         generatedSource.ShouldContain("3, \"marketingTab\"");
         generatedSource.ShouldContain("\"Marketing tab\", 4");
+    }
+
+    [Fact]
+    public void GenerateRegistry_PrimaryConstructorDerivedTabAttribute_PreservesExplicitAlias() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public class UCFTabAttribute : global::System.Attribute
+                {
+                    public UCFTabAttribute(string alias, string name, int sortOrder) { }
+                }
+
+                public sealed class SeoTabAttribute()
+                    : UCFTabAttribute("seo", "SEO", 4);
+
+                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                {
+                    public UCFContentTypeAttribute(string name) { }
+                }
+
+                public sealed class UCFPropertyAttribute : global::System.Attribute
+                {
+                    public UCFPropertyAttribute(string name, string dataTypeAlias) { }
+                }
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                public partial class Article
+                {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
+                    [Shorthand.UmbracoCodeFirst.Attributes.SeoTab]
+                    public partial string Title { get; }
+                }
+            }
+            """;
+
+        // Act
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        string generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        // Assert
+        generatedSource.ShouldContain("\"seo\", \"SEO\", 4");
     }
 
     [Fact]
@@ -276,7 +335,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -322,7 +381,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -387,7 +446,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -452,7 +511,7 @@ public class CodeFirstRegistryGeneratorTests {
         // Act
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
-        CSharpCompilation compilation = CSharpCompilation.Create(
+        var compilation = CSharpCompilation.Create(
             "GeneratorTests",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],

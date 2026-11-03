@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Api.Management.Routing;
@@ -54,4 +55,16 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
 
         return CodeFirstStatusMapping.Map(registry, reportStore, urls);
     }
+
+    [HttpGet("cleanup-preview")]
+    [ProducesResponseType<CodeFirstCleanupResponse>(StatusCodes.Status200OK)]
+    public Task<CodeFirstCleanupResponse> CleanupPreviewAsync(
+        [FromServices] CodeFirstCleanupService cleanupService) =>
+        cleanupService.PreviewAsync();
+
+    [HttpPost("cleanup")]
+    [ProducesResponseType<CodeFirstCleanupResult>(StatusCodes.Status200OK)]
+    public Task<CodeFirstCleanupResult> CleanupAsync(
+        [FromServices] CodeFirstCleanupService cleanupService) =>
+        cleanupService.ApplyAsync();
 }

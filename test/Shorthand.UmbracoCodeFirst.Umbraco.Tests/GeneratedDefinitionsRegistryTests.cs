@@ -26,6 +26,7 @@ public class GeneratedDefinitionsRegistryTests {
         productPage.Properties.ShouldContain(property => property.DataTypeAlias == "codeFirstLongText");
         productPage.EffectiveTabs.Select(tab => tab.Alias).ShouldContain("marketing");
         productPage.EffectiveGroups.Select(group => group.Alias).ShouldContain("pricing");
-        (productPage.CompositionAliases ?? []).ShouldContain("article");
+        (productPage.CompositionAliases ?? []).ShouldContain("happySparkles");
+        (productPage.CompositionAliases ?? []).ShouldContain("seoComposite");
     }
 }

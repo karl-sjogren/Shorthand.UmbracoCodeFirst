@@ -20,6 +20,7 @@ definitions in Umbraco. A backoffice page under **Settings** shows the result.
 | [Synchronization](synchronization.md) | How definitions are created/updated, ownership, what is never touched |
 | [Compositions](compositions.md) | `UCFComposite`, ordering and ownership of compositions |
 | [Backoffice extension](backoffice.md) | The Settings > Code First page and its API |
+| [Explicit cleanup](cleanup.md) | Previewing and confirming removal of obsolete owned items |
 | [Analyzers](analyzers/README.md) | Compile-time rules UCF100–UCF107 |
 | [Development](development.md) | Building, testing, the local Aspire host |
 | [Limitations and roadmap](limitations-and-roadmap.md) | What is implemented, partially implemented and planned |
