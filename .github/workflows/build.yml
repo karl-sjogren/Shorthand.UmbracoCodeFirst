@@ -29,6 +29,7 @@ env:
   NUGET_CERT_REVOCATION_MODE: offline
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
   PUBLISH_CODECOV: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/develop') || startsWith(github.ref, 'refs/heads/main')
+  RUN_UMBRACO_INTEGRATION_TESTS: true
 
 jobs:
 
