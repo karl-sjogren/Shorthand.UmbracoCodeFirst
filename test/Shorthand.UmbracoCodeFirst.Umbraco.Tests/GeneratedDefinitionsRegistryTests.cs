@@ -1,32 +1,29 @@
-using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
+using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public class GeneratedDefinitionsRegistryTests {
     [Fact]
-    public void GeneratedRegistry_SampleDefinitions_ContainsDependenciesAndLayout() {
-        // Arrange
-        GeneratedCodeFirstDefinitionRegistry registry = new();
-
-        // Act
+    public void IntegrationRegistry_ContainsDependenciesAndLayout() {
+        var registry = new IntegrationTestDefinitionRegistry();
         var definitions = registry.Definitions;
 
-        // Assert
         definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
-            .ShouldContain("codeFirstText");
+            .ShouldContain("integrationText");
         definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
             .Select(definition => definition.Alias)
-            .ShouldContain("productPage");
+            .ShouldContain("integrationComposedPage");
 
-        var productPage = definitions.Single(definition => definition.Alias == "productPage");
-        productPage.Properties.ShouldContain(property => property.DataTypeAlias == "codeFirstLongText");
-        productPage.EffectiveTabs.Select(tab => tab.Alias).ShouldContain("marketing");
-        productPage.EffectiveGroups.Select(group => group.Alias).ShouldContain("pricing");
-        (productPage.CompositionAliases ?? []).ShouldContain("happySparkles");
-        (productPage.CompositionAliases ?? []).ShouldContain("seoComposite");
+        var composedPage = definitions.Single(
+            definition => definition.Alias == "integrationComposedPage");
+        composedPage.Properties.ShouldContain(
+            property => property.DataTypeAlias == "integrationText");
+        composedPage.EffectiveTabs.Select(tab => tab.Alias).ShouldContain("page");
+        (composedPage.CompositionAliases ?? [])
+            .ShouldContain("integrationNestedComposition");
     }
 }

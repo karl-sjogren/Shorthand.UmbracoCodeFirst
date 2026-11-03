@@ -54,7 +54,10 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
                     .UseSetting("Umbraco:CMS:Unattended:UpgradeUnattended", "true")
                     .UseSetting("Umbraco:CMS:Unattended:UnattendedUserName", "codefirst")
                     .UseSetting("Umbraco:CMS:Unattended:UnattendedUserEmail", "codefirst@example.com")
-                    .UseSetting("Umbraco:CMS:Unattended:UnattendedUserPassword", "codefirst123!");
+                    .UseSetting("Umbraco:CMS:Unattended:UnattendedUserPassword", "codefirst123!")
+                    .UseSetting(
+                        "Shorthand:UmbracoCodeFirst:DisableStartupSynchronization",
+                        "true");
             });
         await _application.StartAsync(_startupTimeout.Token);
     }

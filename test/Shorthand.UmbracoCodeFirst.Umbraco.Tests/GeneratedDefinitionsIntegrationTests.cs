@@ -19,18 +19,19 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
 
         // Act
         using var scope = fixture.Services.CreateScope();
+        await SynchronizeTestDefinitionsAsync(scope.ServiceProvider);
         var dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
         var contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToList();
-        var productPage = contentTypeService.Get("productPage");
+        var composedPage = contentTypeService.Get("integrationComposedPage");
 
         // Assert
-        dataTypes.Select(dataType => dataType.EditorAlias).ShouldContain("Umbraco.TextBox");
-        dataTypes.Select(dataType => dataType.EditorAlias).ShouldContain("Umbraco.Decimal");
-        productPage.ShouldNotBeNull();
-        productPage!.PropertyTypes.Select(property => property.Alias).ShouldContain("description");
-        productPage.PropertyGroups.Select(group => group.Alias).ShouldContain("pricing");
-        productPage.CompositionAliases().ShouldContain("article");
+        dataTypes.Select(dataType => dataType.Name).ShouldContain("Integration Text");
+        composedPage.ShouldNotBeNull();
+        composedPage!.PropertyTypes.Select(property => property.Alias).ShouldContain("pageTitle");
+        composedPage.PropertyGroups.Select(group => group.Alias).ShouldContain("page");
+        composedPage.CompositionAliases().ShouldContain("integrationNestedComposition");
+        composedPage.CompositionAliases().ShouldContain("integrationMetadataComposition");
     }
 
     [Fact]
@@ -41,6 +42,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         }
 
         using var scope = fixture.Services.CreateScope();
+        await SynchronizeTestDefinitionsAsync(scope.ServiceProvider);
         var store = scope.ServiceProvider.GetRequiredService<ICodeFirstDefinitionStore>();
         var synchronizer = new CodeFirstSynchronizer(
             new IntegrationTestDefinitionRegistry(),
@@ -78,5 +80,16 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
             .ShouldContain("page");
         siblingPage.PropertyGroups.Select(group => group.Alias)
             .ShouldContain("page");
+    }
+
+    private static async Task SynchronizeTestDefinitionsAsync(IServiceProvider services) {
+        var synchronizer = new CodeFirstSynchronizer(
+            new IntegrationTestDefinitionRegistry(),
+            services.GetRequiredService<ICodeFirstDefinitionStore>(),
+            services.GetRequiredService<ISynchronizationReportStore>(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+        report.FailedCount.ShouldBe(0);
     }
 }

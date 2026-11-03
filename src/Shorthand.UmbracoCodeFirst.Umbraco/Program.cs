@@ -28,7 +28,9 @@ public partial class Program {
 
         await app.BootUmbracoAsync();
 
-        using(var scope = app.Services.CreateScope()) {
+        if(!app.Configuration.GetValue<bool>(
+                "Shorthand:UmbracoCodeFirst:DisableStartupSynchronization")) {
+            using var scope = app.Services.CreateScope();
             await scope.ServiceProvider
                 .GetRequiredService<CodeFirstSynchronizer>()
                 .SynchronizeAsync();

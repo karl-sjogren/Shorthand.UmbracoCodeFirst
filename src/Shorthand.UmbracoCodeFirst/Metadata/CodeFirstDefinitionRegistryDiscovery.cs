@@ -5,13 +5,19 @@ namespace Shorthand.UmbracoCodeFirst.Metadata;
 public static class CodeFirstDefinitionRegistryDiscovery {
     public static ICodeFirstDefinitionRegistry Discover() {
         var registryType = typeof(ICodeFirstDefinitionRegistry);
-        var implementation = AppDomain.CurrentDomain.GetAssemblies()
+        var implementations = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(GetLoadableTypes)
-            .FirstOrDefault(type =>
+            .Where(type =>
                 !type.IsAbstract &&
                 !type.IsInterface &&
                 registryType.IsAssignableFrom(type) &&
-                type.GetConstructor(Type.EmptyTypes) is not null);
+                type.GetConstructor(Type.EmptyTypes) is not null)
+            .ToArray();
+        var implementation = implementations
+            .OrderByDescending(type => type.Name == "GeneratedCodeFirstDefinitionRegistry")
+            .ThenBy(type => type.Assembly.GetName().Name, StringComparer.Ordinal)
+            .ThenBy(type => type.FullName, StringComparer.Ordinal)
+            .FirstOrDefault();
 
         return implementation is null
             ? new EmptyCodeFirstDefinitionRegistry()
