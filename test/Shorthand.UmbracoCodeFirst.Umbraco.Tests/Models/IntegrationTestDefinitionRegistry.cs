@@ -1,51 +1,6 @@
-using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Metadata;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
-
-[UCFDataType("integrationText", "Integration Text", "Umbraco.TextBox")]
-public partial class IntegrationTextDataType {
-    public const string Alias = "integrationText";
-}
-
-[UCFDocumentType("integrationCompositionBase", "Integration Composition Base")]
-public partial class IntegrationCompositionBase {
-    [UCFProperty("sharedTitle", "Shared title", IntegrationTextDataType.Alias)]
-    [UCFGroup("shared", "Shared", 0)]
-    public string SharedTitle { get; } = string.Empty;
-}
-
-[UCFDocumentType("integrationNestedComposition", "Integration Nested Composition")]
-[UCFComposite(typeof(IntegrationCompositionBase))]
-public partial class IntegrationNestedComposition {
-    [UCFProperty("nestedValue", "Nested value", IntegrationTextDataType.Alias)]
-    [UCFGroup("nested", "Nested", 1)]
-    public string NestedValue { get; } = string.Empty;
-}
-
-[UCFDocumentType("integrationMetadataComposition", "Integration Metadata Composition")]
-public partial class IntegrationMetadataComposition {
-    [UCFProperty("metadataValue", "Metadata value", IntegrationTextDataType.Alias)]
-    [UCFGroup("metadata", "Metadata", 0)]
-    public string MetadataValue { get; } = string.Empty;
-}
-
-[UCFDocumentType("integrationComposedPage", "Integration Composed Page")]
-[UCFComposite(typeof(IntegrationNestedComposition))]
-[UCFComposite(typeof(IntegrationMetadataComposition))]
-public partial class IntegrationComposedPage {
-    [UCFProperty("pageTitle", "Page title", IntegrationTextDataType.Alias)]
-    [UCFTab("page", "Page", 0)]
-    public string PageTitle { get; } = string.Empty;
-}
-
-[UCFDocumentType("integrationSiblingPage", "Integration Sibling Page")]
-[UCFComposite(typeof(IntegrationCompositionBase))]
-public partial class IntegrationSiblingPage {
-    [UCFProperty("siblingValue", "Sibling value", IntegrationTextDataType.Alias)]
-    [UCFTab("page", "Page", 0)]
-    public string SiblingValue { get; } = string.Empty;
-}
 
 public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegistry {
     public IReadOnlyList<CodeFirstDefinition> Definitions { get; } = [
