@@ -7,6 +7,18 @@ alias is [derived from the name](source-generator.md#alias-derivation).
 Attribute arguments must be compile-time constants, which is why editor and Data Type references are
 strings (use the provided `Alias` constants).
 
+## `UCFFolderPath` – class
+
+Places the generated definition in a type-specific Umbraco folder. The path uses `/` separators;
+missing, empty, or `/` paths keep the definition in the root. Missing folders are created during
+synchronization.
+
+| Argument | Kind | Description |
+| -------- | ---- | ----------- |
+| `path` | ctor | Folder path relative to the type root, e.g. `Elements/SEO`. |
+
+Not inherited; one per class.
+
 ## `UCFDocumentType` – class
 
 Declares a Document Type. Only Document Types are supported; there is no media/member variant yet.

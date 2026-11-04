@@ -12,7 +12,9 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 
 public sealed class UmbracoCodeFirstDefinitionStore(
     IDataTypeService dataTypeService,
+    IDataTypeContainerService dataTypeContainerService,
     IContentTypeService contentTypeService,
+    IContentTypeContainerService contentTypeContainerService,
     PropertyEditorCollection propertyEditors,
     IConfigurationEditorJsonSerializer configurationSerializer,
     IShortStringHelper shortStringHelper,
@@ -40,6 +42,12 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             _ownedDataTypes[definition.Alias] = existing;
             var changed = existing.Name != definition.Name;
             existing.Name = definition.Name;
+            var parentId = await GetDataTypeParentIdAsync(definition.FolderPath);
+            if(existing.ParentId != parentId) {
+                existing.ParentId = parentId;
+                changed = true;
+            }
+
             if(existing.EditorUiAlias != definition.EditorUiAlias) {
                 existing.EditorUiAlias = definition.EditorUiAlias;
                 changed = true;
@@ -57,7 +65,8 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 $"The data type '{definition.Alias}' references unknown editor '{definition.EditorAlias}'.");
         }
 
-        DataType dataType = new(editor, configurationSerializer, -1) {
+        var dataTypeParentId = await GetDataTypeParentIdAsync(definition.FolderPath);
+        DataType dataType = new(editor, configurationSerializer, dataTypeParentId) {
             Name = definition.Name,
             EditorUiAlias = definition.EditorUiAlias,
             ConfigurationData = new Dictionary<string, object> {
@@ -91,7 +100,8 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     private async Task<SynchronizationStatus> ApplyDocumentTypeAsync(CodeFirstDefinition definition) {
         var contentType = contentTypeService.Get(definition.Alias);
         if(contentType is null) {
-            ContentType created = new(shortStringHelper, -1) {
+            var contentTypeParentId = await GetContentTypeParentIdAsync(definition.FolderPath);
+            ContentType created = new(shortStringHelper, contentTypeParentId) {
                 Alias = definition.Alias,
                 Name = definition.Name,
                 Description = definition.Settings?.Description,
@@ -110,6 +120,12 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
         var changed = contentType.Name != definition.Name;
         contentType.Name = definition.Name;
+        var parentId = await GetContentTypeParentIdAsync(definition.FolderPath);
+        if(contentType.ParentId != parentId) {
+            contentType.ParentId = parentId;
+            changed = true;
+        }
+
         changed |= ApplyTypeSettings(contentType, definition.Settings);
         changed |= ApplyPropertyGroups(contentType, definition);
         changed |= ApplyCompositions(
@@ -169,6 +185,69 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
         return existing;
     }
+
+    private async Task<int> GetDataTypeParentIdAsync(string? folderPath) {
+        var parentId = -1;
+        Guid? parentKey = null;
+        foreach(var segment in GetFolderSegments(folderPath)) {
+            var container = (await dataTypeContainerService.GetAllAsync())
+                .FirstOrDefault(candidate =>
+                    candidate.ParentId == parentId
+                    && string.Equals(candidate.Name, segment, StringComparison.Ordinal));
+            if(container is null) {
+                var result = await dataTypeContainerService.CreateAsync(
+                    null,
+                    segment,
+                    parentKey,
+                    Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                if(!result.Success || result.Result is null) {
+                    throw new InvalidOperationException(
+                        $"Could not create the Data Type folder '{segment}': {result.Status}.");
+                }
+
+                container = result.Result;
+            }
+
+            parentId = container.Id;
+            parentKey = container.Key;
+        }
+
+        return parentId;
+    }
+
+    private async Task<int> GetContentTypeParentIdAsync(string? folderPath) {
+        var parentId = -1;
+        Guid? parentKey = null;
+        foreach(var segment in GetFolderSegments(folderPath)) {
+            var container = (await contentTypeContainerService.GetAllAsync())
+                .FirstOrDefault(candidate =>
+                    candidate.ParentId == parentId
+                    && string.Equals(candidate.Name, segment, StringComparison.Ordinal));
+            if(container is null) {
+                var result = await contentTypeContainerService.CreateAsync(
+                    null,
+                    segment,
+                    parentKey,
+                    Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                if(!result.Success || result.Result is null) {
+                    throw new InvalidOperationException(
+                        $"Could not create the Document Type folder '{segment}': {result.Status}.");
+                }
+
+                container = result.Result;
+            }
+
+            parentId = container.Id;
+            parentKey = container.Key;
+        }
+
+        return parentId;
+    }
+
+    private static IEnumerable<string> GetFolderSegments(string? folderPath) =>
+        (folderPath ?? string.Empty)
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(segment => segment is not "." and not "..");
 
     private bool ApplyCompositions(
         IContentType contentType,

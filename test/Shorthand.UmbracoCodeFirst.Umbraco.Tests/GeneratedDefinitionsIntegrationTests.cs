@@ -21,14 +21,38 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         using var scope = fixture.Services.CreateScope();
         await SynchronizeTestDefinitionsAsync(scope.ServiceProvider);
         var dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
+        var dataTypeContainerService =
+            scope.ServiceProvider.GetRequiredService<IDataTypeContainerService>();
         var contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
+        var contentTypeContainerService =
+            scope.ServiceProvider.GetRequiredService<IContentTypeContainerService>();
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToList();
         var composedPage = contentTypeService.Get("integrationComposedPage");
+        var dataTypeContainers = await dataTypeContainerService.GetAllAsync();
+        var contentTypeContainers = await contentTypeContainerService.GetAllAsync();
+        var dataTypeRootFolder = dataTypeContainers.Single(container =>
+            container.Name == "Integration"
+            && container.ParentId == -1);
+        var dataTypeFolder = dataTypeContainers.Single(container =>
+            container.Name == "Editors"
+            && container.ParentId == dataTypeRootFolder.Id);
+        var contentTypeRootFolder = contentTypeContainers.Single(container =>
+            container.Name == "Integration"
+            && container.ParentId == -1);
+        var contentTypeFolder = contentTypeContainers.Single(container =>
+            container.Name == "Pages"
+            && container.ParentId == contentTypeRootFolder.Id);
 
         // Assert
         dataTypes.Select(dataType => dataType.Name).ShouldContain("Integration Text");
         composedPage.ShouldNotBeNull();
-        composedPage!.PropertyTypes.Select(property => property.Alias).ShouldContain("pageTitle");
+        dataTypeFolder.ShouldNotBeNull();
+        contentTypeFolder.ShouldNotBeNull();
+        dataTypes.Single(dataType => dataType.Name == "Integration Text")
+            .ParentId
+            .ShouldBe(dataTypeFolder.Id);
+        composedPage!.ParentId.ShouldBe(contentTypeFolder.Id);
+        composedPage.PropertyTypes.Select(property => property.Alias).ShouldContain("pageTitle");
         composedPage.PropertyGroups.Select(group => group.Alias).ShouldContain("page");
         composedPage.CompositionAliases().ShouldContain("integrationNestedComposition");
         composedPage.CompositionAliases().ShouldContain("integrationMetadataComposition");

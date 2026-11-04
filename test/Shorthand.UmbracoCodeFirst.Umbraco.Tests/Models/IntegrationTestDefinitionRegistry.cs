@@ -9,7 +9,8 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
             IntegrationTextDataType.Alias,
             "Integration Text",
             "Umbraco.TextBox",
-            []),
+            [],
+            FolderPath: "/Integration/Editors"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationCompositionBase",
@@ -22,7 +23,8 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
                     IntegrationTextDataType.Alias,
                     GroupAlias: "shared",
                     GroupName: "Shared"),
-            ]),
+            ],
+            FolderPath: "Integration/Pages"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationNestedComposition",
@@ -36,7 +38,8 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
                     GroupAlias: "nested",
                     GroupName: "Nested"),
             ],
-            CompositionAliases: ["integrationCompositionBase"]),
+            CompositionAliases: ["integrationCompositionBase"],
+            FolderPath: "Integration/Pages"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationMetadataComposition",
@@ -49,7 +52,8 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
                     IntegrationTextDataType.Alias,
                     GroupAlias: "metadata",
                     GroupName: "Metadata"),
-            ]),
+            ],
+            FolderPath: "Integration/Pages"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationComposedPage",
@@ -65,7 +69,8 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
             ],
             CompositionAliases: [
                 "integrationNestedComposition",
-                "integrationMetadataComposition"]),
+                "integrationMetadataComposition"],
+            FolderPath: "Integration/Pages"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationSiblingPage",
@@ -79,6 +84,7 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
                     TabAlias: "page",
                     TabName: "Page"),
             ],
-            CompositionAliases: ["integrationCompositionBase"]),
+            CompositionAliases: ["integrationCompositionBase"],
+            FolderPath: "Integration/Pages"),
     ];
 }

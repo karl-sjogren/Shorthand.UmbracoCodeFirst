@@ -33,6 +33,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private const string _compositeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFCompositeAttribute";
 
+    private const string _folderPathAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFFolderPathAttribute";
+
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
         "UCF001",
@@ -429,6 +431,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             builder.Append(BuildTypeSettings(documentTypeAttribute, definition));
             builder.Append(", null, null, null, ");
             builder.Append(BuildCompositionAliases(definition));
+            builder.Append(", ");
+            builder.Append(BuildFolderPath(definition));
             builder.AppendLine("),");
             return;
         }
@@ -454,6 +458,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.Append(GetNamedStringLiteral(dataTypeAttribute, "ConfigurationJson"));
         builder.Append(", ");
         builder.Append(GetNamedStringLiteral(dataTypeAttribute, "EditorUiAlias"));
+        builder.Append(", null, ");
+        builder.Append(BuildFolderPath(definition));
         builder.AppendLine("),");
     }
 
@@ -773,6 +779,15 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         }
 
         return $"new global::System.String[] {{ {string.Join(", ", aliases.Select(alias => SymbolDisplay.FormatLiteral(alias, true)))} }}";
+    }
+
+    private static string BuildFolderPath(INamedTypeSymbol definition) {
+        var attribute = FindAttribute(definition, _folderPathAttributeMetadataName);
+        return attribute is null || attribute.ConstructorArguments.Length == 0
+            ? "null"
+            : SymbolDisplay.FormatLiteral(
+                attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty,
+                true);
     }
 
     private static string BuildStringArray(AttributeData attribute, string name) {

@@ -40,6 +40,16 @@ public class AttributeContractTests {
         attribute.Variations.ShouldBe("Culture");
     }
 
+    [Theory]
+    [InlineData("Documents/Products")]
+    [InlineData("/")]
+    [InlineData("")]
+    public void UCFFolderPathAttribute_PreservesConfiguredPath(string path) {
+        var attribute = new UCFFolderPathAttribute(path);
+
+        attribute.Path.ShouldBe(path);
+    }
+
     [Fact]
     public void UCFDataTypeAttributeAndUCFPropertyAttribute_WithoutExplicitAliases_LeaveAliasesNull() {
         // Arrange

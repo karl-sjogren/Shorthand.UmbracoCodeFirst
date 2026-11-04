@@ -36,11 +36,18 @@ public class CodeFirstRegistryGeneratorTests {
                     public UCFElementTypeAttribute(string alias, string name) { }
                     public bool AllowInLibrary { get; set; }
                 }
+
+                public sealed class UCFFolderPathAttribute(string path)
+                    : global::System.Attribute
+                {
+                    public string Path { get; } = path;
+                }
             }
 
             namespace Example
             {
                 [Shorthand.UmbracoCodeFirst.Attributes.UCFElementType("seoElement")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFFolderPath("Elements/SEO")]
                 public partial class SeoElement;
             }
             """;
@@ -71,6 +78,7 @@ public class CodeFirstRegistryGeneratorTests {
 
         registrySource.ShouldContain("CodeFirstTypeSettings(");
         registrySource.ShouldContain("true,");
+        registrySource.ShouldContain("\"Elements/SEO\"");
         modelSource.ShouldContain("ModelItemType = PublishedItemType.Element");
     }
 
