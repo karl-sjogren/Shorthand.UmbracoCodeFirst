@@ -22,7 +22,9 @@ public sealed class RepeatedValidationAnalyzer : DiagnosticAnalyzer {
                 foreach(var group in validations
                             .GroupBy(static validation =>
                                 $"{validation.ContainingType.ToDisplayString()}:{validation.Expression}:{validation.Message}")) {
-                    var entries = group.ToArray();
+                    var entries = group
+                        .OrderBy(static validation => validation.Location?.SourceSpan.Start ?? int.MaxValue)
+                        .ToArray();
                     if(entries.Length > 1) {
                         endContext.ReportDiagnostic(Diagnostic.Create(
                             CodeFirstDiagnosticDescriptors.DuplicateValidation,

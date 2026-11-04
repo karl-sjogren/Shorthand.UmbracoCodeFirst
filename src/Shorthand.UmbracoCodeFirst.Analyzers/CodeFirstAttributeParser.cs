@@ -42,7 +42,8 @@ internal static class CodeFirstAttributeParser {
             attributeName == "UCFPropertyAttribute"
                 ? AliasScope.ContainingType
                 : AliasScope.Global,
-            attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+            attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                ?? symbol.Locations.FirstOrDefault(),
             CodeFirstAnalyzerHelpers.IsValidAlias(alias));
         return true;
     }
@@ -77,7 +78,8 @@ internal static class CodeFirstAttributeParser {
             alias,
             symbol,
             AliasScope.ContainingType,
-            attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+            attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                ?? symbol.Locations.FirstOrDefault(),
             CodeFirstAnalyzerHelpers.IsValidAlias(alias),
             attributeName == "UCFGroupAttribute" ? "group" : "tab",
             name,

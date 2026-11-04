@@ -22,7 +22,9 @@ public sealed class RepeatedLayoutAnalyzer : DiagnosticAnalyzer {
                 foreach(var group in layouts
                             .GroupBy(static layout =>
                                 $"{CodeFirstAnalyzerHelpers.GetScopeName(layout)}:{layout.LayoutKind}:{layout.Alias}")) {
-                    var entries = group.ToArray();
+                    var entries = group
+                        .OrderBy(static layout => layout.Location?.SourceSpan.Start ?? int.MaxValue)
+                        .ToArray();
                     if(entries.Length > 1 && entries[0].LayoutKind is not null) {
                         endContext.ReportDiagnostic(Diagnostic.Create(
                             CodeFirstDiagnosticDescriptors.DuplicateLayout,

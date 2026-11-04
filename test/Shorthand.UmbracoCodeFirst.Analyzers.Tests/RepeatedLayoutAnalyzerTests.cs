@@ -1,68 +1,87 @@
+using VerifyCS = Shorthand.UmbracoCodeFirst.Analyzers.Tests.RoslynUtils.CSharpAnalyzerVerifier<Shorthand.UmbracoCodeFirst.Analyzers.RepeatedLayoutAnalyzer>;
+using VerifyFixCS = Shorthand.UmbracoCodeFirst.Analyzers.Tests.RoslynUtils.CSharpCodeFixVerifier<Shorthand.UmbracoCodeFirst.Analyzers.RepeatedLayoutAnalyzer, Shorthand.UmbracoCodeFirst.Analyzers.RepeatedLayoutCodeFixProvider>;
+
 namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
     [Fact]
-    public void Analyze_RepeatedGroupAlias_ReportsSharedLayoutDiagnostic() {
-        // Arrange
-        const string source = """
-            using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFDocumentType("product", "Product")]
-            public partial class Product {
-                [UCFProperty("name", "Name", "text")]
-                [UCFGroup("details", "Details")]
-                public partial string Name { get; }
-                [UCFProperty("sku", "SKU", "text")]
-                [UCFGroup("details", "Details")]
-                public partial string Sku { get; }
-            }
-            """;
-
-        // Act
-        var diagnostics = Analyze(source);
-
-        // Assert
-        diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstDiagnosticIds.DuplicateLayout);
+    public async Task RepeatedGroupAlias_ReportsDiagnosticAsync() {
+        await VerifyCS.VerifyAnalyzerAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocumentType("product", "Product")]
+                public partial class Product {
+                    [UCFProperty("name", "Name", "text")]
+                    [UCFGroup("details", "Details")]
+                    public string Name { get; } = null!;
+                    [UCFProperty("sku", "SKU", "text")]
+                    [[|UCFGroup("details", "Details")|]]
+                    public string Sku { get; } = null!;
+                }
+                """));
     }
 
     [Fact]
-    public async Task CodeFix_RepeatedGroupAlias_CreatesDerivedAttributeAndReplacesUsagesAsync() {
-        const string source = """
-            using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFDocumentType("product", "Product")]
-            public partial class Product {
-                [UCFGroup("details", "Details")]
-                public partial string Name { get; }
-                [UCFGroup("details", "Details")]
-                public partial string Sku { get; }
-            }
-            """;
-
-        var fixedSource = await ApplyCodeFixAsync(source);
-
-        fixedSource.ShouldContain("public sealed class DetailsGroupAttribute : UCFGroupAttribute");
-        fixedSource.ShouldContain("public DetailsGroupAttribute() : base(\"details\", \"Details\")");
-        fixedSource.ShouldContain("[DetailsGroupAttribute]");
-        fixedSource.ShouldNotContain("[UCFGroup(\"details\", \"Details\")]");
+    public async Task RepeatedGroupAlias_CodeFixCreatesDerivedAttributeAsync() {
+        await VerifyFixCS.VerifyCodeFixAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocumentType("product", "Product")]
+                public partial class Product {
+                    [UCFGroup("details", "Details")]
+                    public string Name { get; } = null!;
+                    [[|UCFGroup("details", "Details")|]]
+                    public string Sku { get; } = null!;
+                }
+                """),
+            SourceWithAppended("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocumentType("product", "Product")]
+                public partial class Product {
+                    [DetailsGroupAttribute]
+                    public string Name { get; } = null!;
+                    [DetailsGroupAttribute]
+                    public string Sku { get; } = null!;
+                }
+                """,
+            """
+                [global::System.AttributeUsage(global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
+                public sealed class DetailsGroupAttribute : UCFGroupAttribute {
+                    public DetailsGroupAttribute() : base("details", "Details") {
+                    }
+                }
+                """));
     }
 
     [Fact]
-    public async Task CodeFix_RepeatedTabAliasWithSortOrder_CreatesDerivedAttributeAndReplacesUsagesAsync() {
-        const string source = """
-            using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFDocumentType("product", "Product")]
-            public partial class Product {
-                [UCFTab("Details", 1)]
-                public partial string Name { get; }
-                [UCFTab("Details", 1)]
-                public partial string Sku { get; }
-            }
-            """;
-
-        var fixedSource = await ApplyCodeFixAsync(source);
-
-        fixedSource.ShouldContain("public sealed class DetailsTabAttribute : UCFTabAttribute");
-        fixedSource.ShouldContain("public DetailsTabAttribute() : base(\"Details\", 1)");
-        fixedSource.ShouldContain("[DetailsTabAttribute]");
-        fixedSource.ShouldNotContain("[UCFTab(\"Details\", 1)]");
+    public async Task RepeatedTabAliasWithSortOrder_CodeFixCreatesDerivedAttributeAsync() {
+        await VerifyFixCS.VerifyCodeFixAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocumentType("product", "Product")]
+                public partial class Product {
+                    [UCFTab("Details", 1)]
+                    public string Name { get; } = null!;
+                    [[|UCFTab("Details", 1)|]]
+                    public string Sku { get; } = null!;
+                }
+                """),
+            SourceWithAppended("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocumentType("product", "Product")]
+                public partial class Product {
+                    [DetailsTabAttribute]
+                    public string Name { get; } = null!;
+                    [DetailsTabAttribute]
+                    public string Sku { get; } = null!;
+                }
+                """,
+            """
+                [global::System.AttributeUsage(global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
+                public sealed class DetailsTabAttribute : UCFTabAttribute {
+                    public DetailsTabAttribute() : base("Details", 1) {
+                    }
+                }
+                """));
     }
 }

@@ -14,7 +14,9 @@ internal static class CodeFirstAliasDiagnostics {
                         occurrence.Symbol is not IPropertySymbol || occurrence.LayoutKind is not null)
                     .GroupBy(static occurrence =>
                         $"{occurrence.Scope}:{CodeFirstAnalyzerHelpers.GetScopeName(occurrence)}:{occurrence.Alias}")) {
-            var entries = group.ToArray();
+            var entries = group
+                .OrderBy(static occurrence => occurrence.Location?.SourceSpan.Start ?? int.MaxValue)
+                .ToArray();
             if(entries.Length > 1) {
                 var first = entries[0];
                 context.ReportDiagnostic(Diagnostic.Create(
@@ -62,7 +64,9 @@ internal static class CodeFirstAliasDiagnostics {
     private static void ReportIfDuplicate(
         CompilationAnalysisContext context,
         IEnumerable<AliasOccurrence> group) {
-        var entries = group.ToArray();
+        var entries = group
+            .OrderBy(static occurrence => occurrence.Location?.SourceSpan.Start ?? int.MaxValue)
+            .ToArray();
         if(entries.Length > 1) {
             context.ReportDiagnostic(Diagnostic.Create(
                 CodeFirstDiagnosticDescriptors.DuplicateAlias,

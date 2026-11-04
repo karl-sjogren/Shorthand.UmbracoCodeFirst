@@ -56,7 +56,8 @@ public sealed class RepeatedLayoutCodeFixProvider : CodeFixProvider {
             .Ancestors()
             .OfType<BaseNamespaceDeclarationSyntax>()
             .FirstOrDefault();
-        var classDeclaration = SyntaxFactory.ParseMemberDeclaration(layout.GeneratedSource);
+        var classDeclaration = SyntaxFactory.ParseMemberDeclaration(
+            layout.GeneratedSource.Replace("\r\n", "\n"));
         if(classDeclaration is null) {
             return document;
         }

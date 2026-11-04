@@ -1,42 +1,37 @@
+using VerifyCS = Shorthand.UmbracoCodeFirst.Analyzers.Tests.RoslynUtils.CSharpAnalyzerVerifier<Shorthand.UmbracoCodeFirst.Analyzers.IncompatibleEditorTypeAnalyzer>;
+
 namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
     [Fact]
-    public void Analyze_KnownEditorAndCompatiblePropertyType_DoesNotReportEditorDiagnostic() {
-        const string source = """
-            using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFDataType("textEditor", "Umbraco.TextBox")]
-            public partial class TextEditor;
-            [UCFDocumentType("article", "Article")]
-            public partial class Article {
-                [UCFProperty("title", "textEditor")]
-                public partial string Title { get; }
-            }
-            """;
-
-        var diagnostics = Analyze(source, _editorMetadata);
-
-        diagnostics.ShouldNotContain(diagnostic =>
-            diagnostic.Id == CodeFirstDiagnosticIds.UnknownEditorAlias
-            || diagnostic.Id == CodeFirstDiagnosticIds.IncompatibleEditorType);
+    public async Task KnownEditorAndCompatiblePropertyType_DoesNotReportDiagnosticAsync() {
+        await VerifyCS.VerifyAnalyzerAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDataType("textEditor", "Umbraco.TextBox")]
+                public partial class TextEditor;
+                [UCFDocumentType("article", "Article")]
+                public partial class Article {
+                    [UCFProperty("title", "textEditor")]
+                    public string Title { get; } = null!;
+                }
+                """),
+            [("umbraco-property-editors.json", EditorMetadata)]);
     }
 
     [Fact]
-    public void Analyze_IncompatibleEditorPropertyType_ReportsEditorTypeDiagnostic() {
-        const string source = """
-            using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFDataType("textEditor", "Umbraco.TextBox")]
-            public partial class TextEditor;
-            [UCFDocumentType("article", "Article")]
-            public partial class Article {
-                [UCFProperty("title", "textEditor")]
-                public partial int Title { get; }
-            }
-            """;
-
-        var diagnostics = Analyze(source, _editorMetadata);
-
-        diagnostics.ShouldContain(
-            diagnostic => diagnostic.Id == CodeFirstDiagnosticIds.IncompatibleEditorType);
+    public async Task IncompatibleEditorPropertyType_ReportsDiagnosticAsync() {
+        await VerifyCS.VerifyAnalyzerAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDataType("textEditor", "Umbraco.TextBox")]
+                public partial class TextEditor;
+                [UCFDocumentType("article", "Article")]
+                public partial class Article {
+                    [UCFProperty("title", "textEditor")]
+                    public int [|Title|] { get; }
+                }
+                """),
+            [("umbraco-property-editors.json", EditorMetadata)]);
     }
 }
