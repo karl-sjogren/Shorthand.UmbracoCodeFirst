@@ -53,7 +53,10 @@ public class AttributeContractTests {
     [Fact]
     public void UCFDataTypeAttributeAndUCFPropertyAttribute_WithoutExplicitAliases_LeaveAliasesNull() {
         // Arrange
-        var dataType = new UCFDataTypeAttribute("Code First Text", "Umbraco.TextBox");
+        var dataType = new UCFDataTypeAttribute(
+            "Code First Text",
+            "Umbraco.TextBox",
+            "Umb.PropertyEditorUi.TextBox");
         var property = new UCFPropertyAttribute("Description", "codeFirstText");
 
         // Act
@@ -63,9 +66,32 @@ public class AttributeContractTests {
         // Assert
         dataTypeAlias.ShouldBeNull();
         dataType.Name.ShouldBe("Code First Text");
+        dataType.EditorAlias.ShouldBe("Umbraco.TextBox");
+        dataType.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.TextBox");
         propertyAlias.ShouldBeNull();
         property.Name.ShouldBe("Description");
         property.DataTypeAlias.ShouldBe("codeFirstText");
+    }
+
+    [Fact]
+    public void UCFDataTypeAttribute_ExplicitAlias_PreservesAlias() {
+        var attribute = new UCFDataTypeAttribute(
+            "Code First Text",
+            "Umbraco.TextBox",
+            "Umb.PropertyEditorUi.TextBox") {
+            Alias = "customText",
+        };
+
+        attribute.Alias.ShouldBe("customText");
+    }
+
+    [Fact]
+    public void UCFDataTypeAttribute_EditorType_ReadsAliasesFromEditorType() {
+        var attribute = new UCFDataTypeAttribute("Code First Text", typeof(TestEditor));
+
+        attribute.EditorAlias.ShouldBe("Umbraco.TextBox");
+        attribute.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.TextBox");
+        attribute.Editor.ShouldBe(typeof(TestEditor));
     }
 
     [Fact]
@@ -75,5 +101,10 @@ public class AttributeContractTests {
         attribute.Alias.ShouldBeNull();
         attribute.Name.ShouldBe("Product details");
         attribute.SortOrder.ShouldBe(2);
+    }
+
+    private static class TestEditor {
+        public const string Alias = "Umbraco.TextBox";
+        public const string UiAlias = "Umb.PropertyEditorUi.TextBox";
     }
 }

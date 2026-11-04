@@ -22,15 +22,14 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 
 [UCFDataType(
     "codeFirstDecimal",
-    "Code First Decimal",
-    UmbracoEditors.Decimal.Alias,
-    EditorUiAlias = UmbracoEditors.Decimal.UiAlias,
+    typeof(UmbracoEditors.Decimal),
     ConfigurationJson = """{"step":0.01}""")]
 public partial class CodeFirstDecimalDataType;
 ```
 
-The generator adds `public const string Alias = "codeFirstDecimal";` to the class, so properties can
-reference it as `CodeFirstDecimalDataType.Alias`.
+The generator derives the internal alias from the name and adds `public const string Alias` to the
+class, so properties can reference it as `CodeFirstDecimalDataType.Alias`. Use the optional named
+`Alias` property when the derived alias is not suitable.
 
 ## 2. Declare a Document Type
 

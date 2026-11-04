@@ -60,12 +60,21 @@ Declares a Data Type.
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
 | `name` | ctor | Display name. |
-| `alias` | ctor (optional) | Alias used by `UCFProperty`. |
 | `editorAlias` | ctor | Property editor schema alias, e.g. `Umbraco.TextBox`. |
-| `EditorUiAlias` | named | Editor UI alias, e.g. `Umb.PropertyEditorUi.TextBox`. Written independently of the schema alias. |
+| `editorUiAlias` | ctor | Editor UI alias, e.g. `Umb.PropertyEditorUi.TextBox`. Written independently of the schema alias. |
+| `editor` | ctor overload | A type from `UmbracoEditors`; its `Alias` and `UiAlias` constants are read automatically. |
+| `Alias` | named (optional) | Internal code-first alias used by `UCFProperty`; derived from `name` when omitted. |
 | `ConfigurationJson` | named | A JSON **object** merged into the Data Type's configuration (see below). |
 
-The generator also emits `public const string Alias` on the class.
+The generator also emits `public const string Alias` on the class. This is a code-first identity;
+Umbraco's `IDataType` does not expose a persisted alias property.
+
+When using the generated editor registry, prefer the type overload:
+
+```csharp
+[UCFDataType("Code First Text", typeof(UmbracoEditors.TextBox))]
+public partial class CodeFirstTextDataType;
+```
 
 ### Editor registry
 

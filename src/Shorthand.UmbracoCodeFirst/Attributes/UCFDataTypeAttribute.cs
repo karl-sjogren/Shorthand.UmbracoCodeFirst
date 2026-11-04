@@ -2,24 +2,33 @@ namespace Shorthand.UmbracoCodeFirst.Attributes;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class UCFDataTypeAttribute : Attribute {
-    public UCFDataTypeAttribute(string name, string editorAlias) {
+    public UCFDataTypeAttribute(string name, string editorAlias, string editorUiAlias) {
         Name = name;
         EditorAlias = editorAlias;
+        EditorUiAlias = editorUiAlias;
     }
 
-    public UCFDataTypeAttribute(string alias, string name, string editorAlias) {
-        Alias = alias;
+    public UCFDataTypeAttribute(string name, Type editor) {
         Name = name;
-        EditorAlias = editorAlias;
+        EditorAlias = ReadEditorValue(editor, "Alias");
+        EditorUiAlias = ReadEditorValue(editor, "UiAlias");
+        Editor = editor;
     }
 
-    public string? Alias { get; }
+    public string? Alias { get; set; }
 
     public string Name { get; }
 
     public string EditorAlias { get; }
 
-    public string? EditorUiAlias { get; set; }
+    public string EditorUiAlias { get; }
+
+    public Type? Editor { get; }
 
     public string? ConfigurationJson { get; set; }
+
+    private static string ReadEditorValue(Type editor, string name) =>
+        editor.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?.GetRawConstantValue() as string
+        ?? throw new ArgumentException($"The editor type must define a public constant string named '{name}'.", nameof(editor));
 }

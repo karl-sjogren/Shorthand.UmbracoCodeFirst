@@ -4,8 +4,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
     "Code First Email",
-    PropertyEditors.UmbracoEditors.EmailAddress.Alias,
-    EditorUiAlias = PropertyEditors.UmbracoEditors.EmailAddress.UiAlias,
+    typeof(PropertyEditors.UmbracoEditors.EmailAddress),
     ConfigurationJson = """{"inputType":"email"}""")]
 [UCFFolderPath("CodeFirst")]
 public partial class CodeFirstEmailDataType;

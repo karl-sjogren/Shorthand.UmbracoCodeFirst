@@ -24,9 +24,8 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.PropertyEditors;
 
 [UCFDataType(
-    "articleTitle",
     "Article title",
-    UmbracoEditors.TextBox.Alias)]
+    typeof(UmbracoEditors.TextBox))]
 public partial class ArticleTitleDataType;
 
 [UCFDocumentType("article", "Article", AllowAsRoot = true)]

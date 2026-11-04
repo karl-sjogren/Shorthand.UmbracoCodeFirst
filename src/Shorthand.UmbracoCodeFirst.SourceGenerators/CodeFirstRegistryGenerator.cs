@@ -457,7 +457,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             ", global::System.Array.Empty<global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstPropertyDefinition>(), null, null, ");
         builder.Append(GetNamedStringLiteral(dataTypeAttribute, "ConfigurationJson"));
         builder.Append(", ");
-        builder.Append(GetNamedStringLiteral(dataTypeAttribute, "EditorUiAlias"));
+        builder.Append(GetDataTypeEditorUiArgument(dataTypeAttribute));
         builder.Append(", null, ");
         builder.Append(BuildFolderPath(definition));
         builder.AppendLine("),");
@@ -470,6 +470,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private static string GetNameArgument(AttributeData attribute) =>
         attribute.ConstructorArguments.Length switch {
+            _ when IsAttribute(attribute, _dataTypeAttributeMetadataName) && HasDataTypeAliasProperty(attribute)
+                => GetStringArgument(attribute, 0),
             1 => GetStringArgument(attribute, 0),
             2 => IsAttribute(attribute, _propertyAttributeMetadataName)
                 ? GetStringArgument(attribute, 0)
@@ -477,8 +479,16 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             _ => GetStringArgument(attribute, 1),
         };
 
+    private static bool HasDataTypeAliasProperty(AttributeData attribute) =>
+        IsAttribute(attribute, _dataTypeAttributeMetadataName)
+        && attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() is true;
+
     private static string GetAliasArgument(AttributeData attribute, string name) =>
         attribute.ConstructorArguments.Length switch {
+            _ when IsAttribute(attribute, _dataTypeAttributeMetadataName) && HasDataTypeAliasProperty(attribute)
+                => GetNamedStringArgument(attribute, "Alias") is { Length: > 0 } alias
+                    ? alias
+                    : ToAlias(name),
             1 => ToAlias(name),
             2 when IsAttribute(attribute, _propertyAttributeMetadataName) => ToAlias(name),
             2 => GetStringArgument(attribute, 0),
@@ -533,9 +543,29 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     }
 
     private static string GetDataTypeEditorArgument(AttributeData attribute) =>
-        attribute.ConstructorArguments.Length == 2
-            ? GetStringArgument(attribute, 1)
-            : GetStringArgument(attribute, 2);
+        HasDataTypeAliasProperty(attribute)
+            ? attribute.ConstructorArguments[1].Kind == TypedConstantKind.Type
+                ? GetEditorTypeValueArgument(attribute, 1, "Alias")
+                : GetStringArgument(attribute, 1)
+            : attribute.ConstructorArguments.Length == 2
+                ? GetStringArgument(attribute, 1)
+                : GetStringArgument(attribute, 2);
+
+    private static string GetDataTypeEditorUiArgument(AttributeData attribute) =>
+        HasDataTypeAliasProperty(attribute)
+            ? attribute.ConstructorArguments.Length == 2
+                ? GetEditorTypeValueArgument(attribute, 1, "UiAlias")
+                : SymbolDisplay.FormatLiteral(GetStringArgument(attribute, 2), true)
+            : GetNamedStringLiteral(attribute, "EditorUiAlias");
+
+    private static string GetEditorTypeValueArgument(AttributeData attribute, int index, string memberName) {
+        var editorType = (INamedTypeSymbol)attribute.ConstructorArguments[index].Value!;
+        var member = editorType.GetMembers(memberName)
+            .OfType<IFieldSymbol>()
+            .Single(field => field.IsStatic && field.HasConstantValue);
+
+        return SymbolDisplay.FormatLiteral((string)member.ConstantValue!, true);
+    }
 
     private static AttributeData? FindAttribute(ISymbol symbol, string metadataName) =>
         symbol.GetAttributes().FirstOrDefault(attribute => IsAttribute(attribute, metadataName));
