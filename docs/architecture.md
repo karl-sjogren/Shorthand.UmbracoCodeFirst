@@ -28,7 +28,7 @@
 | ------- | ------- |
 | `Shorthand.UmbracoCodeFirst` | The public contract: attributes, the immutable metadata records (`CodeFirstDefinition` and friends), the Umbraco editor registry (`UmbracoEditors`), and the Umbraco-independent synchronizer (`CodeFirstSynchronizer`, report types). |
 | `Shorthand.UmbracoCodeFirst.SourceGenerators` | Incremental generator (`CodeFirstRegistryGenerator`) producing the registry, published models and Data Type alias constants. |
-| `Shorthand.UmbracoCodeFirst.Analyzers` | `CodeFirstAttributeAnalyzer` with diagnostics UCF100–UCF107. |
+| `Shorthand.UmbracoCodeFirst.Analyzers` | Dedicated analyzers for diagnostics UCF100–UCF109 plus the UCF102 code fix. |
 | `Shorthand.UmbracoCodeFirst.Backoffice` | Razor class library: the Umbraco persistence adapter (`UmbracoCodeFirstDefinitionStore`), the DI composer, the Management API controller and the TypeScript client for the Settings page. |
 | `Shorthand.UmbracoCodeFirst.Umbraco` | Sample Umbraco site. Its `Models/` folder contains the sample Data Types and Document Types and runs the synchronizer at startup. |
 | `Shorthand.UmbracoCodeFirst.AppHost` | .NET Aspire host for local development (SQL Server, Azure storage emulator, Redis, backoffice client watcher). |

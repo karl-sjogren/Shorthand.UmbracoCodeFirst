@@ -12,7 +12,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 [UCFDescription("An article managed by the code-first sample model.")]
 public partial class Article {
     [UCFProperty(
-        "Title",
+        "Title!",
         CodeFirstTextDataType.Alias,
         SortOrder = 0,
         Mandatory = true,

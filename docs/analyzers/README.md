@@ -1,7 +1,8 @@
 # Analyzers
 
-`CodeFirstAttributeAnalyzer` (project `Shorthand.UmbracoCodeFirst.Analyzers`) validates code-first
-declarations while you type and during builds. Every rule has its own page with an example.
+The `Shorthand.UmbracoCodeFirst.Analyzers` project validates code-first declarations while you
+type and during builds. Each diagnostic is implemented by a focused analyzer, and every rule has
+its own page with an example.
 
 | Id | Title | Severity |
 | -- | ----- | -------- |
@@ -13,6 +14,8 @@ declarations while you type and during builds. Every rule has its own page with 
 | [UCF105](UCF105.md) | UCFProperty used outside a UCFDocumentType | Warning |
 | [UCF106](UCF106.md) | Invalid content composition target | Warning |
 | [UCF107](UCF107.md) | Invalid content composition graph (duplicate, self, cycle) | Warning |
+| [UCF108](UCF108.md) | Unknown Umbraco property editor | Error |
+| [UCF109](UCF109.md) | Incompatible Umbraco property editor type | Warning |
 
 The source generator additionally reports `UCF001` (unsupported published model property type) as
 an error; see [Source generator](../source-generator.md#generator-diagnostics).
@@ -21,5 +24,5 @@ Notes:
 
 - Diagnostic help links currently point at the `feature/initial-implementation` branch and should
   be switched to `main` when merged.
-- No code fixes are provided yet.
+- UCF102 provides a code fix that creates a reusable derived layout attribute in the current file.
 - Alias validity follows Umbraco: letters, combining marks, digits, whitespace, `.` and `-`.
