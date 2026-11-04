@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsIntegrationTestProject>true</IsIntegrationTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Umbraco\Shorthand.UmbracoCodeFirst.Umbraco.csproj" />
+    <PackageReference Include="Testcontainers.MsSql" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\src\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json"
+                      Link="umbraco-property-editors.json" />
+  </ItemGroup>
+
+</Project>

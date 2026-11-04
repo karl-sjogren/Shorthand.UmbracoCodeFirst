@@ -3,15 +3,24 @@
     <Project Path="benchmarks/Shorthand.UmbracoCodeFirst.Benchmarks/Shorthand.UmbracoCodeFirst.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Shorthand.UmbracoCodeFirst.Analyzers/Shorthand.UmbracoCodeFirst.Analyzers.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst.AppHost/Shorthand.UmbracoCodeFirst.AppHost.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst/Shorthand.UmbracoCodeFirst.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst.Backoffice/Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
+    <Project Path="src/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst.ServiceDefaults/Shorthand.UmbracoCodeFirst.ServiceDefaults.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst.SourceGenerators/Shorthand.UmbracoCodeFirst.SourceGenerators.csproj" />
     <Project Path="src/Shorthand.UmbracoCodeFirst.Umbraco/Shorthand.UmbracoCodeFirst.Umbraco.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Analyzers.Tests/Shorthand.UmbracoCodeFirst.Analyzers.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.AppHost.Tests/Shorthand.UmbracoCodeFirst.AppHost.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Backoffice.Tests/Shorthand.UmbracoCodeFirst.Backoffice.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.Tests/Shorthand.UmbracoCodeFirst.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.TestHelpers/Shorthand.UmbracoCodeFirst.TestHelpers.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.ServiceDefaults.Tests/Shorthand.UmbracoCodeFirst.ServiceDefaults.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.Umbraco.Tests/Shorthand.UmbracoCodeFirst.Umbraco.Tests.csproj" />
   </Folder>
 </Solution>
