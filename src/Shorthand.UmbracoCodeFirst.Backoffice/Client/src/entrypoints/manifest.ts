@@ -1,3 +1,8 @@
+import { UMB_WORKSPACE_CONDITION_ALIAS } from "@umbraco-cms/backoffice/workspace";
+
+const codeFirstEntityType = "shorthand-code-first";
+const codeFirstWorkspaceAlias = "Shorthand.UmbracoCodeFirst.Workspace";
+
 export const manifests: Array<UmbExtensionManifest> = [
   {
     name: "Shorthand Umbraco Code First English Localization",
@@ -15,19 +20,28 @@ export const manifests: Array<UmbExtensionManifest> = [
     js: () => import("./entrypoint.js"),
   },
   {
-    name: "Shorthand Umbraco Code First View Route",
-    alias: "Shorthand.UmbracoCodeFirst.ViewRoute",
-    type: "sectionView",
-    js: () => import("../views/code-first-view.js"),
+    name: "Shorthand Umbraco Code First Workspace",
+    alias: codeFirstWorkspaceAlias,
+    type: "workspace",
+    element: () => import("../views/code-first-workspace.js"),
+    meta: {
+      entityType: codeFirstEntityType,
+    },
+  },
+  {
+    name: "Shorthand Umbraco Code First Workspace View",
+    alias: "Shorthand.UmbracoCodeFirst.WorkspaceView",
+    type: "workspaceView",
+    element: () => import("../views/code-first-view.js"),
     meta: {
       label: "#codeFirst_viewLabel",
-      pathname: "code-first",
+      pathname: "overview",
       icon: "icon-code",
     },
     conditions: [
       {
-        alias: "Umb.Condition.SectionAlias",
-        match: "Umb.Section.Settings",
+        alias: UMB_WORKSPACE_CONDITION_ALIAS,
+        match: codeFirstWorkspaceAlias,
       },
     ],
   },
@@ -35,12 +49,11 @@ export const manifests: Array<UmbExtensionManifest> = [
     name: "Shorthand Umbraco Code First Menu Item",
     alias: "Shorthand.UmbracoCodeFirst.MenuItem",
     type: "menuItem",
-    kind: "link",
     weight: 100,
     meta: {
       label: "#codeFirst_menuLabel",
       icon: "icon-code",
-      href: "/umbraco/section/settings/view/code-first",
+      entityType: codeFirstEntityType,
       menus: ["Umb.Menu.AdvancedSettings"],
     },
   },
