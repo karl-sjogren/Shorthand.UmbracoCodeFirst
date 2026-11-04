@@ -4,6 +4,21 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("Body text", "bodyText")]
+    [InlineData("Product Page", "productPage")]
+    [InlineData("ProductPage", "productPage")]
+    [InlineData("SEO", "seo")]
+    [InlineData("SEO URL", "seoUrl")]
+    [InlineData("XMLParser", "xmlParser")]
+    [InlineData("version2Value", "version2Value")]
+    [InlineData("foo_bar-baz", "fooBarBaz")]
+    [InlineData("  Multiple   words  ", "multipleWords")]
+    public void ToAlias_DerivesExpectedCamelCaseAlias(string value, string expected) {
+        CodeFirstRegistryGenerator.ToAlias(value).ShouldBe(expected);
+    }
+
     [Fact]
     public void GenerateRegistry_ContentTypeComposition_EmitsReferencedAlias() {
         // Arrange
@@ -124,6 +139,54 @@ public class CodeFirstRegistryGeneratorTests {
         modelSource.ShouldContain("public static IPublishedPropertyType GetModelPropertyType<TValue>");
         modelSource.ShouldContain("public partial global::System.String Title => this.Value<global::System.String>");
         modelSource.ShouldContain("[ImplementPropertyType(\"title\")]");
+    }
+
+    [Fact]
+    public void GenerateRegistry_DerivesCamelCaseAliasesFromPascalCaseNames() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                {
+                    public UCFContentTypeAttribute(string name) { }
+                }
+
+                public sealed class UCFPropertyAttribute : global::System.Attribute
+                {
+                    public UCFPropertyAttribute(string name, string dataTypeAlias) { }
+                }
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("ProductPage")]
+                public partial class ProductPage
+                {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("SEO URL", "text")]
+                    public partial string SeoUrl { get; }
+                }
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        string generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("\"productPage\"");
+        generatedSource.ShouldContain("\"seoUrl\"");
     }
 
     [Fact]
@@ -258,11 +321,15 @@ public class CodeFirstRegistryGeneratorTests {
             {
                 public class UCFTabAttribute : global::System.Attribute
                 {
+                    public UCFTabAttribute(string name, int sortOrder) { }
                     public UCFTabAttribute(string alias, string name, int sortOrder) { }
                 }
 
                 public sealed class SeoTabAttribute()
                     : UCFTabAttribute("seo", "SEO", 4);
+
+                public sealed class ImplicitSeoTabAttribute()
+                    : UCFTabAttribute("SEO", 4);
 
                 public sealed class UCFContentTypeAttribute : global::System.Attribute
                 {
@@ -283,6 +350,10 @@ public class CodeFirstRegistryGeneratorTests {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
                     [Shorthand.UmbracoCodeFirst.Attributes.SeoTab]
                     public partial string Title { get; }
+
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Description", "textstring")]
+                    [Shorthand.UmbracoCodeFirst.Attributes.ImplicitSeoTab]
+                    public partial string Description { get; }
                 }
             }
             """;
@@ -307,6 +378,7 @@ public class CodeFirstRegistryGeneratorTests {
 
         // Assert
         generatedSource.ShouldContain("\"seo\", \"SEO\", 4");
+        generatedSource.ShouldContain("\"description\"");
     }
 
     [Fact]

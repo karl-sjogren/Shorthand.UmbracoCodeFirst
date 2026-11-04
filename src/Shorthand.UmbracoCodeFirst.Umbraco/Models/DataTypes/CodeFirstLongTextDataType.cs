@@ -4,7 +4,6 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
-    "codeFirstLongText",
     "Code First Long Text",
     UmbracoEditors.TextArea.Alias,
     EditorUiAlias = UmbracoEditors.TextArea.UiAlias,

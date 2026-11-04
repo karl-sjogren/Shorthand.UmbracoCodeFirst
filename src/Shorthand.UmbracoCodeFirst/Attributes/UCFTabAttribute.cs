@@ -11,6 +11,11 @@ public class UCFTabAttribute : Attribute {
         Name = name;
     }
 
+    public UCFTabAttribute(string name, int sortOrder) {
+        Name = name;
+        SortOrder = sortOrder;
+    }
+
     public UCFTabAttribute(string alias, string name, int sortOrder) {
         Alias = alias;
         Name = name;

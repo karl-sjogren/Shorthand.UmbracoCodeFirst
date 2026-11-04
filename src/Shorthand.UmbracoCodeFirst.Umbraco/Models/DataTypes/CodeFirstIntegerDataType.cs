@@ -4,7 +4,6 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
-    "codeFirstInteger",
     "Code First Integer",
     UmbracoEditors.Integer.Alias,
     EditorUiAlias = UmbracoEditors.Integer.UiAlias,

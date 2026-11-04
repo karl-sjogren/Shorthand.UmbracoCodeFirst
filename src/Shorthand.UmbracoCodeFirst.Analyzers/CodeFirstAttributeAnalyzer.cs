@@ -215,8 +215,19 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
         };
-        if(!hasExplicitAlias
-            || attribute.ConstructorArguments[0].Value is not string alias) {
+        int nameIndex = attributeName switch {
+            "UCFPropertyAttribute" => hasExplicitAlias ? 1 : 0,
+            _ => hasExplicitAlias ? 1 : 0,
+        };
+        if(attribute.ConstructorArguments.Length <= nameIndex
+            || attribute.ConstructorArguments[nameIndex].Value is not string name) {
+            return;
+        }
+
+        string alias = hasExplicitAlias
+            ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
+            : ToAlias(name);
+        if(alias.Length == 0) {
             return;
         }
 
@@ -233,12 +244,15 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ISymbol symbol,
         ConcurrentBag<AliasOccurrence> occurrences,
         bool isGroup) {
-        if(attribute.ConstructorArguments.Length < 2
-            || attribute.ConstructorArguments[0].Value is not string alias
-            || attribute.ConstructorArguments[1].Value is not string name) {
+        if(attribute.ConstructorArguments.Length == 0
+            || attribute.ConstructorArguments[attribute.ConstructorArguments.Length - 1].Value
+                is not string name) {
             return;
         }
 
+        string alias = attribute.ConstructorArguments.Length == 1
+            ? ToAlias(name)
+            : attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
         int sortOrder = attribute.ConstructorArguments.Length > 2
             && attribute.ConstructorArguments[2].Value is int value
             ? value
@@ -509,6 +523,48 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         return category is UnicodeCategory.NonSpacingMark
             or UnicodeCategory.SpacingCombiningMark
             or UnicodeCategory.EnclosingMark;
+    }
+
+    private static string ToAlias(string value) {
+        var words = new List<string>();
+        var word = new System.Text.StringBuilder();
+
+        for(int index = 0; index < value.Length; index++) {
+            char character = value[index];
+            if(!char.IsLetterOrDigit(character)) {
+                AddWord();
+                continue;
+            }
+
+            bool startsNewWord = word.Length > 0
+                && char.IsUpper(character)
+                && (char.IsLower(value[index - 1])
+                    || char.IsDigit(value[index - 1])
+                    || (index + 1 < value.Length && char.IsLower(value[index + 1])));
+            if(startsNewWord) {
+                AddWord();
+            }
+
+            word.Append(character);
+        }
+
+        AddWord();
+        if(words.Count == 0) {
+            return string.Empty;
+        }
+
+        return string.Join(
+            string.Empty,
+            new[] { words[0].ToLowerInvariant() }
+                .Concat(words.Skip(1).Select(word =>
+                    char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant())));
+
+        void AddWord() {
+            if(word.Length > 0) {
+                words.Add(word.ToString());
+                word.Clear();
+            }
+        }
     }
 
     private sealed class AliasOccurrence(

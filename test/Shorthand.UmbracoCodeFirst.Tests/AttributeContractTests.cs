@@ -45,4 +45,13 @@ public class AttributeContractTests {
         property.Name.ShouldBe("Description");
         property.DataTypeAlias.ShouldBe("codeFirstText");
     }
+
+    [Fact]
+    public void UCFTabAttribute_NameAndSortOrder_LeavesAliasNull() {
+        var attribute = new UCFTabAttribute("Product details", 2);
+
+        attribute.Alias.ShouldBeNull();
+        attribute.Name.ShouldBe("Product details");
+        attribute.SortOrder.ShouldBe(2);
+    }
 }

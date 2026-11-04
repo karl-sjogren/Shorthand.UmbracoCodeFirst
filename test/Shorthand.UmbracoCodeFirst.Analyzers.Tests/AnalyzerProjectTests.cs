@@ -97,6 +97,39 @@ public class AnalyzerProjectTests {
     }
 
     [Fact]
+    public void Analyze_DuplicateDerivedDefinitionAliases_ReportsDuplicateAliasDiagnostic() {
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("Product Page")]
+            public partial class Product;
+            [UCFDataType("Product Page", "text")]
+            public partial class ProductEditor;
+            """;
+
+        var diagnostics = Analyze(source);
+
+        diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
+    public void Analyze_DuplicateDerivedPropertyAliases_ReportsDuplicateAliasDiagnostic() {
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFContentType("Article")]
+            public partial class Article {
+                [UCFProperty("Product Page", "text")]
+                public partial string First { get; }
+                [UCFProperty("ProductPage", "text")]
+                public partial string Second { get; }
+            }
+            """;
+
+        var diagnostics = Analyze(source);
+
+        diagnostics.ShouldContain(diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.DuplicateAliasId);
+    }
+
+    [Fact]
     public void Analyze_SharedDataTypeAcrossComposedTypes_DoesNotReportDuplicatePropertyAliasDiagnostic() {
         // Arrange
         const string source = """
@@ -340,16 +373,28 @@ public class AnalyzerProjectTests {
 
     private const string _attributeDefinitions = """
         namespace Shorthand.UmbracoCodeFirst.Attributes;
-        public sealed class UCFContentTypeAttribute(string alias, string name) : global::System.Attribute;
+        public sealed class UCFContentTypeAttribute : global::System.Attribute {
+            public UCFContentTypeAttribute(string name) { }
+            public UCFContentTypeAttribute(string alias, string name) { }
+        }
         public sealed class UCFDataTypeAttribute : global::System.Attribute {
             public UCFDataTypeAttribute(string name, string editorAlias) { }
             public UCFDataTypeAttribute(string alias, string name, string editorAlias) { }
         }
-        public sealed class UCFPropertyAttribute(string alias, string name, string dataTypeAlias) : global::System.Attribute;
+        public sealed class UCFPropertyAttribute : global::System.Attribute {
+            public UCFPropertyAttribute(string name, string dataTypeAlias) { }
+            public UCFPropertyAttribute(string alias, string name, string dataTypeAlias) { }
+        }
         [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
         public sealed class UCFCompositeAttribute(global::System.Type contentType) : global::System.Attribute;
-        public class UCFGroupAttribute(string alias, string name) : global::System.Attribute;
-        public sealed class UCFTabAttribute(string alias, string name) : global::System.Attribute;
+        public class UCFGroupAttribute : global::System.Attribute {
+            public UCFGroupAttribute(string name) { }
+            public UCFGroupAttribute(string alias, string name) { }
+        }
+        public sealed class UCFTabAttribute : global::System.Attribute {
+            public UCFTabAttribute(string name) { }
+            public UCFTabAttribute(string alias, string name) { }
+        }
         public class UCFValidationAttribute(string expression, string? message = null) : global::System.Attribute;
         """;
 }

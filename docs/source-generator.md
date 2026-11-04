@@ -44,15 +44,15 @@ not been bound yet), so ordering of files does not matter.
 
 ## Alias derivation
 
-When no alias is supplied: every non-letter/digit character starts a new word; the first word is
-lower-case; each following word starts upper-case; all other letters are lower-cased.
+When no alias is supplied, separators and PascalCase word boundaries are detected. The first word
+is lower-case; each following word starts upper-case; all other letters are lower-cased.
 
 | Name | Alias |
 | ---- | ----- |
 | `Body text` | `bodyText` |
 | `Product Page` | `productPage` |
 | `SEO` | `seo` |
-| `ProductPage` | `productpage` |
+| `ProductPage` | `productPage` |
 
 Because letters inside a word are lower-cased, supply explicit aliases when you need mixed-case
 (`"productPage"`).

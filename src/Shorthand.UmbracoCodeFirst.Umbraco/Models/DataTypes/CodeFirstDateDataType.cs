@@ -4,7 +4,6 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
-    "codeFirstDate",
     "Code First Date",
     UmbracoEditors.DateTime.Alias,
     EditorUiAlias = UmbracoEditors.DateTime.UiAlias,

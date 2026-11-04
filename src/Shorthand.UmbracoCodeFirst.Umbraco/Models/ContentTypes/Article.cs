@@ -3,7 +3,6 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 
 [UCFContentType(
-    "article",
     "Article",
     Icon = "icon-document",
     AllowAsRoot = true)]
@@ -12,14 +11,13 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 [UCFDescription("An article managed by the code-first sample model.")]
 public partial class Article {
     [UCFProperty(
-        "title",
         "Title",
         "codeFirstText",
         SortOrder = 0,
         Mandatory = true,
         LabelOnTop = true)]
     [UCFDescription("The article headline.")]
-    [UCFTab("content", "Content")]
+    [UCFTab("Content")]
     public partial string Title { get; }
 
     [UCFProperty(

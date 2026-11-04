@@ -545,15 +545,19 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             return null;
         }
 
-        string name = constructorArguments.Count == 1
+        bool hasImplicitAlias = constructorArguments.Count == 1
+            || constructorArguments.Count == 2 && constructorArguments[1] is int;
+        string name = hasImplicitAlias
             ? constructorArguments[0]?.ToString() ?? string.Empty
             : constructorArguments[1]?.ToString() ?? string.Empty;
-        string alias = constructorArguments.Count == 1
+        string alias = hasImplicitAlias
             ? ToAlias(name)
             : constructorArguments[0]?.ToString() ?? ToAlias(name);
         int sortOrder = constructorArguments.Count > 2 && constructorArguments[2] is int constructorSortOrder
             ? constructorSortOrder
-            : GetNamedIntArgument(attribute, "SortOrder");
+            : constructorArguments.Count == 2 && constructorArguments[1] is int implicitSortOrder
+                ? implicitSortOrder
+                : GetNamedIntArgument(attribute, "SortOrder");
         return new GroupMetadata(alias, name, sortOrder);
     }
 
@@ -626,24 +630,46 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static bool IsDefinitionAttribute(AttributeData attribute) =>
         IsAttribute(attribute, _documentTypeAttributeMetadataName, _dataTypeAttributeMetadataName);
 
-    private static string ToAlias(string value) {
-        var builder = new System.Text.StringBuilder();
-        bool capitalize = false;
-        foreach (char character in value) {
-            if (!char.IsLetterOrDigit(character)) {
-                capitalize = builder.Length > 0;
+    internal static string ToAlias(string value) {
+        var words = new List<string>();
+        var word = new System.Text.StringBuilder();
+
+        for(int index = 0; index < value.Length; index++) {
+            char character = value[index];
+            if(!char.IsLetterOrDigit(character)) {
+                AddWord();
                 continue;
             }
 
-            builder.Append(builder.Length == 0
-                ? char.ToLowerInvariant(character)
-                : capitalize
-                    ? char.ToUpperInvariant(character)
-                    : char.ToLowerInvariant(character));
-            capitalize = false;
+            bool startsNewWord = word.Length > 0
+                && char.IsUpper(character)
+                && (char.IsLower(value[index - 1])
+                    || char.IsDigit(value[index - 1])
+                    || (index + 1 < value.Length && char.IsLower(value[index + 1])));
+            if(startsNewWord) {
+                AddWord();
+            }
+
+            word.Append(character);
         }
 
-        return builder.ToString();
+        AddWord();
+        if(words.Count == 0) {
+            return string.Empty;
+        }
+
+        return string.Join(
+            string.Empty,
+            new[] { words[0].ToLowerInvariant() }
+                .Concat(words.Skip(1).Select(word =>
+                    char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant())));
+
+        void AddWord() {
+            if(word.Length > 0) {
+                words.Add(word.ToString());
+                word.Clear();
+            }
+        }
     }
 
     private static string GetNamedStringArgument(AttributeData attribute, string name) =>
