@@ -33,10 +33,10 @@ de-duplicated list in `CodeFirstDefinition.CompositionAliases`.
 - **Ordering** – composed types are synchronized before the types that compose them.
 - **Adding** – missing compositions are added with Umbraco's `AddContentType`. A composition alias
   that does not exist in Umbraco fails the composing type with a descriptive message.
-- **Ownership** – each composition added by code-first is recorded as a
-  `shorthand.umbraco-codefirst:composition:<alias>` line in the composing type's description.
+- **Ownership** – each composition added by code-first is recorded in Umbraco's persisted
+  key/value store rather than the composing type's editor-facing description.
 - **Removing** – if a composition is removed from code, it is removed from Umbraco **only** when
-  that marker exists. Compositions added manually in the backoffice are preserved.
+  its ownership record exists. Compositions added manually in the backoffice are preserved.
 - Compositions of non-owned Document Types are never changed.
 
 The sample `ProductPage` composes `Article`, and the integration tests assert that `productPage`

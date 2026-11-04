@@ -19,7 +19,7 @@ public class AttributeContractTests {
         };
 
         // Act
-        string? alias = attribute.Alias;
+        var alias = attribute.Alias;
 
         // Assert
         alias.ShouldBe("productPage");
@@ -35,8 +35,8 @@ public class AttributeContractTests {
         var property = new UCFPropertyAttribute("Description", "codeFirstText");
 
         // Act
-        string? dataTypeAlias = dataType.Alias;
-        string? propertyAlias = property.Alias;
+        var dataTypeAlias = dataType.Alias;
+        var propertyAlias = property.Alias;
 
         // Assert
         dataTypeAlias.ShouldBeNull();

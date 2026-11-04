@@ -29,7 +29,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
     }
 
     private static MetadataResult Parse(AdditionalText text, CancellationToken cancellationToken) {
-        string content = text.GetText(cancellationToken)?.ToString() ?? string.Empty;
+        var content = text.GetText(cancellationToken)?.ToString() ?? string.Empty;
         if(content.Length == 0) {
             return MetadataResult.Failure("The editor metadata file is empty.");
         }
@@ -43,13 +43,13 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
 
             var entries = new List<EditorMetadata>();
             foreach(var editor in editors.EnumerateArray()) {
-                string? id = GetString(editor, "id");
-                string? name = GetString(editor, "name");
-                string? description = GetString(editor, "description");
-                string? alias = GetString(editor, "alias");
-                string? uiAlias = GetString(editor, "uiAlias");
-                string? returnType = GetString(editor, "returnType");
-                string? documentationUrl = GetString(editor, "documentationUrl");
+                var id = GetString(editor, "id");
+                var name = GetString(editor, "name");
+                var description = GetString(editor, "description");
+                var alias = GetString(editor, "alias");
+                var uiAlias = GetString(editor, "uiAlias");
+                var returnType = GetString(editor, "returnType");
+                var documentationUrl = GetString(editor, "documentationUrl");
                 if(new[] { id, name, description, alias, uiAlias, returnType, documentationUrl }
                     .Any(static value => string.IsNullOrWhiteSpace(value))) {
                     return MetadataResult.Failure("Every editor metadata entry must define all required fields.");
@@ -121,7 +121,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         builder.AppendLine("public static class UmbracoEditors {");
 
         foreach(var editor in result.Entries!) {
-            string className = GetClassName(editor.Id);
+            var className = GetClassName(editor.Id);
             builder.AppendLine($"    /// <summary>{EscapeXml(editor.Description)}</summary>");
             builder.AppendLine($"    /// <remarks><see href=\"{editor.DocumentationUrl}\">Documentation</see></remarks>");
             builder.AppendLine($"    public static class {className} {{");

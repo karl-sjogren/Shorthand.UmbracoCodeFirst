@@ -29,9 +29,9 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
             return;
         }
 
-        string assemblyDirectory = _fileSystem.Path.GetDirectoryName(typeof(UmbracoIntegrationFixture).Assembly.Location)!;
+        var assemblyDirectory = _fileSystem.Path.GetDirectoryName(typeof(UmbracoIntegrationFixture).Assembly.Location)!;
         _assemblyResolver = (_, assemblyName) => {
-            string assemblyPath = _fileSystem.Path.Combine(assemblyDirectory, $"{assemblyName.Name}.dll");
+            var assemblyPath = _fileSystem.Path.Combine(assemblyDirectory, $"{assemblyName.Name}.dll");
             return _fileSystem.File.Exists(assemblyPath)
                 ? AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath)
                 : null;

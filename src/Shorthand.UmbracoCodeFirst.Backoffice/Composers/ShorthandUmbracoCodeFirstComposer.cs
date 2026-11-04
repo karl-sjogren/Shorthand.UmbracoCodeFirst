@@ -14,6 +14,7 @@ public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
             _ => CodeFirstDefinitionRegistryDiscovery.Discover());
         builder.Services.AddSingleton<ISynchronizationReportStore, SynchronizationReportStore>();
         builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<CodeFirstOwnershipStore>();
         builder.Services.AddSingleton<ICodeFirstDefinitionStore, UmbracoCodeFirstDefinitionStore>();
         builder.Services.AddSingleton<CodeFirstSynchronizer>();
         builder.Services.AddSingleton<CodeFirstCleanupService>();

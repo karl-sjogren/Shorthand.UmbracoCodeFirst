@@ -1,3 +1,4 @@
+using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
@@ -7,7 +8,8 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 public sealed class CodeFirstCleanupService(
     ICodeFirstDefinitionRegistry registry,
     IDataTypeService dataTypeService,
-    IContentTypeService contentTypeService) {
+    IContentTypeService contentTypeService,
+    CodeFirstOwnershipStore ownershipStore) {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
 
     public async Task<CodeFirstCleanupResponse> PreviewAsync() {
@@ -24,7 +26,7 @@ public sealed class CodeFirstCleanupService(
         List<CodeFirstCleanupItem> items = [];
 
         foreach(var dataType in dataTypes) {
-            if(TryGetOwnedAlias(dataType.ConfigurationData, out string? alias)
+            if(TryGetOwnedAlias(dataType.ConfigurationData, out var alias)
                 && alias is not null
                 && !dataTypeAliases.Contains(alias)) {
                 items.Add(new("DataType", alias, dataType.Name ?? alias));
@@ -32,9 +34,12 @@ public sealed class CodeFirstCleanupService(
         }
 
         foreach(var contentType in contentTypes) {
-            if(!TryGetOwnedAlias(contentType.Description, out string? alias)
+            if(!TryGetOwnedAlias(contentType.Description, out var alias)
                 || alias is null) {
-                continue;
+                alias = contentType.Alias;
+                if(ownershipStore.Get(alias, contentType.Key) is null) {
+                    continue;
+                }
             }
 
             if(!contentTypeAliases.Contains(alias)) {
@@ -76,7 +81,7 @@ public sealed class CodeFirstCleanupService(
         if(item.Kind == "DataType") {
             var dataType = (await dataTypeService.GetAllAsync())
                 .FirstOrDefault(candidate =>
-                    TryGetOwnedAlias(candidate.ConfigurationData, out string? alias)
+                    TryGetOwnedAlias(candidate.ConfigurationData, out var alias)
                     && string.Equals(alias, item.Alias, StringComparison.Ordinal));
             if(dataType is null) {
                 return false;
@@ -187,15 +192,16 @@ public sealed class CodeFirstCleanupService(
         }
     }
 
-    private static bool IsOwned(IContentType contentType, string alias) =>
-        contentType.Description?.Contains(
+    private bool IsOwned(IContentType contentType, string alias) =>
+        ownershipStore.Get(alias, contentType.Key) is not null
+        || contentType.Description?.Contains(
             $"{_ownershipKey}:{alias}",
             StringComparison.Ordinal) == true;
 
     private static bool TryGetOwnedAlias(
         IDictionary<string, object> configuration,
         out string? alias) {
-        if(configuration.TryGetValue(_ownershipKey, out object? value)
+        if(configuration.TryGetValue(_ownershipKey, out var value)
             && value is string stringValue) {
             alias = stringValue;
             return true;
@@ -206,8 +212,8 @@ public sealed class CodeFirstCleanupService(
     }
 
     private static bool TryGetOwnedAlias(string? description, out string? alias) {
-        string prefix = $"{_ownershipKey}:";
-        string? marker = description?
+        var prefix = $"{_ownershipKey}:";
+        var marker = description?
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .FirstOrDefault(line => line.StartsWith(prefix, StringComparison.Ordinal)
                 && !line.StartsWith($"{_ownershipKey}:composition:", StringComparison.Ordinal));

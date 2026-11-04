@@ -6,6 +6,27 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_NoDefinitions_DoesNotEmitEmptyRegistry() {
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                "public static class Empty { }",
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var result = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single();
+
+        result.GeneratedSources.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void GenerateEditorCatalog_EmitsPublicEditorDefinitionsFromMetadata() {
         const string metadata = """
             {
@@ -39,7 +60,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        string generatedSource = driver
+        var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -117,7 +138,7 @@ public class CodeFirstRegistryGeneratorTests {
             .Results
             .Single()
             ;
-        string generatedSource = result
+        var generatedSource = result
             .GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText
@@ -177,10 +198,10 @@ public class CodeFirstRegistryGeneratorTests {
         var generatorResult = result.GetRunResult().Results
             .Single()
             ;
-        string generatedSource = generatorResult.GeneratedSources
+        var generatedSource = generatorResult.GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText.ToString();
-        string modelSource = generatorResult.GeneratedSources
+        var modelSource = generatorResult.GeneratedSources
             .Single(source => source.HintName.Contains("Example_Article", StringComparison.Ordinal))
             .SourceText.ToString();
 
@@ -196,12 +217,13 @@ public class CodeFirstRegistryGeneratorTests {
         modelSource.ShouldContain("public static IPublishedPropertyType GetModelPropertyType<TValue>");
         modelSource.ShouldContain("public partial global::System.String Title => this.Value<global::System.String>");
         modelSource.ShouldContain("[ImplementPropertyType(\"title\")]");
+        var generatorVersion = typeof(CodeFirstRegistryGenerator).Assembly.GetName().Version!.ToString();
         modelSource.ShouldContain(
-            """
+            $$"""
                 /// <summary>
                 ///   Title
                 /// </summary>
-                [GeneratedCode("Shorthand.UmbracoCodeFirst.SourceGenerators", "1.0")]
+                [GeneratedCode("Shorthand.UmbracoCodeFirst.SourceGenerators", "{{generatorVersion}}")]
                 [MaybeNull]
                 [ImplementPropertyType("title")]
                 public partial global::System.String Title => this.Value<global::System.String>(_publishedValueFallback, "title");
@@ -242,7 +264,7 @@ public class CodeFirstRegistryGeneratorTests {
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        string generatedSource = driver
+        var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -369,7 +391,7 @@ public class CodeFirstRegistryGeneratorTests {
             .GetRunResult()
             .Results
             .Single();
-        string generatedSource = generatorResult.GeneratedSources
+        var generatedSource = generatorResult.GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText.ToString();
 
@@ -433,7 +455,7 @@ public class CodeFirstRegistryGeneratorTests {
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        string generatedSource = driver
+        var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -480,7 +502,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        string generatedSource = driver
+        var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -526,7 +548,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        string generatedSource = driver
+        var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
@@ -598,7 +620,7 @@ public class CodeFirstRegistryGeneratorTests {
             .Single();
         // Assert
         generatorResult.Diagnostics.ShouldBeEmpty();
-        string generatedSource = generatorResult.GeneratedSources
+        var generatedSource = generatorResult.GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText
             .ToString();
@@ -661,7 +683,7 @@ public class CodeFirstRegistryGeneratorTests {
             .GetRunResult()
             .Results
             .Single();
-        string generatedSource = generatorResult.GeneratedSources
+        var generatedSource = generatorResult.GeneratedSources
             .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
             .SourceText.ToString();
 

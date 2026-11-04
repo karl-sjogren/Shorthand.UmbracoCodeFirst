@@ -31,7 +31,9 @@ removed after its obsolete direct properties have been removed and it has no rem
 
 ## Safety rules
 
-- Only items with the existing code-first ownership markers are candidates.
+- Only items belonging to a code-first-owned Document Type or Data Type are candidates. Document
+  type ownership is stored in Umbraco's persisted key/value store; legacy description markers are
+  still recognized for migration compatibility.
 - Manual Data Types and Document Types are never included.
 - Manual compositions and composition-owned properties/groups are preserved.
 - Each deletion is attempted independently. A failure is displayed with its message and does not

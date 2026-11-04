@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
+using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
@@ -235,8 +236,15 @@ public class CodeFirstCleanupServiceTests {
     private static CodeFirstCleanupService CreateService(
         IDataTypeService dataTypeService,
         IContentTypeService contentTypeService,
-        IReadOnlyList<CodeFirstDefinition> definitions) =>
-        new(new TestRegistry(definitions), dataTypeService, contentTypeService);
+        IReadOnlyList<CodeFirstDefinition> definitions) {
+        var keyValueService = A.Fake<IKeyValueService>();
+        A.CallTo(() => keyValueService.GetValue(A<string>._)).Returns(null);
+        return new(
+            new TestRegistry(definitions),
+            dataTypeService,
+            contentTypeService,
+            new CodeFirstOwnershipStore(keyValueService));
+    }
 
     private static ContentType CreateContentType(
         string alias,

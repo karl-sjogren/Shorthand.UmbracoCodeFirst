@@ -61,7 +61,7 @@ public sealed class CodeFirstSynchronizer(
                 return;
             }
 
-            foreach(string compositionAlias in definition.CompositionAliases ?? []) {
+            foreach(var compositionAlias in definition.CompositionAliases ?? []) {
                 if(contentTypes.TryGetValue(compositionAlias, out var composition)) {
                     Visit(composition);
                 }

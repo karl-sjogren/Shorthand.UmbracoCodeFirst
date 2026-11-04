@@ -25,15 +25,14 @@ Ownership is how code-first knows it may update something.
 
 - **Data Types** – the Data Type's configuration data contains the key `shorthand.umbraco-codefirst`
   whose value is the code-first alias. Lookups find Data Types by that marker, not by name.
-- **Document Types** – the description contains the line `shorthand.umbraco-codefirst:<alias>`. The
-  marker is appended to your `UCFDescription` text and re-applied on every update.
-- **Compositions** – a line `shorthand.umbraco-codefirst:composition:<compositionAlias>` in the
-  composing type's description marks that composition as code-first-owned
-  (see [Compositions](compositions.md)).
+- **Document Types and compositions** – ownership is stored in Umbraco's persisted key/value store,
+  keyed by the Document Type alias and persisted key. It is not part of the editor-facing
+  description.
 
 Because ownership lives in Umbraco's own data, anything created manually in the backoffice, or by
-other tools, is never modified. A Document Type that already exists without the marker is reported
-as `Skipped`. (Note that the marker is user-visible in the Document Type description.)
+other tools, is never modified. A Document Type that already exists without ownership metadata is
+reported as `Skipped`. Sites upgraded from an earlier version are migrated automatically: legacy
+description markers are removed during synchronization.
 
 ## Data Types
 
@@ -49,8 +48,8 @@ unknown reference fails that Document Type.
 
 ## Document Types
 
-For a new Document Type: create with name, description (+ marker), icon, element/root/library flags,
-then compositions, tabs/groups, properties.
+For a new Document Type: create with name, description, icon, element/root/library flags, then
+compositions, tabs/groups, properties.
 
 For an existing **owned** Document Type, the following are reconciled:
 

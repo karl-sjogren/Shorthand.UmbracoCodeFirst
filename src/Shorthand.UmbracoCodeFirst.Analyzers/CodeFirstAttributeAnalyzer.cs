@@ -182,7 +182,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ConcurrentBag<DataTypeOccurrence> dataTypes,
         ConcurrentBag<EditorPropertyOccurrence> editorProperties) {
         foreach(var attribute in symbol.GetAttributes()) {
-            string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
+            var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
             if(attributeName is "UCFContentTypeAttribute" or "UCFDataTypeAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.Global);
                 if(attributeName == "UCFDataTypeAttribute") {
@@ -226,13 +226,13 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         AttributeData attribute,
         ISymbol symbol,
         ConcurrentBag<DataTypeOccurrence> dataTypes) {
-        int editorIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
+        var editorIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
         if(attribute.ConstructorArguments.Length <= editorIndex
             || attribute.ConstructorArguments[editorIndex].Value is not string editorAlias) {
             return;
         }
 
-        string alias = GetDefinitionAlias(attribute);
+        var alias = GetDefinitionAlias(attribute);
         if(alias.Length > 0) {
             dataTypes.Add(new DataTypeOccurrence(alias, editorAlias, symbol));
         }
@@ -242,7 +242,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         AttributeData attribute,
         IPropertySymbol property,
         ConcurrentBag<EditorPropertyOccurrence> editorProperties) {
-        int dataTypeIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
+        var dataTypeIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
         if(attribute.ConstructorArguments.Length > dataTypeIndex
             && attribute.ConstructorArguments[dataTypeIndex].Value is string dataTypeAlias) {
             editorProperties.Add(new EditorPropertyOccurrence(property, dataTypeAlias));
@@ -250,8 +250,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     }
 
     private static string GetDefinitionAlias(AttributeData attribute) {
-        bool hasExplicitAlias = attribute.ConstructorArguments.Length >= 3;
-        int nameIndex = hasExplicitAlias ? 1 : 0;
+        var hasExplicitAlias = attribute.ConstructorArguments.Length >= 3;
+        var nameIndex = hasExplicitAlias ? 1 : 0;
         if(attribute.ConstructorArguments.Length <= nameIndex
             || attribute.ConstructorArguments[nameIndex].Value is not string name) {
             return string.Empty;
@@ -287,14 +287,14 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ISymbol symbol,
         ConcurrentBag<AliasOccurrence> occurrences,
         AliasScope scope) {
-        string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
-        bool hasExplicitAlias = attributeName switch {
+        var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
+        var hasExplicitAlias = attributeName switch {
             "UCFContentTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
             "UCFDataTypeAttribute" => attribute.ConstructorArguments.Length >= 3,
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
         };
-        int nameIndex = attributeName switch {
+        var nameIndex = attributeName switch {
             "UCFPropertyAttribute" => hasExplicitAlias ? 1 : 0,
             _ => hasExplicitAlias ? 1 : 0,
         };
@@ -303,7 +303,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             return;
         }
 
-        string alias = hasExplicitAlias
+        var alias = hasExplicitAlias
             ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
             : ToAlias(name);
         if(alias.Length == 0) {
@@ -329,10 +329,10 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             return;
         }
 
-        string alias = attribute.ConstructorArguments.Length == 1
+        var alias = attribute.ConstructorArguments.Length == 1
             ? ToAlias(name)
             : attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
-        int sortOrder = attribute.ConstructorArguments.Length > 2
+        var sortOrder = attribute.ConstructorArguments.Length > 2
             && attribute.ConstructorArguments[2].Value is int value
             ? value
             : 0;
@@ -356,7 +356,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             return;
         }
 
-        string message = attribute.ConstructorArguments.Length > 1
+        var message = attribute.ConstructorArguments.Length > 1
             ? attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty
             : string.Empty;
         validations.Add(new ValidationOccurrence(
@@ -682,14 +682,14 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         var words = new List<string>();
         var word = new System.Text.StringBuilder();
 
-        for(int index = 0; index < value.Length; index++) {
-            char character = value[index];
+        for(var index = 0; index < value.Length; index++) {
+            var character = value[index];
             if(!char.IsLetterOrDigit(character)) {
                 AddWord();
                 continue;
             }
 
-            bool startsNewWord = word.Length > 0
+            var startsNewWord = word.Length > 0
                 && char.IsUpper(character)
                 && (char.IsLower(value[index - 1])
                     || char.IsDigit(value[index - 1])
@@ -802,7 +802,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                 return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
             }
 
-            string content = metadataFile.GetText()?.ToString() ?? string.Empty;
+            var content = metadataFile.GetText()?.ToString() ?? string.Empty;
             if(content.Length == 0) {
                 return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
             }
@@ -817,8 +817,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                 var builder = ImmutableDictionary.CreateBuilder<string, EditorMetadata>(
                     StringComparer.Ordinal);
                 foreach(var editor in editors.EnumerateArray()) {
-                    string? alias = GetJsonString(editor, "alias");
-                    string? returnType = GetJsonString(editor, "returnType");
+                    var alias = GetJsonString(editor, "alias");
+                    var returnType = GetJsonString(editor, "returnType");
                     if(!string.IsNullOrWhiteSpace(alias) && !string.IsNullOrWhiteSpace(returnType)) {
                         builder[alias!] = new EditorMetadata(alias!, returnType!);
                     }

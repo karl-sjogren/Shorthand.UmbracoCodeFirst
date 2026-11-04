@@ -37,7 +37,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
                     .FirstOrDefault(dataType =>
                         dataType.ConfigurationData.TryGetValue(
                             "shorthand.umbraco-codefirst",
-                            out object? value) &&
+                            out var value) &&
                         string.Equals(value as string, definition.Alias, StringComparison.Ordinal))
                     ?.Key,
                 CodeFirstDefinitionKind.DocumentType => contentTypeService.Get(definition.Alias)?.Key,
@@ -45,7 +45,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
             };
 
             if(key is not null) {
-                string path = definition.Kind == CodeFirstDefinitionKind.DataType
+                var path = definition.Kind == CodeFirstDefinitionKind.DataType
                     ? "data-type"
                     : "document-type";
                 urls[(definition.Kind, definition.Alias)] =

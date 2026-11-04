@@ -38,7 +38,9 @@
 
 ## Known behaviours worth knowing
 
-- The ownership marker is stored in the Document Type description and is visible there.
+- Document Type and composition ownership is stored in Umbraco's persisted key/value store and is
+  not shown in the editor-facing description. Legacy description markers are removed during the
+  next synchronization.
 - A property with both `UCFTab` and `UCFGroup` is placed in the group.
 - Generated aliases lower-case letters inside words (`ProductPage` → `productpage`); supply explicit
   aliases for mixed case.

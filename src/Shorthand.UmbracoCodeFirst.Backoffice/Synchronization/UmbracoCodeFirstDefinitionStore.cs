@@ -15,7 +15,8 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     IContentTypeService contentTypeService,
     PropertyEditorCollection propertyEditors,
     IConfigurationEditorJsonSerializer configurationSerializer,
-    IShortStringHelper shortStringHelper) : ICodeFirstDefinitionStore {
+    IShortStringHelper shortStringHelper,
+    CodeFirstOwnershipStore ownershipStore) : ICodeFirstDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
 
@@ -37,7 +38,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             }
 
             _ownedDataTypes[definition.Alias] = existing;
-            bool changed = existing.Name != definition.Name;
+            var changed = existing.Name != definition.Name;
             existing.Name = definition.Name;
             if(existing.EditorUiAlias != definition.EditorUiAlias) {
                 existing.EditorUiAlias = definition.EditorUiAlias;
@@ -93,34 +94,54 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             ContentType created = new(shortStringHelper, -1) {
                 Alias = definition.Alias,
                 Name = definition.Name,
-                Description = BuildDescription(definition.Settings?.Description, definition.Alias),
+                Description = definition.Settings?.Description,
             };
-            ApplyTypeSettings(created, definition.Settings, definition.Alias);
+            ApplyTypeSettings(created, definition.Settings);
             ApplyCompositions(created, definition);
             await ApplyGroupsAndPropertiesAsync(created, definition);
-            return await CreateContentTypeAsync(created);
+            return await CreateContentTypeAsync(created, definition);
         }
 
-        if(!IsOwned(contentType, definition.Alias)) {
+        var ownership = ownershipStore.Get(definition.Alias, contentType.Key);
+        var migrated = MigrateLegacyOwnership(contentType, definition.Alias, out var legacyCompositions);
+        if(ownership is null && !migrated) {
             return SynchronizationStatus.Skipped;
         }
 
-        bool changed = contentType.Name != definition.Name;
+        var changed = contentType.Name != definition.Name;
         contentType.Name = definition.Name;
-        changed |= ApplyTypeSettings(contentType, definition.Settings, definition.Alias);
+        changed |= ApplyTypeSettings(contentType, definition.Settings);
         changed |= ApplyPropertyGroups(contentType, definition);
-        changed |= ApplyCompositions(contentType, definition);
+        changed |= ApplyCompositions(
+            contentType,
+            definition,
+            ownership?.CompositionAliases ?? legacyCompositions);
         changed |= await ApplyGroupsAndPropertiesAsync(contentType, definition);
 
         if(!changed) {
+            ownershipStore.Set(
+                definition.Alias,
+                contentType.Key,
+                definition.CompositionAliases ?? []);
             return SynchronizationStatus.Unchanged;
         }
 
-        return await UpdateContentTypeAsync(contentType);
+        var result = await UpdateContentTypeAsync(contentType);
+        ownershipStore.Set(
+            definition.Alias,
+            contentType.Key,
+            definition.CompositionAliases ?? []);
+        return result;
     }
 
-    private async Task<SynchronizationStatus> CreateContentTypeAsync(ContentType contentType) {
+    private async Task<SynchronizationStatus> CreateContentTypeAsync(
+        ContentType contentType,
+        CodeFirstDefinition definition) {
         await contentTypeService.CreateAsync(contentType, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        ownershipStore.Set(
+            definition.Alias,
+            contentType.Key,
+            definition.CompositionAliases ?? []);
         return SynchronizationStatus.Created;
     }
 
@@ -130,7 +151,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private static bool IsOwned(IDataType dataType) =>
-        dataType.ConfigurationData.TryGetValue(_ownershipKey, out object? value) &&
+        dataType.ConfigurationData.TryGetValue(_ownershipKey, out var value) &&
         value is string;
 
     private async Task<IDataType?> FindOwnedDataTypeAsync(string alias) {
@@ -140,7 +161,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
         var existing = (await dataTypeService.GetAllAsync())
             .FirstOrDefault(dataType =>
-                dataType.ConfigurationData.TryGetValue(_ownershipKey, out object? value) &&
+                dataType.ConfigurationData.TryGetValue(_ownershipKey, out var value) &&
                 string.Equals(value as string, alias, StringComparison.Ordinal));
         if(existing is not null) {
             _ownedDataTypes[alias] = existing;
@@ -151,25 +172,24 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
     private bool ApplyCompositions(
         IContentType contentType,
-        CodeFirstDefinition definition) {
-        bool changed = false;
+        CodeFirstDefinition definition,
+        IReadOnlyList<string>? ownedCompositionAliases = null) {
+        var changed = false;
         var desiredAliases = definition.CompositionAliases ?? [];
         var desired = desiredAliases.ToHashSet(StringComparer.Ordinal);
+        var owned = (ownedCompositionAliases ?? []).ToHashSet(StringComparer.Ordinal);
 
-        foreach(string existingAlias in contentType.CompositionAliases().ToArray()) {
+        foreach(var existingAlias in contentType.CompositionAliases().ToArray()) {
             if(desired.Contains(existingAlias)
-                || !HasMarker(contentType.Description, CompositionOwnershipMarker(existingAlias))) {
+                || !owned.Contains(existingAlias)) {
                 continue;
             }
 
             contentType.RemoveContentType(existingAlias);
-            contentType.Description = RemoveMarker(
-                contentType.Description,
-                CompositionOwnershipMarker(existingAlias));
             changed = true;
         }
 
-        foreach(string compositionAlias in desiredAliases) {
+        foreach(var compositionAlias in desiredAliases) {
             var composition = contentTypeService.Get(compositionAlias);
             if(composition is null) {
                 throw new InvalidOperationException(
@@ -180,62 +200,39 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 contentType.AddContentType(composition);
                 changed = true;
             }
-
-            string marker = CompositionOwnershipMarker(compositionAlias);
-            if(!HasMarker(contentType.Description, marker)) {
-                contentType.Description = AppendMarker(contentType.Description, marker);
-                changed = true;
-            }
         }
 
         return changed;
     }
 
-    private static bool IsOwned(IContentType contentType, string alias) =>
-        contentType.Description?.Contains(OwnershipMarker(alias), StringComparison.Ordinal) == true;
-
-    private static string OwnershipMarker(string alias) => $"{_ownershipKey}:{alias}";
-
-    private static string BuildDescription(
-        string? description,
+    private bool MigrateLegacyOwnership(
+        IContentType contentType,
         string alias,
-        string? existingDescription = null) {
-        string result = string.IsNullOrWhiteSpace(description) ? string.Empty : description;
-        if(!HasMarker(result, OwnershipMarker(alias))) {
-            result = AppendMarker(result, OwnershipMarker(alias));
+        out IReadOnlyList<string> compositionAliases) {
+        var lines = (contentType.Description ?? string.Empty)
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        var ownershipMarker = $"{_ownershipKey}:{alias}";
+        if(!lines.Contains(ownershipMarker, StringComparer.Ordinal)) {
+            compositionAliases = [];
+            return false;
         }
 
-        foreach(string marker in ExtractCompositionMarkers(existingDescription)) {
-            if(!HasMarker(result, marker)) {
-                result = AppendMarker(result, marker);
-            }
-        }
-
-        return result;
-    }
-
-    private static string CompositionOwnershipMarker(string alias) =>
-        $"{_ownershipKey}:composition:{alias}";
-
-    private static bool HasMarker(string? description, string marker) =>
-        description?.Contains(marker, StringComparison.Ordinal) == true;
-
-    private static string AppendMarker(string? description, string marker) =>
-        string.IsNullOrWhiteSpace(description)
-            ? marker
-            : $"{description}{Environment.NewLine}{marker}";
-
-    private static string RemoveMarker(string? description, string marker) =>
-        string.Join(
+        compositionAliases = lines
+            .Where(line => line.StartsWith(
+                $"{_ownershipKey}:composition:",
+                StringComparison.Ordinal))
+            .Select(line => line[($"{_ownershipKey}:composition:").Length..])
+            .ToArray();
+        contentType.Description = string.Join(
             Environment.NewLine,
-            (description ?? string.Empty)
-                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-                .Where(line => !string.Equals(line, marker, StringComparison.Ordinal)));
-
-    private static IEnumerable<string> ExtractCompositionMarkers(string? description) =>
-        (description ?? string.Empty)
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Where(line => line.StartsWith($"{_ownershipKey}:composition:", StringComparison.Ordinal));
+            lines.Where(line =>
+                !string.Equals(line, ownershipMarker, StringComparison.Ordinal)
+                && !line.StartsWith(
+                    $"{_ownershipKey}:composition:",
+                    StringComparison.Ordinal)));
+        ownershipStore.Set(alias, contentType.Key, compositionAliases);
+        return true;
+    }
 
     private static bool ApplyConfiguration(IDataType dataType, string? configurationJson) {
         if(string.IsNullOrWhiteSpace(configurationJson)) {
@@ -265,9 +262,9 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             JsonValueKind.String => element.GetString()!,
             JsonValueKind.True => true,
             JsonValueKind.False => false,
-            JsonValueKind.Number when element.TryGetInt32(out int intValue) => intValue,
-            JsonValueKind.Number when element.TryGetInt64(out long longValue) => longValue,
-            JsonValueKind.Number when element.TryGetDecimal(out decimal decimalValue) => decimalValue,
+            JsonValueKind.Number when element.TryGetInt32(out var intValue) => intValue,
+            JsonValueKind.Number when element.TryGetInt64(out var longValue) => longValue,
+            JsonValueKind.Number when element.TryGetDecimal(out var decimalValue) => decimalValue,
             JsonValueKind.Number => element.GetDouble(),
             JsonValueKind.Null => null!,
             _ => throw new InvalidOperationException(
@@ -277,7 +274,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     private async Task<bool> ApplyGroupsAndPropertiesAsync(
         IContentType contentType,
         CodeFirstDefinition definition) {
-        bool changed = ApplyPropertyGroups(contentType, definition);
+        var changed = ApplyPropertyGroups(contentType, definition);
         foreach(var property in definition.Properties) {
             var dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
             if(dataType is null) {
@@ -287,10 +284,10 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
             var existingProperty = contentType.PropertyTypes
                 .FirstOrDefault(candidate => candidate.Alias == property.Alias);
-            string? desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
+            var desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
             if(existingProperty is not null) {
                 changed |= ApplyPropertySettings(existingProperty, property);
-                string? currentGroupAlias = contentType.PropertyGroups
+                var currentGroupAlias = contentType.PropertyGroups
                     .FirstOrDefault(group => group.PropertyTypes?.Any(
                         candidate => candidate.Alias == property.Alias) == true)
                     ?.Alias;
@@ -332,7 +329,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     private static bool ApplyPropertyGroups(
         IContentType contentType,
         CodeFirstDefinition definition) {
-        bool changed = false;
+        var changed = false;
         var desiredAliases = definition.EffectiveTabs
             .Concat(definition.EffectiveGroups)
             .Select(group => group.Alias)
@@ -368,11 +365,11 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         string definitionAlias,
         CodeFirstGroupDefinition definition,
         PropertyGroupType type) {
-        bool changed = false;
+        var changed = false;
         var existingGroup = contentType.PropertyGroups
             .FirstOrDefault(candidate => candidate.Alias == definition.Alias);
         if(existingGroup is null) {
-            string legacyAlias = ToLegacyAlias(definition.Name);
+            var legacyAlias = ToLegacyAlias(definition.Name);
             existingGroup = contentType.PropertyGroups
                 .FirstOrDefault(candidate =>
                     candidate.Type == type
@@ -427,14 +424,13 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
     private static bool ApplyTypeSettings(
         IContentType contentType,
-        CodeFirstTypeSettings? settings,
-        string alias) {
+        CodeFirstTypeSettings? settings) {
         if(settings is null) {
             return false;
         }
 
-        bool changed = false;
-        string description = BuildDescription(settings.Description, alias, contentType.Description);
+        var changed = false;
+        var description = settings.Description;
         if(contentType.Description != description) {
             contentType.Description = description;
             changed = true;
@@ -464,7 +460,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private static bool ApplyPropertySettings(IPropertyType propertyType, CodeFirstPropertyDefinition definition) {
-        bool changed = false;
+        var changed = false;
         if(propertyType.Name != definition.Name) {
             propertyType.Name = definition.Name;
             changed = true;
