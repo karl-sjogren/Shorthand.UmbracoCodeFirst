@@ -19,9 +19,11 @@
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Backoffice\Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.ServiceDefaults\Shorthand.UmbracoCodeFirst.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
+                      PrivateAssets="all"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Analyzers\Shorthand.UmbracoCodeFirst.Analyzers.csproj"
+                      PrivateAssets="all"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="..\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json" />
