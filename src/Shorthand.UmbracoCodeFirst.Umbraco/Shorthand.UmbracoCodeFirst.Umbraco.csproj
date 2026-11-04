@@ -26,7 +26,6 @@
                       PrivateAssets="all"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <AdditionalFiles Include="..\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json" />
   </ItemGroup>
 
   <PropertyGroup>

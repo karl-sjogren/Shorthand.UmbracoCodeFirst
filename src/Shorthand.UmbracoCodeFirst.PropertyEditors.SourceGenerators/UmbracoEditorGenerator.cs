@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 
-namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
+namespace Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators;
 
 [Generator]
 public sealed class UmbracoEditorGenerator : IIncrementalGenerator {

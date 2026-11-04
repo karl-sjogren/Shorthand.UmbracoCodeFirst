@@ -1,11 +1,10 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
-using Shorthand.UmbracoCodeFirst.PropertyEditors;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
     "Code First Long Text",
-    UmbracoEditors.TextArea.Alias,
-    EditorUiAlias = UmbracoEditors.TextArea.UiAlias,
+    PropertyEditors.UmbracoEditors.TextArea.Alias,
+    EditorUiAlias = PropertyEditors.UmbracoEditors.TextArea.UiAlias,
     ConfigurationJson = """{"maxChars":5000,"rows":8}""")]
 public partial class CodeFirstLongTextDataType;

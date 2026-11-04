@@ -1,11 +1,10 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
-using Shorthand.UmbracoCodeFirst.PropertyEditors;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 [UCFDataType(
     "Code First Date",
-    UmbracoEditors.DateTime.Alias,
-    EditorUiAlias = UmbracoEditors.DateTime.UiAlias,
+    PropertyEditors.UmbracoEditors.DateTime.Alias,
+    EditorUiAlias = PropertyEditors.UmbracoEditors.DateTime.UiAlias,
     ConfigurationJson = """{"format":"yyyy-MM-dd"}""")]
 public partial class CodeFirstDateDataType;
