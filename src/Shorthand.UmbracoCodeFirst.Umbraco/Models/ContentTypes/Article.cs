@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 
@@ -12,7 +13,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 public partial class Article {
     [UCFProperty(
         "Title",
-        "codeFirstText",
+        CodeFirstTextDataType.Alias,
         SortOrder = 0,
         Mandatory = true,
         LabelOnTop = true)]
@@ -22,7 +23,7 @@ public partial class Article {
 
     [UCFProperty(
         "Body text",
-        "codeFirstLongText",
+        CodeFirstLongTextDataType.Alias,
         SortOrder = 1)]
     [UCFTab("Content")]
     public partial string BodyText { get; }

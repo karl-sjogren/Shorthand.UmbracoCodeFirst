@@ -148,6 +148,7 @@ See [development](docs/development.md) for local hosting, test categories, and t
 - [Getting started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
 - [Attribute reference](docs/attributes.md)
+- [Property editor metadata](docs/property-editors.md)
 - [Source generator](docs/source-generator.md)
 - [Synchronization and ownership](docs/synchronization.md)
 - [Compositions](docs/compositions.md)

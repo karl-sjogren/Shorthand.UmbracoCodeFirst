@@ -52,9 +52,9 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
             scope.ServiceProvider.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
 
         // Act
-        SynchronizationReport firstReport =
+        var firstReport =
             await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
-        SynchronizationReport secondReport =
+        var secondReport =
             await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
         var contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
         var nestedComposition = contentTypeService.Get("integrationNestedComposition");

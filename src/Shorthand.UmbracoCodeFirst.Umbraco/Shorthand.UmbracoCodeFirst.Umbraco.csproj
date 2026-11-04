@@ -21,6 +21,10 @@
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Analyzers\Shorthand.UmbracoCodeFirst.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="..\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json" />
   </ItemGroup>
 
   <PropertyGroup>

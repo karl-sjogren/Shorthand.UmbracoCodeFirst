@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
@@ -31,6 +32,8 @@ public class AnalyzerProjectTests {
             ["UCF105"] = $"{documentationBaseUrl}/UCF105.md",
             ["UCF106"] = $"{documentationBaseUrl}/UCF106.md",
             ["UCF107"] = $"{documentationBaseUrl}/UCF107.md",
+            ["UCF108"] = $"{documentationBaseUrl}/UCF108.md",
+            ["UCF109"] = $"{documentationBaseUrl}/UCF109.md",
         });
     }
 
@@ -148,7 +151,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldNotContain(
@@ -174,7 +177,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldNotContain(
@@ -200,7 +203,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(
@@ -222,7 +225,7 @@ public class AnalyzerProjectTests {
             """;
 
         // Act
-        ImmutableArray<Diagnostic> diagnostics = Analyze(source);
+        var diagnostics = Analyze(source);
 
         // Assert
         diagnostics.ShouldContain(
@@ -351,7 +354,60 @@ public class AnalyzerProjectTests {
             diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.InvalidCompositionGraphId);
     }
 
-    private static ImmutableArray<Diagnostic> Analyze(string source) {
+    [Fact]
+    public void Analyze_KnownEditorAndCompatiblePropertyType_DoesNotReportEditorDiagnostic() {
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFDataType("textEditor", "Umbraco.TextBox")]
+            public partial class TextEditor;
+            [UCFContentType("article", "Article")]
+            public partial class Article {
+                [UCFProperty("title", "textEditor")]
+                public partial string Title { get; }
+            }
+            """;
+
+        var diagnostics = Analyze(source, _editorMetadata);
+
+        diagnostics.ShouldNotContain(diagnostic =>
+            diagnostic.Id == CodeFirstAttributeAnalyzer.UnknownEditorAliasId
+            || diagnostic.Id == CodeFirstAttributeAnalyzer.IncompatibleEditorTypeId);
+    }
+
+    [Fact]
+    public void Analyze_IncompatibleEditorPropertyType_ReportsEditorTypeDiagnostic() {
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFDataType("textEditor", "Umbraco.TextBox")]
+            public partial class TextEditor;
+            [UCFContentType("article", "Article")]
+            public partial class Article {
+                [UCFProperty("title", "textEditor")]
+                public partial int Title { get; }
+            }
+            """;
+
+        var diagnostics = Analyze(source, _editorMetadata);
+
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.IncompatibleEditorTypeId);
+    }
+
+    [Fact]
+    public void Analyze_UnknownEditorAlias_ReportsUnknownEditorDiagnostic() {
+        const string source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFDataType("customEditor", "Umbraco.MissingEditor")]
+            public partial class CustomEditor;
+            """;
+
+        var diagnostics = Analyze(source, _editorMetadata);
+
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.UnknownEditorAliasId);
+    }
+
+    private static ImmutableArray<Diagnostic> Analyze(string source, string? metadata = null) {
         source = _attributeDefinitions + source;
         var compilation = CSharpCompilation.Create(
             "AnalyzerTests",
@@ -364,8 +420,12 @@ public class AnalyzerProjectTests {
 
         ImmutableArray<DiagnosticAnalyzer> analyzers =
             [new CodeFirstAttributeAnalyzer()];
+        var options = metadata is null
+            ? new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty)
+            : new AnalyzerOptions(
+                [new InMemoryAdditionalText("umbraco-property-editors.json", metadata)]);
         return compilation
-            .WithAnalyzers(analyzers)
+            .WithAnalyzers(analyzers, options)
             .GetAnalyzerDiagnosticsAsync()
             .GetAwaiter()
             .GetResult();
@@ -397,4 +457,27 @@ public class AnalyzerProjectTests {
         }
         public class UCFValidationAttribute(string expression, string? message = null) : global::System.Attribute;
         """;
+
+    private const string _editorMetadata = """
+        {
+          "editors": [
+            {
+              "id": "textBox",
+              "name": "Textbox",
+              "description": "A single-line text editor.",
+              "alias": "Umbraco.TextBox",
+              "uiAlias": "Umb.PropertyEditorUi.TextBox",
+              "returnType": "string",
+              "documentationUrl": "https://docs.umbraco.com/example"
+            }
+          ]
+        }
+        """;
+
+    private sealed class InMemoryAdditionalText(string path, string content) : AdditionalText {
+        public override string Path { get; } = path;
+
+        public override SourceText? GetText(CancellationToken cancellationToken = default) =>
+            SourceText.From(content);
+    }
 }

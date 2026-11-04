@@ -43,7 +43,10 @@ The generator also emits `public const string Alias` on the class.
 
 ### Editor registry
 
-`UmbracoEditors` provides `Alias`/`UiAlias` constants and an `UmbracoEditor` record `Definition`:
+`UmbracoEditors` is generated from the repository's
+[property-editor metadata catalog](property-editors.md). It provides `Alias`/`UiAlias` constants
+and an `UmbracoEditor` record `Definition` containing the documented name, description, return
+type, and documentation URL:
 
 | Editor | Schema alias | UI alias |
 | ------ | ------------ | -------- |
@@ -55,8 +58,9 @@ The generator also emits `public const string Alias` on the class.
 | `Boolean` | `Umbraco.TrueFalse` | `Umb.PropertyEditorUi.Toggle` |
 | `EmailAddress` | `Umbraco.EmailAddress` | `Umb.PropertyEditorUi.EmailAddress` |
 
-Any other installed editor can be used by passing its alias string. The editor must be registered
-in Umbraco or the Data Type fails with *unknown editor*.
+The analyzer also validates that a referenced built-in editor is in the catalog and that the CLR
+property type is compatible with its documented return type. Any other installed editor can be
+used by passing its alias string, but it will require a catalog entry to participate in validation.
 
 ### `ConfigurationJson`
 

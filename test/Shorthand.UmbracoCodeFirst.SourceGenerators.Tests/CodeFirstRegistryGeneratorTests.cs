@@ -1,9 +1,59 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
+    [Fact]
+    public void GenerateEditorCatalog_EmitsPublicEditorDefinitionsFromMetadata() {
+        const string metadata = """
+            {
+              "editors": [
+                {
+                  "id": "textBox",
+                  "name": "Textbox",
+                  "description": "A single-line text editor.",
+                  "alias": "Umbraco.TextBox",
+                  "uiAlias": "Umb.PropertyEditorUi.TextBox",
+                  "returnType": "string",
+                  "documentationUrl": "https://docs.umbraco.com/example"
+                }
+              ]
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            [
+                new CodeFirstRegistryGenerator().AsSourceGenerator(),
+                new UmbracoEditorGenerator().AsSourceGenerator(),
+            ],
+            additionalTexts: [new InMemoryAdditionalText(
+                "umbraco-property-editors.json",
+                metadata)]);
+        var compilation = CSharpCompilation.Create(
+            "Shorthand.UmbracoCodeFirst",
+            [CSharpSyntaxTree.ParseText(
+                "public static class Empty { }",
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        string generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single(result => result.GeneratedSources.Any(source => source.HintName == "UmbracoEditors.g.cs"))
+            .GeneratedSources
+            .Single(source => source.HintName == "UmbracoEditors.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("public static class TextBox");
+        generatedSource.ShouldContain("public const string Alias = \"Umbraco.TextBox\"");
+        generatedSource.ShouldContain("ReturnType");
+    }
+
     [Theory]
     [InlineData("", "")]
     [InlineData("Body text", "bodyText")]
@@ -17,6 +67,13 @@ public class CodeFirstRegistryGeneratorTests {
     [InlineData("  Multiple   words  ", "multipleWords")]
     public void ToAlias_DerivesExpectedCamelCaseAlias(string value, string expected) {
         CodeFirstRegistryGenerator.ToAlias(value).ShouldBe(expected);
+    }
+
+    private sealed class InMemoryAdditionalText(string path, string content) : AdditionalText {
+        public override string Path { get; } = path;
+
+        public override SourceText? GetText(CancellationToken cancellationToken = default) =>
+            SourceText.From(content);
     }
 
     [Fact]

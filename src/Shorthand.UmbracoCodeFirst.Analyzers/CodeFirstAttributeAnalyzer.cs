@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -19,6 +20,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     public const string PropertyOutsideContentTypeId = "UCF105";
     public const string InvalidCompositionTargetId = "UCF106";
     public const string InvalidCompositionGraphId = "UCF107";
+    public const string UnknownEditorAliasId = "UCF108";
+    public const string IncompatibleEditorTypeId = "UCF109";
 
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _invalidAlias = new(
@@ -98,6 +101,26 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         isEnabledByDefault: true,
         helpLinkUri: _documentationBaseUrl + "/UCF107.md",
         customTags: new[] { "CompilationEnd" });
+
+    private static readonly DiagnosticDescriptor _unknownEditorAlias = new(
+        UnknownEditorAliasId,
+        "Unknown Umbraco property editor",
+        "Data Type '{0}' references editor alias '{1}', which is not in the built-in editor catalog",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF108.md",
+        customTags: new[] { "CompilationEnd" });
+
+    private static readonly DiagnosticDescriptor _incompatibleEditorType = new(
+        IncompatibleEditorTypeId,
+        "Incompatible Umbraco property editor type",
+        "Property '{0}' has CLR type '{1}', but editor '{2}' documents return type '{3}'",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF109.md",
+        customTags: new[] { "CompilationEnd" });
 #pragma warning restore RS2008
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -110,16 +133,21 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             _propertyOutsideContentType,
             _invalidCompositionTarget,
             _invalidCompositionGraph,
+            _unknownEditorAlias,
+            _incompatibleEditorType,
         ];
 
     public override void Initialize(AnalysisContext context) {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(static compilationContext => {
+            var editorCatalog = EditorCatalog.Load(compilationContext.Options.AdditionalFiles);
             var occurrences = new ConcurrentBag<AliasOccurrence>();
             var validations = new ConcurrentBag<ValidationOccurrence>();
             var propertyDiagnostics = new ConcurrentBag<PropertyDiagnosticOccurrence>();
             var compositions = new ConcurrentBag<CompositionOccurrence>();
+            var dataTypes = new ConcurrentBag<DataTypeOccurrence>();
+            var editorProperties = new ConcurrentBag<EditorPropertyOccurrence>();
 
             compilationContext.RegisterSymbolAction(
                 symbolContext => Collect(
@@ -127,7 +155,9 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                     occurrences,
                     validations,
                     propertyDiagnostics,
-                    compositions),
+                    compositions,
+                    dataTypes,
+                    editorProperties),
                 SymbolKind.NamedType,
                 SymbolKind.Property);
             compilationContext.RegisterCompilationEndAction(
@@ -136,7 +166,10 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                     occurrences,
                     validations,
                     propertyDiagnostics,
-                    compositions));
+                    compositions,
+                    dataTypes,
+                    editorProperties,
+                    editorCatalog));
         });
     }
 
@@ -145,11 +178,16 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ConcurrentBag<AliasOccurrence> occurrences,
         ConcurrentBag<ValidationOccurrence> validations,
         ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics,
-        ConcurrentBag<CompositionOccurrence> compositions) {
+        ConcurrentBag<CompositionOccurrence> compositions,
+        ConcurrentBag<DataTypeOccurrence> dataTypes,
+        ConcurrentBag<EditorPropertyOccurrence> editorProperties) {
         foreach(var attribute in symbol.GetAttributes()) {
             string attributeName = attribute.AttributeClass?.Name ?? string.Empty;
             if(attributeName is "UCFContentTypeAttribute" or "UCFDataTypeAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.Global);
+                if(attributeName == "UCFDataTypeAttribute") {
+                    AddDataType(attribute, symbol, dataTypes);
+                }
             } else if(attributeName == "UCFCompositeAttribute"
                       && symbol is INamedTypeSymbol contentType) {
                 CollectComposition(contentType, attribute, compositions);
@@ -157,6 +195,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
                 AddAlias(attribute, symbol, occurrences, AliasScope.ContainingType);
                 if(symbol is IPropertySymbol property) {
                     CollectPropertyContractDiagnostics(property, propertyDiagnostics);
+                    AddEditorProperty(attribute, property, editorProperties);
                 }
             } else if(attributeName is "UCFGroupAttribute" or "UCFTabAttribute") {
                 AddLayout(attribute, symbol, occurrences, attributeName == "UCFGroupAttribute");
@@ -181,6 +220,46 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             target,
             attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
             target.GetAttributes().Any(HasContentTypeAttribute)));
+    }
+
+    private static void AddDataType(
+        AttributeData attribute,
+        ISymbol symbol,
+        ConcurrentBag<DataTypeOccurrence> dataTypes) {
+        int editorIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
+        if(attribute.ConstructorArguments.Length <= editorIndex
+            || attribute.ConstructorArguments[editorIndex].Value is not string editorAlias) {
+            return;
+        }
+
+        string alias = GetDefinitionAlias(attribute);
+        if(alias.Length > 0) {
+            dataTypes.Add(new DataTypeOccurrence(alias, editorAlias, symbol));
+        }
+    }
+
+    private static void AddEditorProperty(
+        AttributeData attribute,
+        IPropertySymbol property,
+        ConcurrentBag<EditorPropertyOccurrence> editorProperties) {
+        int dataTypeIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
+        if(attribute.ConstructorArguments.Length > dataTypeIndex
+            && attribute.ConstructorArguments[dataTypeIndex].Value is string dataTypeAlias) {
+            editorProperties.Add(new EditorPropertyOccurrence(property, dataTypeAlias));
+        }
+    }
+
+    private static string GetDefinitionAlias(AttributeData attribute) {
+        bool hasExplicitAlias = attribute.ConstructorArguments.Length >= 3;
+        int nameIndex = hasExplicitAlias ? 1 : 0;
+        if(attribute.ConstructorArguments.Length <= nameIndex
+            || attribute.ConstructorArguments[nameIndex].Value is not string name) {
+            return string.Empty;
+        }
+
+        return hasExplicitAlias
+            ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
+            : ToAlias(name);
     }
 
     private static void CollectPropertyContractDiagnostics(
@@ -292,8 +371,12 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ConcurrentBag<AliasOccurrence> occurrences,
         ConcurrentBag<ValidationOccurrence> validations,
         ConcurrentBag<PropertyDiagnosticOccurrence> propertyDiagnostics,
-        ConcurrentBag<CompositionOccurrence> compositions) {
+        ConcurrentBag<CompositionOccurrence> compositions,
+        ConcurrentBag<DataTypeOccurrence> dataTypes,
+        ConcurrentBag<EditorPropertyOccurrence> editorProperties,
+        EditorCatalog editorCatalog) {
         ReportCompositionDiagnostics(context, compositions);
+        ReportEditorDiagnostics(context, dataTypes, editorProperties, editorCatalog);
 
         foreach(var diagnostic in propertyDiagnostics) {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -346,6 +429,76 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         }
     }
 
+    private static void ReportEditorDiagnostics(
+        CompilationAnalysisContext context,
+        IEnumerable<DataTypeOccurrence> dataTypes,
+        IEnumerable<EditorPropertyOccurrence> editorProperties,
+        EditorCatalog editorCatalog) {
+        if(editorCatalog.IsEmpty) {
+            return;
+        }
+
+        var editorByDataType = dataTypes
+            .GroupBy(static dataType => dataType.Alias, StringComparer.Ordinal)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+
+        foreach(var dataType in editorByDataType.Values) {
+            if(!editorCatalog.TryGet(dataType.EditorAlias, out _)) {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    _unknownEditorAlias,
+                    dataType.Symbol.Locations.FirstOrDefault(),
+                    dataType.Alias,
+                    dataType.EditorAlias));
+            }
+        }
+
+        foreach(var property in editorProperties) {
+            if(!editorByDataType.TryGetValue(property.DataTypeAlias, out var dataType)
+                || !editorCatalog.TryGet(dataType.EditorAlias, out var editor)
+                || IsCompatible(property.Property.Type, editor.ReturnType)) {
+                continue;
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                _incompatibleEditorType,
+                property.Property.Locations.FirstOrDefault(),
+                property.Property.Name,
+                property.Property.Type.ToDisplayString(),
+                dataType.EditorAlias,
+                editor.ReturnType));
+        }
+    }
+
+    private static bool IsCompatible(ITypeSymbol type, string returnType) {
+        var actual = type is INamedTypeSymbol { IsGenericType: true } named
+            && named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
+                ? named.TypeArguments[0]
+                : type;
+
+        return returnType switch {
+            "object" => true,
+            "string" => actual.SpecialType == SpecialType.System_String,
+            "bool" => actual.SpecialType == SpecialType.System_Boolean,
+            "int" => actual.SpecialType == SpecialType.System_Int32,
+            "decimal" => actual.SpecialType == SpecialType.System_Decimal,
+            "System.DateTime" => actual.SpecialType == SpecialType.System_DateTime,
+            "System.DateTimeOffset" => actual.ToDisplayString() == "System.DateTimeOffset",
+            "System.DateOnly" => actual.ToDisplayString() == "System.DateOnly",
+            "System.TimeOnly" => actual.ToDisplayString() == "System.TimeOnly",
+            _ when returnType.StartsWith("System.Collections.Generic.IEnumerable<string>", StringComparison.Ordinal)
+                => IsEnumerableOf(actual, SpecialType.System_String),
+            _ => returnType.StartsWith("Umbraco.", StringComparison.Ordinal),
+        };
+    }
+
+    private static bool IsEnumerableOf(ITypeSymbol type, SpecialType elementType) =>
+        type is IArrayTypeSymbol array && array.ElementType.SpecialType == elementType
+        || type is INamedTypeSymbol namedType && namedType.AllInterfaces.Any(interfaceType =>
+            interfaceType is INamedTypeSymbol named
+            && named.Name == "IEnumerable"
+            && named.TypeArguments.Length == 1
+            && named.TypeArguments[0].SpecialType == elementType);
+
     private static void ReportPropertyAliasDiagnostics(
         CompilationAnalysisContext context,
         ConcurrentBag<AliasOccurrence> occurrences,
@@ -374,7 +527,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             targets.Add(composition.Target);
         }
 
-        IEnumerable<INamedTypeSymbol> contentTypes = propertyOccurrences
+        var contentTypes = propertyOccurrences
             .Select(static occurrence => occurrence.Symbol.ContainingType)
             .OfType<INamedTypeSymbol>()
             .Where(static type => type.GetAttributes().Any(HasContentTypeAttribute))
@@ -615,6 +768,78 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         public INamedTypeSymbol Target { get; } = target;
         public Location? Location { get; } = location;
         public bool TargetHasContentType { get; } = targetHasContentType;
+    }
+
+    private sealed class DataTypeOccurrence(string alias, string editorAlias, ISymbol symbol) {
+        public string Alias { get; } = alias;
+        public string EditorAlias { get; } = editorAlias;
+        public ISymbol Symbol { get; } = symbol;
+    }
+
+    private sealed class EditorPropertyOccurrence(IPropertySymbol property, string dataTypeAlias) {
+        public IPropertySymbol Property { get; } = property;
+        public string DataTypeAlias { get; } = dataTypeAlias;
+    }
+
+    private sealed class EditorCatalog {
+        private readonly ImmutableDictionary<string, EditorMetadata> _editors;
+
+        private EditorCatalog(ImmutableDictionary<string, EditorMetadata> editors) {
+            _editors = editors;
+        }
+
+        public bool IsEmpty => _editors.IsEmpty;
+
+        public bool TryGet(string alias, out EditorMetadata metadata) =>
+            _editors.TryGetValue(alias, out metadata!);
+
+        public static EditorCatalog Load(ImmutableArray<AdditionalText> additionalFiles) {
+            var metadataFile = additionalFiles.FirstOrDefault(static file =>
+                file.Path.EndsWith(
+                    "umbraco-property-editors.json",
+                    StringComparison.OrdinalIgnoreCase));
+            if(metadataFile is null) {
+                return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
+            }
+
+            string content = metadataFile.GetText()?.ToString() ?? string.Empty;
+            if(content.Length == 0) {
+                return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
+            }
+
+            try {
+                using var document = JsonDocument.Parse(content);
+                if(!document.RootElement.TryGetProperty("editors", out var editors)
+                    || editors.ValueKind != JsonValueKind.Array) {
+                    return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
+                }
+
+                var builder = ImmutableDictionary.CreateBuilder<string, EditorMetadata>(
+                    StringComparer.Ordinal);
+                foreach(var editor in editors.EnumerateArray()) {
+                    string? alias = GetJsonString(editor, "alias");
+                    string? returnType = GetJsonString(editor, "returnType");
+                    if(!string.IsNullOrWhiteSpace(alias) && !string.IsNullOrWhiteSpace(returnType)) {
+                        builder[alias!] = new EditorMetadata(alias!, returnType!);
+                    }
+                }
+
+                return new EditorCatalog(builder.ToImmutable());
+            } catch(JsonException) {
+                return new EditorCatalog(ImmutableDictionary<string, EditorMetadata>.Empty);
+            }
+        }
+
+        private static string? GetJsonString(JsonElement element, string propertyName) =>
+            element.TryGetProperty(propertyName, out var property)
+                && property.ValueKind == JsonValueKind.String
+                ? property.GetString()
+                : null;
+    }
+
+    private sealed class EditorMetadata(string alias, string returnType) {
+        public string Alias { get; } = alias;
+        public string ReturnType { get; } = returnType;
     }
 
     private enum AliasScope {

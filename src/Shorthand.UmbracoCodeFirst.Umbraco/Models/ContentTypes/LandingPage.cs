@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 
@@ -10,7 +11,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
 public partial class LandingPage {
     [UCFProperty(
         "Heading",
-        "codeFirstText",
+        CodeFirstTextDataType.Alias,
         SortOrder = 0,
         Mandatory = true)]
     [UCFTab("Content")]

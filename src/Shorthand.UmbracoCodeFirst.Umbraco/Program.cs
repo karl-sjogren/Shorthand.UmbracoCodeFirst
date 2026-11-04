@@ -1,7 +1,7 @@
 
 using Shorthand.UmbracoCodeFirst.Synchronization;
 
-var app = await Program.CreateApplicationAsync(args);
+var app = await CreateApplicationAsync(args);
 await app.RunAsync();
 
 public partial class Program {
