@@ -5,6 +5,6 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 [UCFDataType(
     "Code First Long Text",
     typeof(PropertyEditors.UmbracoEditors.TextArea),
-    ConfigurationJson = """{"maxChars":5000,"rows":8}""")]
+    typeof(CodeFirstLongTextConfiguration))]
 [UCFFolderPath("CodeFirst")]
 public partial class CodeFirstLongTextDataType;

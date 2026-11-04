@@ -2,6 +2,11 @@
 
 Code-first definitions for Umbraco Document Types and Data Types.
 
+> [!WARNING]
+> This whole project was vibe coded over a few evenings and the code quality is not great.
+> I see this more of a proof of concept than a production-ready library. It will require
+> a lot further refinement to become a robust and production-ready library. But is kinda cool.
+
 Instead of configuring every definition manually in the Umbraco backoffice, declare partial C#
 classes and properties with `UCFDocumentType`, `UCFDataType`, `UCFProperty`, tabs, groups,
 validation attributes, and compositions. A Roslyn source generator creates the definition registry

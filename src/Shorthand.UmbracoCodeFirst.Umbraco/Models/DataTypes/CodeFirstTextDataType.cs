@@ -5,6 +5,6 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 [UCFDataType(
     "Code First Text",
     typeof(PropertyEditors.UmbracoEditors.TextBox),
-    ConfigurationJson = """{"maxChars":255}""")]
+    typeof(CodeFirstTextConfiguration))]
 [UCFFolderPath("CodeFirst")]
 public partial class CodeFirstTextDataType;

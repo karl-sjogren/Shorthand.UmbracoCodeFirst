@@ -136,7 +136,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 changed = true;
             }
 
-            changed |= ApplyConfiguration(existing, definition.ConfigurationJson);
+            changed |= ApplyConfiguration(existing, definition.EffectiveConfigurationJson);
             return !changed
                 ? SynchronizationStatus.Unchanged
                 : await UpdateDataTypeAsync(existing, definition);
@@ -156,7 +156,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 [_ownershipKey] = definition.Alias,
             },
         };
-        ApplyConfiguration(dataType, definition.ConfigurationJson);
+        ApplyConfiguration(dataType, definition.EffectiveConfigurationJson);
         var result =
             await dataTypeService.CreateAsync(dataType, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
         if(!result.Success) {

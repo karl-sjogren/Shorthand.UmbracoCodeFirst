@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Metadata;
 
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
@@ -95,6 +96,36 @@ public class AttributeContractTests {
     }
 
     [Fact]
+    public void UCFDataTypeAttribute_EditorAndConfigurationTypes_PreserveConfigurationType() {
+        var attribute = new UCFDataTypeAttribute(
+            "Code First Text",
+            typeof(TestEditor),
+            typeof(TestConfiguration));
+
+        attribute.ConfigurationType.ShouldBe(typeof(TestConfiguration));
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromJson_CanonicalizesObjectProperties() {
+        var configuration = CodeFirstEditorConfiguration.FromJson(
+            "Umbraco.TextBox",
+            """{"z":true,"a":{"y":2,"x":1}}""");
+
+        configuration.Json.ShouldBe("""{"a":{"x":1,"y":2},"z":true}""");
+        configuration.SchemaVersion.ShouldBe(1);
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesTypedDefinition() {
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(TestTextConfiguration),
+            "Umbraco.TextBox");
+
+        configuration.Json.ShouldBe("""{"maxChars":255}""");
+        configuration.EditorId.ShouldBe("Umbraco.TextBox");
+    }
+
+    [Fact]
     public void UCFTabAttribute_NameAndSortOrder_LeavesAliasNull() {
         var attribute = new UCFTabAttribute("Product details", 2);
 
@@ -106,5 +137,13 @@ public class AttributeContractTests {
     private static class TestEditor {
         public const string Alias = "Umbraco.TextBox";
         public const string UiAlias = "Umb.PropertyEditorUi.TextBox";
+    }
+
+    private static class TestConfiguration {
+        public const string Json = """{"maxChars":255}""";
+    }
+
+    private sealed class TestTextConfiguration : CodeFirstEditorConfigurationDefinition {
+        public int? MaxChars { get; set; } = 255;
     }
 }

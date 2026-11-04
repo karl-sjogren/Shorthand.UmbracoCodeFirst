@@ -8,4 +8,9 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\src\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json"
+                      Link="umbraco-property-editors.json" />
+  </ItemGroup>
+
 </Project>

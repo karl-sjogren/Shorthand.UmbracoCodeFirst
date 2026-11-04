@@ -52,7 +52,11 @@ public sealed record CodeFirstDefinition(
     string? ConfigurationJson = null,
     string? EditorUiAlias = null,
     IReadOnlyList<string>? CompositionAliases = null,
-    string? FolderPath = null) {
+    string? FolderPath = null,
+    CodeFirstEditorConfiguration? EditorConfiguration = null) {
+    public string? EffectiveConfigurationJson =>
+        EditorConfiguration?.Json ?? ConfigurationJson;
+
     public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups =>
         Groups ?? Properties
             .Where(property => property.GroupAlias is not null)

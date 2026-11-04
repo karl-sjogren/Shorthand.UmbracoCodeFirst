@@ -52,6 +52,160 @@ public class CodeFirstRegistryGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_DataTypeConfigurationType_EmitsConstantJson() {
+        const string source = """"
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute
+                {
+                    public UCFDataTypeAttribute(
+                        string name,
+                        string editorAlias,
+                        string editorUiAlias) { }
+                    public string? Alias { get; set; }
+                    public string? ConfigurationJson { get; set; }
+                    public global::System.Type? ConfigurationType { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                public static class TextBoxConfiguration
+                {
+                    public const string Json = """{"maxChars":512}""";
+                }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType(
+                    "Configured Text",
+                    "Umbraco.TextBox",
+                    "Umb.PropertyEditorUi.TextBox",
+                    ConfigurationType = typeof(TextBoxConfiguration))]
+                public partial class ConfiguredText;
+            }
+            """";
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                source,
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("\\\"maxChars\\\":512");
+        generatedSource.ShouldContain(
+            "new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfiguration");
+    }
+
+    [Fact]
+    public void GenerateRegistry_DataTypeConfigurationTypeWithoutJson_ReportsDiagnostic() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute(string name, string editorAlias, string editorUiAlias)
+                    : global::System.Attribute
+                {
+                    public global::System.Type? ConfigurationType { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                public static class InvalidConfiguration
+                {
+                    public const int SchemaVersion = 1;
+                }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType(
+                    "Invalid",
+                    "Umbraco.TextBox",
+                    "Umb.PropertyEditorUi.TextBox",
+                    ConfigurationType = typeof(InvalidConfiguration))]
+                public partial class InvalidDataType;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                source,
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
+
+        result.GetRunResult().Diagnostics.ShouldContain(diagnostic => diagnostic.Id == "UCF111");
+    }
+
+    [Fact]
+    public void GenerateRegistry_TypedConfigurationConstants_EmitsJsonObject() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute(string name, string editorAlias, string editorUiAlias)
+                    : global::System.Attribute
+                {
+                    public global::System.Type? ConfigurationType { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                public static class TextBoxConfiguration
+                {
+                    public const int MaxChars = 512;
+                    public const bool Trim = true;
+                }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType(
+                    "Configured Text",
+                    "Umbraco.TextBox",
+                    "Umb.PropertyEditorUi.TextBox",
+                    ConfigurationType = typeof(TextBoxConfiguration))]
+                public partial class ConfiguredText;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                source,
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("\\\"maxChars\\\":512");
+        generatedSource.ShouldContain("\\\"trim\\\":true");
+    }
+
+    [Fact]
     public void GenerateRegistry_NoDefinitions_DoesNotEmitEmptyRegistry() {
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());

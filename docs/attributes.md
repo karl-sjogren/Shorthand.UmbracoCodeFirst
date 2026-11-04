@@ -63,8 +63,9 @@ Declares a Data Type.
 | `editorAlias` | ctor | Property editor schema alias, e.g. `Umbraco.TextBox`. |
 | `editorUiAlias` | ctor | Editor UI alias, e.g. `Umb.PropertyEditorUi.TextBox`. Written independently of the schema alias. |
 | `editor` | ctor overload | A type from `UmbracoEditors`; its `Alias` and `UiAlias` constants are read automatically. |
+| `configurationType` | ctor overload or named | A static configuration type exposing typed public constants; their names become camel-case JSON settings. A raw `Json` constant remains supported. |
 | `Alias` | named (optional) | Internal code-first alias used by `UCFProperty`; derived from `name` when omitted. |
-| `ConfigurationJson` | named | A JSON **object** merged into the Data Type's configuration (see below). |
+| `ConfigurationJson` | named | A JSON **object** merged into the Data Type's configuration (see below). This remains the raw escape hatch. |
 
 The generator also emits `public const string Alias` on the class. This is a code-first identity;
 Umbraco's `IDataType` does not expose a persisted alias property.
@@ -100,8 +101,28 @@ used by passing its alias string, but it will require a catalog entry to partici
 ### `ConfigurationJson`
 
 Top-level keys of the JSON object are merged into the Data Type configuration data; nested objects
-and arrays are converted to dictionaries/arrays. It must be a JSON object. There is currently no
-typed per-editor settings model – this raw JSON is the only configuration path.
+and arrays are converted to dictionaries/arrays. It must be a JSON object.
+
+For reusable typed declarations, inherit the generated configuration base for the editor. The base
+exposes the known editor options through IntelliSense:
+
+```csharp
+public sealed class TextBoxConfiguration :
+    UmbracoEditors.TextBox.Configuration {
+    public TextBoxConfiguration() {
+        MaxChars = 512;
+    }
+}
+
+[UCFDataType("Configured Text", typeof(UmbracoEditors.TextBox), typeof(TextBoxConfiguration))]
+public partial class ConfiguredTextDataType;
+```
+
+`ConfigurationType` takes precedence over `ConfigurationJson` when both are supplied. Generated
+editor configuration bases are instantiated and serialized using camel-case names
+(`MaxChars` becomes `maxChars`). A public constant string `Json` remains supported for legacy or
+complex configurations. `EditorId` defaults to the Data Type editor alias and `SchemaVersion`
+defaults to `1`. Unsupported typed fields report `UCF112`.
 
 ## `UCFProperty` – property
 

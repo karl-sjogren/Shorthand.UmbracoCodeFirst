@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,6 +40,9 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private const string _folderPathAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFFolderPathAttribute";
 
+    private const string _configurationDefinitionMetadataName =
+        "Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition";
+
 #pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
         "UCF001",
@@ -47,6 +51,26 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+#pragma warning disable RS2008
+    private static readonly DiagnosticDescriptor _invalidConfigurationType = new(
+        "UCF111",
+        "Invalid Data Type configuration type",
+        "Configuration type '{0}' for Data Type '{1}' must expose either a public constant string named 'Json' or supported public constant settings",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+#pragma warning restore RS2008
+
+#pragma warning disable RS2008
+    private static readonly DiagnosticDescriptor _unsupportedConfigurationSetting = new(
+        "UCF112",
+        "Unsupported Data Type configuration setting",
+        "Configuration setting '{0}' on '{1}' has type '{2}', which cannot be serialized as editor configuration",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+#pragma warning restore RS2008
 #pragma warning restore RS2008
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
@@ -99,7 +123,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
         var dataTypeAliases = BuildDataTypeAliasMap(definitionSymbols);
         foreach (var definition in definitions) {
-            AppendDefinition(builder, definition, compilation, dataTypeAliases);
+            AppendDefinition(builder, definition, compilation, dataTypeAliases, context);
         }
 
         builder.Indent--;
@@ -340,7 +364,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         IndentedStringBuilder builder,
         INamedTypeSymbol definition,
         Compilation compilation,
-        IReadOnlyDictionary<string, string> dataTypeAliases) {
+        IReadOnlyDictionary<string, string> dataTypeAliases,
+        SourceProductionContext context) {
         var contentTypeAttribute = FindContentTypeAttribute(definition);
         if (contentTypeAttribute is not null) {
             var name = GetNameArgument(contentTypeAttribute);
@@ -458,11 +483,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             SymbolDisplay.FormatLiteral(GetDataTypeEditorArgument(dataTypeAttribute), true));
         builder.Append(
             ", global::System.Array.Empty<global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstPropertyDefinition>(), null, null, ");
-        builder.Append(GetNamedStringLiteral(dataTypeAttribute, "ConfigurationJson"));
+        builder.Append(GetConfigurationJsonLiteral(dataTypeAttribute, definition, context));
         builder.Append(", ");
         builder.Append(GetDataTypeEditorUiArgument(dataTypeAttribute));
         builder.Append(", null, ");
         builder.Append(BuildFolderPath(definition));
+        builder.Append(", ");
+        builder.Append(BuildEditorConfiguration(dataTypeAttribute, definition, context));
         builder.AppendLine("),");
     }
 
@@ -794,6 +821,176 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             ? "null"
             : SymbolDisplay.FormatLiteral(argument.Value.Value?.ToString() ?? string.Empty, true);
     }
+
+    private static string GetConfigurationJsonLiteral(
+        AttributeData attribute,
+        INamedTypeSymbol definition,
+        SourceProductionContext context) {
+        var typeArgument = attribute.NamedArguments
+            .FirstOrDefault(candidate => candidate.Key == "ConfigurationType");
+        if(typeArgument.Key is not null &&
+            typeArgument.Value.Kind == TypedConstantKind.Type &&
+            typeArgument.Value.Value is INamedTypeSymbol typedConfigurationType) {
+            var typedJson = BuildConfigurationJson(
+                typedConfigurationType,
+                attribute,
+                definition,
+                context);
+            if(typedJson is not null) {
+                return SymbolDisplay.FormatLiteral(typedJson, true);
+            }
+
+            return "null";
+        }
+
+        var jsonArgument = attribute.NamedArguments
+            .FirstOrDefault(candidate => candidate.Key == "ConfigurationJson");
+        if(jsonArgument.Key is not null && !jsonArgument.Value.IsNull) {
+            return SymbolDisplay.FormatLiteral(
+                jsonArgument.Value.Value?.ToString() ?? string.Empty,
+                true);
+        }
+
+        return "null";
+    }
+
+    private static string BuildEditorConfiguration(
+        AttributeData attribute,
+        INamedTypeSymbol definition,
+        SourceProductionContext context) {
+        var typeArgument = attribute.NamedArguments
+            .FirstOrDefault(candidate => candidate.Key == "ConfigurationType");
+        if(typeArgument.Key is null ||
+            typeArgument.Value.Kind != TypedConstantKind.Type ||
+            typeArgument.Value.Value is not INamedTypeSymbol configurationType) {
+            return "null";
+        }
+
+        if(IsConfigurationDefinition(configurationType)) {
+            var runtimeEditorIdField = configurationType.GetMembers("EditorId")
+                .OfType<IFieldSymbol>()
+                .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
+            var runtimeSchemaVersionField = configurationType.GetMembers("SchemaVersion")
+                .OfType<IFieldSymbol>()
+                .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
+            var runtimeEditorId = runtimeEditorIdField?.ConstantValue as string ?? GetDataTypeEditorArgument(attribute);
+            var runtimeSchemaVersion = runtimeSchemaVersionField?.ConstantValue is int runtimeVersion
+                ? runtimeVersion
+                : 1;
+            return $"global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfiguration.FromType(typeof({configurationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}), {SymbolDisplay.FormatLiteral(runtimeEditorId, true)}, {runtimeSchemaVersion})";
+        }
+
+        var json = BuildConfigurationJson(configurationType, attribute, definition, context);
+        if(json is null) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                _invalidConfigurationType,
+                attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+                configurationType.ToDisplayString(),
+                GetNameArgument(attribute)));
+            return "null";
+        }
+
+        var editorIdField = configurationType.GetMembers("EditorId")
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
+        var schemaVersionField = configurationType.GetMembers("SchemaVersion")
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
+        var editorId = editorIdField?.ConstantValue as string ?? GetDataTypeEditorArgument(attribute);
+        var schemaVersion = schemaVersionField?.ConstantValue is int version ? version : 1;
+
+        return $"new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfiguration({SymbolDisplay.FormatLiteral(editorId, true)}, {SymbolDisplay.FormatLiteral(json, true)}, {schemaVersion})";
+    }
+
+    private static bool IsConfigurationDefinition(INamedTypeSymbol type) {
+        for(var current = type.BaseType; current is not null; current = current.BaseType) {
+            if(string.Equals(
+                current.ToDisplayString(),
+                _configurationDefinitionMetadataName,
+                StringComparison.Ordinal)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string? BuildConfigurationJson(
+        INamedTypeSymbol configurationType,
+        AttributeData attribute,
+        INamedTypeSymbol definition,
+        SourceProductionContext context) {
+        var jsonField = configurationType.GetMembers("Json")
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
+        if(jsonField?.ConstantValue is string json) {
+            return json;
+        }
+
+        var fields = configurationType.GetMembers()
+            .OfType<IFieldSymbol>()
+            .Where(field =>
+                field.DeclaredAccessibility == Accessibility.Public
+                && field.IsStatic
+                && field.IsConst
+                && field.Name is not "EditorId" and not "SchemaVersion")
+            .OrderBy(field => field.Name, StringComparer.Ordinal)
+            .ToArray();
+        if(fields.Length == 0) {
+            return null;
+        }
+
+        var values = new List<string>(fields.Length);
+        foreach(var field in fields) {
+            var value = FormatConfigurationValue(field, out var supported);
+            if(!supported) {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    _unsupportedConfigurationSetting,
+                    field.Locations.FirstOrDefault(),
+                    field.Name,
+                    configurationType.ToDisplayString(),
+                    field.Type.ToDisplayString()));
+                return null;
+            }
+
+            values.Add($"{SymbolDisplay.FormatLiteral(ToCamelCase(field.Name), true)}:{value}");
+        }
+
+        return $"{{{string.Join(",", values)}}}";
+    }
+
+    private static string FormatConfigurationValue(IFieldSymbol field, out bool supported) {
+        supported = true;
+        if(field.Type.SpecialType == SpecialType.System_String) {
+            return SymbolDisplay.FormatLiteral(field.ConstantValue?.ToString() ?? string.Empty, true);
+        }
+
+        if(field.Type.SpecialType == SpecialType.System_Boolean) {
+            return ((bool)field.ConstantValue!).ToString().ToLowerInvariant();
+        }
+
+        if(field.Type.SpecialType is SpecialType.System_Byte
+            or SpecialType.System_SByte
+            or SpecialType.System_Int16
+            or SpecialType.System_UInt16
+            or SpecialType.System_Int32
+            or SpecialType.System_UInt32
+            or SpecialType.System_Int64
+            or SpecialType.System_UInt64
+            or SpecialType.System_Single
+            or SpecialType.System_Double
+            or SpecialType.System_Decimal) {
+            return Convert.ToString(field.ConstantValue, CultureInfo.InvariantCulture)!;
+        }
+
+        supported = false;
+        return string.Empty;
+    }
+
+    private static string ToCamelCase(string value) =>
+        value.Length == 0
+            ? value
+            : char.ToLowerInvariant(value[0]) + value.Substring(1);
 
     private static int GetNamedIntArgument(AttributeData? attribute, string name) =>
         attribute?.NamedArguments.FirstOrDefault(argument => argument.Key == name).Value.Value is int value ? value : 0;

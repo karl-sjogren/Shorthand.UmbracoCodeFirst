@@ -15,6 +15,11 @@ public sealed class UCFDataTypeAttribute : Attribute {
         Editor = editor;
     }
 
+    public UCFDataTypeAttribute(string name, Type editor, Type configurationType)
+        : this(name, editor) {
+        ConfigurationType = configurationType;
+    }
+
     public string? Alias { get; set; }
 
     public string Name { get; }
@@ -26,6 +31,8 @@ public sealed class UCFDataTypeAttribute : Attribute {
     public Type? Editor { get; }
 
     public string? ConfigurationJson { get; set; }
+
+    public Type? ConfigurationType { get; set; }
 
     private static string ReadEditorValue(Type editor, string name) =>
         editor.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)

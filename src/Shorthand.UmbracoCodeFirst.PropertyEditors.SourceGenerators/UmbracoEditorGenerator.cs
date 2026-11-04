@@ -55,6 +55,15 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
                     return MetadataResult.Failure("Every editor metadata entry must define all required fields.");
                 }
 
+                if(!editor.TryGetProperty("configuration", out var configuration)
+                    || configuration.ValueKind != JsonValueKind.Object
+                    || !configuration.TryGetProperty("properties", out var properties)
+                    || properties.ValueKind != JsonValueKind.Array) {
+                    return MetadataResult.Failure(
+                        $"Editor metadata entry '{id}' must define configuration.properties, even when it is empty.");
+                }
+
+                var configurationProperties = ParseConfigurationProperties(editor, id!);
                 entries.Add(new EditorMetadata(
                     id!,
                     name!,
@@ -62,7 +71,8 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
                     alias!,
                     uiAlias!,
                     returnType!,
-                    documentationUrl!));
+                    documentationUrl!,
+                    configurationProperties));
             }
 
             var duplicate = entries
@@ -128,6 +138,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             builder.AppendLine($"        public const string Alias = \"{EscapeString(editor.Alias)}\";");
             builder.AppendLine($"        public const string UiAlias = \"{EscapeString(editor.UiAlias)}\";");
             builder.AppendLine();
+            AppendConfiguration(builder, editor.ConfigurationProperties);
             builder.AppendLine(
                 $"        public static UmbracoEditor Definition {{ get; }} = new(Alias, UiAlias, \"{EscapeString(editor.Name)}\", \"{EscapeString(editor.Description)}\", \"{EscapeString(editor.ReturnType)}\", \"{EscapeString(editor.DocumentationUrl)}\");");
             builder.AppendLine("    }");
@@ -143,6 +154,19 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         context.AddSource("UmbracoEditors.g.cs", builder.ToString());
     }
 
+    private static void AppendConfiguration(
+        StringBuilder builder,
+        IReadOnlyList<ConfigurationPropertyMetadata> properties) {
+        builder.AppendLine();
+        builder.AppendLine(
+            "        public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition {");
+        foreach(var property in properties) {
+            builder.AppendLine($"            public {property.CSharpType}? {property.Name} {{ get; set; }}");
+        }
+
+        builder.AppendLine("        }");
+    }
+
     private static string GetClassName(string id) =>
         id switch {
             "checkBoxList" => "CheckBoxList",
@@ -156,6 +180,51 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             "richTextEditor" => "RichTextEditor",
             _ => char.ToUpperInvariant(id[0]) + id.Substring(1),
         };
+
+    private static IReadOnlyList<ConfigurationPropertyMetadata> ParseConfigurationProperties(
+        JsonElement editor,
+        string editorId) {
+        if(!editor.TryGetProperty("configuration", out var configuration)
+            || configuration.ValueKind != JsonValueKind.Object
+            || !configuration.TryGetProperty("properties", out var properties)
+            || properties.ValueKind != JsonValueKind.Array) {
+            return [];
+        }
+
+        var result = new List<ConfigurationPropertyMetadata>();
+        foreach(var property in properties.EnumerateArray()) {
+            var name = GetString(property, "name");
+            var type = GetString(property, "type");
+            if(string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type)) {
+                throw new JsonException(
+                    $"Configuration properties for editor '{editorId}' require 'name' and 'type'.");
+            }
+
+            var csharpType = type switch {
+                "string" => "string",
+                "bool" => "bool",
+                "int" => "int",
+                "decimal" => "decimal",
+                "string[]" => "string[]",
+                "int[]" => "int[]",
+                "decimal[]" => "decimal[]",
+                "json" => "global::System.Text.Json.JsonElement",
+                _ => throw new JsonException(
+                    $"Configuration property '{name}' on editor '{editorId}' uses unsupported type '{type}'."),
+            };
+            result.Add(new ConfigurationPropertyMetadata(name!, csharpType));
+        }
+
+        var duplicate = result
+            .GroupBy(static property => property.Name, StringComparer.Ordinal)
+            .FirstOrDefault(static group => group.Count() > 1);
+        if(duplicate is not null) {
+            throw new JsonException(
+                $"Configuration property '{duplicate.Key}' on editor '{editorId}' is duplicated.");
+        }
+
+        return result;
+    }
 
     private static string EscapeString(string value) =>
         value.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -173,7 +242,8 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             string alias,
             string uiAlias,
             string returnType,
-            string documentationUrl) {
+            string documentationUrl,
+            IReadOnlyList<ConfigurationPropertyMetadata> configurationProperties) {
             Id = id;
             Name = name;
             Description = description;
@@ -181,6 +251,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             UiAlias = uiAlias;
             ReturnType = returnType;
             DocumentationUrl = documentationUrl;
+            ConfigurationProperties = configurationProperties;
         }
 
         public string Id { get; }
@@ -190,6 +261,17 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         public string UiAlias { get; }
         public string ReturnType { get; }
         public string DocumentationUrl { get; }
+        public IReadOnlyList<ConfigurationPropertyMetadata> ConfigurationProperties { get; }
+    }
+
+    private sealed class ConfigurationPropertyMetadata {
+        public ConfigurationPropertyMetadata(string name, string cSharpType) {
+            Name = name;
+            CSharpType = cSharpType;
+        }
+
+        public string Name { get; }
+        public string CSharpType { get; }
     }
 
     private sealed class MetadataResult {

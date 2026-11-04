@@ -5,6 +5,8 @@ The built-in Umbraco property-editor catalog is maintained in
 It is the single metadata source for:
 
 - generated `UmbracoEditors` aliases, UI aliases, descriptions, return types, and documentation links;
+- generated typed `UmbracoEditors.<Editor>.Configuration` base classes for editors whose settings
+  are described in the catalog;
 - analyzer validation of Data Type editor aliases;
 - analyzer checks that a code-first property's CLR type is compatible with the editor's documented
   return type.
@@ -14,9 +16,19 @@ The source generator consumes the file as an `AdditionalFiles` input and emits
 then rebuild.
 
 Each entry has a stable `id`, display `name`, `description`, schema `alias`, `uiAlias`,
-documented `returnType`, and `documentationUrl`. Return types are descriptors rather than
+documented `returnType`, `documentationUrl`, and a `configuration.properties` array. The array is
+empty for editors with no documented Data Type options. Supported configuration property types are
+`string`, `bool`, `int`, `decimal`, `string[]`, `int[]`, `decimal[]`, and `json`. The `json` type is
+intentional for editor-owned arrays and objects such as picker roots, crop presets, block definitions,
+and rich-text toolbar settings; it preserves the editor's native shape while keeping the generated
+configuration API discoverable. Return types are descriptors rather than
 assembly-qualified CLR names so the netstandard source generator and analyzer can consume them
 without referencing Umbraco runtime assemblies.
+
+Every catalog entry generates a `Configuration` base class with nullable setters, including entries
+whose configuration array is empty. A consuming project derives from that class, sets the desired
+values in a constructor, and passes the derived type through `UCFDataType.ConfigurationType`. This
+keeps editor options discoverable while allowing the catalog to remain the single source of truth.
 
 Compatibility diagnostics are conservative. Scalar and string collection editors are checked
 directly; nullable values are accepted; picker/block/media return types are treated as compatible
