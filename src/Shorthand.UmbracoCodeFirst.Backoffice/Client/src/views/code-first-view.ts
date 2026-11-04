@@ -1,96 +1,19 @@
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { css, html, customElement, state } from "@umbraco-cms/backoffice/external/lit";
 import { client } from "../api/client.gen.js";
+import type {
+  CleanupResponse,
+  CleanupResult,
+  StatusItem,
+  StatusResponse,
+} from "../types/code-first.types.js";
 import {
+  formatCompletedAt,
   formatEditorAliases,
   getSynchronizationCssClass,
+  getSynchronizationState,
+  sortDefinitions,
 } from "./code-first-view.helpers.js";
-
-type StatusItem = {
-  kind: string;
-  alias: string;
-  name: string;
-  folder: string;
-  description?: string;
-  icon?: string;
-  allowAsRoot: boolean;
-  allowInLibrary: boolean;
-  defaultTemplateAlias?: string;
-  allowedTemplateAliases: string[];
-  allowedChildAliases: string[];
-  variations?: string;
-  isListView: boolean;
-  compositionAliases: string[];
-  groups: LayoutItem[];
-  tabs: LayoutItem[];
-  editorAlias?: string;
-  editorUiAlias?: string;
-  isElement: boolean;
-  propertyCount: number;
-  status: string;
-  message?: string;
-  backofficeUrl?: string;
-  properties: StatusProperty[];
-};
-
-type LayoutItem = {
-  alias: string;
-  name: string;
-  sortOrder: number;
-};
-
-type StatusProperty = {
-  alias: string;
-  name: string;
-  dataTypeAlias: string;
-  description?: string;
-  groupAlias?: string;
-  groupName?: string;
-  tabAlias?: string;
-  tabName?: string;
-  sortOrder: number;
-  mandatory: boolean;
-  validationExpression?: string;
-  validationMessage?: string;
-  labelOnTop: boolean;
-};
-
-type StatusResponse = {
-  definitionCount: number;
-  dataTypeCount: number;
-  documentTypeCount: number;
-  elementTypeCount: number;
-  mediaTypeCount: number;
-  memberTypeCount: number;
-  createdCount: number;
-  updatedCount: number;
-  unchangedCount: number;
-  skippedCount: number;
-  failedCount: number;
-  completedAt: string;
-  dataTypes: StatusItem[];
-  documentTypes: StatusItem[];
-  elementTypes: StatusItem[];
-  mediaTypes: StatusItem[];
-  memberTypes: StatusItem[];
-};
-
-type CleanupItem = {
-  kind: string;
-  alias: string;
-  name: string;
-  parentAlias?: string;
-};
-
-type CleanupResponse = {
-  items: CleanupItem[];
-};
-
-type CleanupResult = {
-  removedCount: number;
-  removed: CleanupItem[];
-  failed: { item: CleanupItem; message: string }[];
-};
 
 @customElement("shorthand-code-first-view")
 export default class ShorthandCodeFirstViewElement extends UmbLitElement {
@@ -343,23 +266,21 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   }
 
   private getSynchronizationLabel(): string {
-    if (!this.status?.completedAt) {
+    const state = getSynchronizationState(
+      this.status?.completedAt,
+      this.status?.failedCount ?? 0,
+    );
+    if (state === "pending") {
       return this.localize.term("codeFirst_synchronizationPending");
     }
 
-    return this.status.failedCount > 0
+    return state === "failed"
       ? this.localize.term("codeFirst_synchronizationFailed")
       : this.localize.term("codeFirst_synchronizationComplete");
   }
 
   private formatCompletedAt(value: string): string {
-    const date = new Date(value);
-    return Number.isNaN(date.valueOf())
-      ? value
-      : new Intl.DateTimeFormat(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(date);
+    return formatCompletedAt(value);
   }
 
   private renderDefinitionTable(
@@ -367,6 +288,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     definitions: StatusItem[],
     showProperties: boolean,
   ) {
+    const sortedDefinitions = sortDefinitions(definitions);
     return html`
       <uui-box headline=${headline}>
         <uui-table>
@@ -393,7 +315,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
               >${this.localize.term("codeFirst_status")}</uui-table-head-cell
             >
           </uui-table-head>
-          ${definitions.map(
+          ${sortedDefinitions.map(
             (definition) => html`
               <uui-table-row
                 class=${this.isFailed(definition)
