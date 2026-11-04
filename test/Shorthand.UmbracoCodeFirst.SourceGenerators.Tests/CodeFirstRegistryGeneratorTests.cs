@@ -744,4 +744,83 @@ public class CodeFirstRegistryGeneratorTests {
         generatedSource.ShouldContain("\"^[A-Z]{3}-[0-9]{4}$\"");
         generatedSource.ShouldContain("\"Use the ABC-1234 format.\"");
     }
+
+    [Fact]
+    public void GenerateRegistry_ExpandedTypeSettings_EmitsArraysAndConfiguration() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute
+                {
+                    public UCFDataTypeAttribute(string name, string editorAlias, string editorUiAlias) { }
+                    public string? Alias { get; set; }
+                    public string? ConfigurationJson { get; set; }
+                }
+
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
+                {
+                    public UCFDocumentTypeAttribute(string name) { }
+                    public bool AllowAsRoot { get; set; }
+                    public string? DefaultTemplateAlias { get; set; }
+                    public string[] AllowedTemplateAliases { get; set; } = [];
+                    public string[] AllowedChildAliases { get; set; } = [];
+                    public bool IsListView { get; set; }
+                }
+
+                public sealed class UCFDescriptionAttribute(string description)
+                    : global::System.Attribute
+                {
+                    public string Description { get; } = description;
+                }
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType(
+                    "Text",
+                    "Umbraco.TextBox",
+                    "Umb.PropertyEditorUi.TextBox",
+                    Alias = "integrationText",
+                    ConfigurationJson = "{\"maxChars\":128}")]
+                public partial class TextDataType;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType(
+                    "Landing",
+                    AllowAsRoot = true,
+                    DefaultTemplateAlias = "landing",
+                    AllowedTemplateAliases = new[] { "landing", "campaign" },
+                    AllowedChildAliases = new[] { "article", "folder" },
+                    IsListView = true)]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDescription("Landing description")]
+                public partial class Landing;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(source => source.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("\"integrationText\"");
+        generatedSource.ShouldContain("\"{\\\"maxChars\\\":128}\"");
+        generatedSource.ShouldContain("\"landing\"");
+        generatedSource.ShouldContain("\"campaign\"");
+        generatedSource.ShouldContain("\"article\"");
+        generatedSource.ShouldContain("\"folder\"");
+        generatedSource.ShouldContain("\"Landing description\"");
+        generatedSource.ShouldContain("true");
+    }
 }

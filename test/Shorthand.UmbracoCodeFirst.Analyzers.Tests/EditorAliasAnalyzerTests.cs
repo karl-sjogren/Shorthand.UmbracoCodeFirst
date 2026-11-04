@@ -13,4 +13,15 @@ public class EditorAliasAnalyzerTests : AnalyzerTestBase {
                 """),
             [("umbraco-property-editors.json", EditorMetadata)]);
     }
+
+    [Fact]
+    public async Task KnownEditorAlias_DoesNotReportDiagnosticAsync() {
+        await VerifyCS.VerifyAnalyzerAsync(
+            Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDataType("text", "Umbraco.TextBox")]
+                public partial class TextDataType;
+                """),
+            [("umbraco-property-editors.json", EditorMetadata)]);
+    }
 }

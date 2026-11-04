@@ -3,7 +3,7 @@ using Shorthand.UmbracoCodeFirst.Metadata;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
 public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegistry {
-    public IReadOnlyList<CodeFirstDefinition> Definitions { get; } = [
+    private static IReadOnlyList<CodeFirstDefinition> BuildDefinitions() => [
         new(
             CodeFirstDefinitionKind.DataType,
             IntegrationTextDataType.Alias,
@@ -11,6 +11,14 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
             "Umbraco.TextBox",
             [],
             FolderPath: "/Integration/Editors"),
+        new(
+            CodeFirstDefinitionKind.DataType,
+            IntegrationIntegerDataType.Alias,
+            "Integration Integer",
+            "Umbraco.Integer",
+            [],
+            EditorUiAlias: "Umb.PropertyEditorUi.Integer",
+            FolderPath: "Integration/Editors"),
         new(
             CodeFirstDefinitionKind.DocumentType,
             "integrationCompositionBase",
@@ -86,5 +94,112 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
             ],
             CompositionAliases: ["integrationCompositionBase"],
             FolderPath: "Integration/Pages"),
+        new(
+            CodeFirstDefinitionKind.DocumentType,
+            "integrationRichDocument",
+            "Integration Rich Document",
+            null,
+            [
+                new(
+                    "headline",
+                    "Headline",
+                    IntegrationTextDataType.Alias,
+                    Description: "Initial headline description",
+                    GroupAlias: "content",
+                    GroupName: "Content",
+                    GroupSortOrder: 0,
+                    TabAlias: "details",
+                    TabName: "Details",
+                    TabSortOrder: 0,
+                    SortOrder: 0,
+                    Mandatory: true,
+                    ValidationExpression: @"^.{3,}$",
+                    ValidationMessage: "Headline must contain at least three characters."),
+                new(
+                    "count",
+                    "Count",
+                    IntegrationIntegerDataType.Alias,
+                    GroupAlias: "content",
+                    GroupName: "Content",
+                    GroupSortOrder: 0,
+                    SortOrder: 1,
+                    LabelOnTop: true),
+            ],
+            Settings: new(
+                Description: "Initial rich document description",
+                Icon: "icon-document",
+                AllowAsRoot: true),
+            FolderPath: "Integration/Rich"),
+        new(
+            CodeFirstDefinitionKind.DocumentType,
+            "integrationElement",
+            "Integration Element",
+            null,
+            [
+                new(
+                    "elementText",
+                    "Element text",
+                    IntegrationTextDataType.Alias,
+                    GroupAlias: "content",
+                    GroupName: "Content",
+                    GroupSortOrder: 0),
+            ],
+            Settings: new(
+                Description: "An integration element.",
+                Icon: "icon-element",
+                IsElement: true,
+                AllowInLibrary: true),
+            FolderPath: "Integration/Elements"),
     ];
+
+    public IReadOnlyList<CodeFirstDefinition> Definitions { get; }
+
+    public static IntegrationTestDefinitionRegistry CreateUpdated() =>
+        new([
+            ..new IntegrationTestDefinitionRegistry().Definitions
+                .Where(definition =>
+                    definition.Alias is not "integrationRichDocument" and not "integrationElement"),
+            new(
+                CodeFirstDefinitionKind.DocumentType,
+                "integrationRichDocument",
+                "Updated Rich Document",
+                null,
+                [
+                    new(
+                        "headline",
+                        "Updated headline",
+                        IntegrationTextDataType.Alias,
+                        Description: "Updated headline description",
+                        GroupAlias: "content",
+                        GroupName: "Updated Content",
+                        GroupSortOrder: 1,
+                        TabAlias: "details",
+                        TabName: "Details",
+                        SortOrder: 0,
+                        Mandatory: false,
+                        ValidationExpression: @"^.{5,}$",
+                        ValidationMessage: "Headline must contain at least five characters."),
+                    new(
+                        "count",
+                        "Count",
+                        IntegrationIntegerDataType.Alias,
+                        GroupAlias: "content",
+                        GroupName: "Updated Content",
+                        GroupSortOrder: 1,
+                        SortOrder: 1,
+                        LabelOnTop: false),
+                ],
+                Settings: new(
+                    Description: "Updated rich document description",
+                    Icon: "icon-folder",
+                    AllowAsRoot: false),
+                FolderPath: "Integration/Updated"),
+        ]);
+
+    private IntegrationTestDefinitionRegistry(IReadOnlyList<CodeFirstDefinition> definitions) {
+        Definitions = definitions;
+    }
+
+    public IntegrationTestDefinitionRegistry()
+        : this(BuildDefinitions()) { }
 }
