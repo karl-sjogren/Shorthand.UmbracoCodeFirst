@@ -4,9 +4,9 @@ namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class AttributeContractTests {
     [Fact]
-    public void UCFContentTypeAttribute_ExplicitSettings_PreservesValues() {
+    public void UCFDocumentTypeAttribute_ExplicitSettings_PreservesValues() {
         // Arrange
-        var attribute = new UCFContentTypeAttribute("productPage", "Product Page") {
+        var attribute = new UCFDocumentTypeAttribute("productPage", "Product Page") {
             Icon = "icon-barcode",
             IsElement = true,
             AllowAsRoot = true,

@@ -15,7 +15,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         typeof(CodeFirstRegistryGenerator).Assembly.GetName().Version?.ToString()
         ?? throw new InvalidOperationException("The source generator assembly has no version.");
 
-    private const string _documentTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFContentTypeAttribute";
+    private const string _documentTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentTypeAttribute";
 
     private const string _dataTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDataTypeAttribute";
 

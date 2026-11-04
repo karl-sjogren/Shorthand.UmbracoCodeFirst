@@ -34,14 +34,14 @@ type StatusProperty = {
 type StatusResponse = {
   definitionCount: number;
   dataTypeCount: number;
-  contentTypeCount: number;
+  documentTypeCount: number;
   createdCount: number;
   updatedCount: number;
   unchangedCount: number;
   failedCount: number;
   completedAt: string;
   dataTypes: StatusItem[];
-  contentTypes: StatusItem[];
+  documentTypes: StatusItem[];
 };
 
 type CleanupItem = {
@@ -153,8 +153,8 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             "codeFirst_dataTypes",
           )}
           ${this.renderSummaryMetric(
-            this.status.contentTypeCount,
-            "codeFirst_contentTypes",
+            this.status.documentTypeCount,
+            "codeFirst_documentTypes",
           )}
           ${this.renderSummaryMetric(this.status.createdCount, "codeFirst_created")}
           ${this.renderSummaryMetric(this.status.updatedCount, "codeFirst_updated")}
@@ -172,8 +172,8 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
         false,
       )}
       ${this.renderDefinitionTable(
-        this.localize.term("codeFirst_contentTypesHeadline"),
-        this.status.contentTypes,
+        this.localize.term("codeFirst_documentTypesHeadline"),
+        this.status.documentTypes,
         true,
       )}
     `;

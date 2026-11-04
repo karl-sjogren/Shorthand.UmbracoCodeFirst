@@ -17,7 +17,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     public const string DuplicateLayoutId = "UCF102";
     public const string DuplicateValidationId = "UCF103";
     public const string UnsupportedPropertyTypeId = "UCF104";
-    public const string PropertyOutsideContentTypeId = "UCF105";
+    public const string PropertyOutsideDocumentTypeId = "UCF105";
     public const string InvalidCompositionTargetId = "UCF106";
     public const string InvalidCompositionGraphId = "UCF107";
     public const string UnknownEditorAliasId = "UCF108";
@@ -73,10 +73,10 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         isEnabledByDefault: true,
         helpLinkUri: _documentationBaseUrl + "/UCF104.md");
 
-    private static readonly DiagnosticDescriptor _propertyOutsideContentType = new(
-        PropertyOutsideContentTypeId,
+    private static readonly DiagnosticDescriptor _propertyOutsideDocumentType = new(
+        PropertyOutsideDocumentTypeId,
         "Code-first property requires a content type",
-        "Property '{0}' uses UCFProperty but its containing class is not a UCFContentType",
+        "Property '{0}' uses UCFProperty but its containing class is not a UCFDocumentType",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -85,7 +85,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     private static readonly DiagnosticDescriptor _invalidCompositionTarget = new(
         InvalidCompositionTargetId,
         "Invalid content composition target",
-        "Composition target '{0}' must have UCFContentTypeAttribute",
+        "Composition target '{0}' must have UCFDocumentTypeAttribute",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -130,7 +130,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             _duplicateLayout,
             _duplicateValidation,
             _unsupportedPropertyType,
-            _propertyOutsideContentType,
+            _propertyOutsideDocumentType,
             _invalidCompositionTarget,
             _invalidCompositionGraph,
             _unknownEditorAlias,
@@ -183,7 +183,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         ConcurrentBag<EditorPropertyOccurrence> editorProperties) {
         foreach(var attribute in symbol.GetAttributes()) {
             var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
-            if(attributeName is "UCFContentTypeAttribute" or "UCFDataTypeAttribute") {
+            if(attributeName is "UCFDocumentTypeAttribute" or "UCFDataTypeAttribute") {
                 AddAlias(attribute, symbol, occurrences, AliasScope.Global);
                 if(attributeName == "UCFDataTypeAttribute") {
                     AddDataType(attribute, symbol, dataTypes);
@@ -219,7 +219,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             source,
             target,
             attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
-            target.GetAttributes().Any(HasContentTypeAttribute)));
+            target.GetAttributes().Any(HasDocumentTypeAttribute)));
     }
 
     private static void AddDataType(
@@ -266,9 +266,9 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         IPropertySymbol property,
         ConcurrentBag<PropertyDiagnosticOccurrence> diagnostics) {
         if(property.ContainingType is null
-            || !property.ContainingType.GetAttributes().Any(HasContentTypeAttribute)) {
+            || !property.ContainingType.GetAttributes().Any(HasDocumentTypeAttribute)) {
             diagnostics.Add(new PropertyDiagnosticOccurrence(
-                _propertyOutsideContentType,
+                _propertyOutsideDocumentType,
                 property,
                 [property.Name]));
         }
@@ -289,7 +289,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         AliasScope scope) {
         var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
         var hasExplicitAlias = attributeName switch {
-            "UCFContentTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
+            "UCFDocumentTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
             "UCFDataTypeAttribute" => attribute.ConstructorArguments.Length >= 3,
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
@@ -518,7 +518,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
 
         Dictionary<INamedTypeSymbol, List<INamedTypeSymbol>> graph =
             new(SymbolEqualityComparer.Default);
-        foreach(var composition in compositions.Where(static composition => composition.TargetHasContentType)) {
+        foreach(var composition in compositions.Where(static composition => composition.TargetHasDocumentType)) {
             if(!graph.TryGetValue(composition.Source, out var targets)) {
                 targets = [];
                 graph.Add(composition.Source, targets);
@@ -527,17 +527,17 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
             targets.Add(composition.Target);
         }
 
-        var contentTypes = propertyOccurrences
+        var documentTypes = propertyOccurrences
             .Select(static occurrence => occurrence.Symbol.ContainingType)
             .OfType<INamedTypeSymbol>()
-            .Where(static type => type.GetAttributes().Any(HasContentTypeAttribute))
+            .Where(static type => type.GetAttributes().Any(HasDocumentTypeAttribute))
             .Concat(graph.Keys)
             .Concat(graph.Values.SelectMany(static targets => targets))
             .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
-        foreach(var contentType in contentTypes) {
+        foreach(var documentType in documentTypes) {
             HashSet<INamedTypeSymbol> effectiveTypes = new(SymbolEqualityComparer.Default);
-            CollectEffectiveCompositionTypes(contentType, graph, effectiveTypes);
+            CollectEffectiveCompositionTypes(documentType, graph, effectiveTypes);
 
             foreach(var group in propertyOccurrences
                         .Where(occurrence => occurrence.Symbol.ContainingType is INamedTypeSymbol containingType
@@ -580,7 +580,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         CompilationAnalysisContext context,
         ConcurrentBag<CompositionOccurrence> compositions) {
         foreach(var occurrence in compositions.Where(
-                    static occurrence => !occurrence.TargetHasContentType)) {
+                    static occurrence => !occurrence.TargetHasDocumentType)) {
             context.ReportDiagnostic(Diagnostic.Create(
                 _invalidCompositionTarget,
                 occurrence.Location ?? occurrence.Source.Locations.FirstOrDefault(),
@@ -588,7 +588,7 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         }
 
         var validCompositions = compositions
-            .Where(static occurrence => occurrence.TargetHasContentType)
+            .Where(static occurrence => occurrence.TargetHasDocumentType)
             .ToArray();
         foreach(var duplicate in validCompositions
                     .GroupBy(static occurrence =>
@@ -662,8 +662,8 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
     private static string GetScopeName(AliasOccurrence occurrence) =>
         occurrence.Symbol.ContainingType?.ToDisplayString() ?? string.Empty;
 
-    private static bool HasContentTypeAttribute(AttributeData attribute) =>
-        attribute.AttributeClass?.Name == "UCFContentTypeAttribute";
+    private static bool HasDocumentTypeAttribute(AttributeData attribute) =>
+        attribute.AttributeClass?.Name == "UCFDocumentTypeAttribute";
 
     private static bool IsValidAlias(string alias) =>
         alias.All(static character => char.IsLetterOrDigit(character)
@@ -763,11 +763,11 @@ public sealed class CodeFirstAttributeAnalyzer : DiagnosticAnalyzer {
         INamedTypeSymbol source,
         INamedTypeSymbol target,
         Location? location,
-        bool targetHasContentType) {
+        bool targetHasDocumentType) {
         public INamedTypeSymbol Source { get; } = source;
         public INamedTypeSymbol Target { get; } = target;
         public Location? Location { get; } = location;
-        public bool TargetHasContentType { get; } = targetHasContentType;
+        public bool TargetHasDocumentType { get; } = targetHasDocumentType;
     }
 
     private sealed class DataTypeOccurrence(string alias, string editorAlias, ISymbol symbol) {

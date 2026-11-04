@@ -7,7 +7,7 @@ alias is [derived from the name](source-generator.md#alias-derivation).
 Attribute arguments must be compile-time constants, which is why editor and Data Type references are
 strings (use the provided `Alias` constants).
 
-## `UCFContentType` – class
+## `UCFDocumentType` – class
 
 Declares a Document Type. Only Document Types are supported; there is no media/member variant yet.
 
@@ -71,7 +71,7 @@ typed per-editor settings model – this raw JSON is the only configuration path
 ## `UCFProperty` – property
 
 Declares a Document Type property. Must be on a `partial` property of a class that has
-`UCFContentType`.
+`UCFDocumentType`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
@@ -113,7 +113,7 @@ Unsealed, so a derived attribute can fix both values.
 
 ## `UCFComposite` – class
 
-`UCFComposite(typeof(OtherContentType))` composes another code-first Document Type. Repeatable.
+`UCFComposite(typeof(OtherDocumentType))` composes another code-first Document Type. Repeatable.
 See [Compositions](compositions.md).
 
 ## Derived attributes

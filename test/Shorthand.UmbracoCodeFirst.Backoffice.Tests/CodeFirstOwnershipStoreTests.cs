@@ -6,7 +6,7 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstOwnershipStoreTests {
     [Fact]
-    public void Set_PersistsContentTypeOwnershipOutsideTheContentTypeDescription() {
+    public void Set_PersistsDocumentTypeOwnershipOutsideTheDocumentTypeDescription() {
         var keyValueService = A.Fake<IKeyValueService>();
         var store = new CodeFirstOwnershipStore(keyValueService);
 
@@ -18,7 +18,7 @@ public class CodeFirstOwnershipStoreTests {
             .MustHaveHappenedOnceExactly();
         A.CallTo(() => keyValueService.SetValue(
                 "shorthand.umbraco-codefirst:content-type:productPage",
-                JsonSerializer.Serialize(new CodeFirstContentTypeOwnership(
+                JsonSerializer.Serialize(new CodeFirstDocumentTypeOwnership(
                     Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     "productPage",
                     new[] { "article" }))))
@@ -26,11 +26,11 @@ public class CodeFirstOwnershipStoreTests {
     }
 
     [Fact]
-    public void Get_IgnoresOwnershipForAnotherContentTypeKey() {
+    public void Get_IgnoresOwnershipForAnotherDocumentTypeKey() {
         var keyValueService = A.Fake<IKeyValueService>();
         A.CallTo(() => keyValueService.GetValue(
                 "shorthand.umbraco-codefirst:content-type:productPage"))
-            .Returns(JsonSerializer.Serialize(new CodeFirstContentTypeOwnership(
+            .Returns(JsonSerializer.Serialize(new CodeFirstDocumentTypeOwnership(
                 Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 "productPage",
                 ["article"])));

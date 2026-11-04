@@ -1,6 +1,6 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
 
-namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
+namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
 public sealed class ProductDetailsTabAttribute()

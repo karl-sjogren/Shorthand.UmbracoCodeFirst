@@ -1,12 +1,12 @@
 namespace Shorthand.UmbracoCodeFirst.Attributes;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-public sealed class UCFContentTypeAttribute : Attribute {
-    public UCFContentTypeAttribute(string name) {
+public sealed class UCFDocumentTypeAttribute : Attribute {
+    public UCFDocumentTypeAttribute(string name) {
         Name = name;
     }
 
-    public UCFContentTypeAttribute(string alias, string name) {
+    public UCFDocumentTypeAttribute(string alias, string name) {
         Alias = alias;
         Name = name;
     }

@@ -3,7 +3,7 @@
 Code-first definitions for Umbraco Document Types and Data Types.
 
 Instead of configuring every definition manually in the Umbraco backoffice, declare partial C#
-classes and properties with `UCFContentType`, `UCFDataType`, `UCFProperty`, tabs, groups,
+classes and properties with `UCFDocumentType`, `UCFDataType`, `UCFProperty`, tabs, groups,
 validation attributes, and compositions. A Roslyn source generator creates the definition registry
 and typed published-model members. When the Umbraco application starts, the synchronizer creates or
 updates the matching definitions.
@@ -29,7 +29,7 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
     UmbracoEditors.TextBox.Alias)]
 public partial class ArticleTitleDataType;
 
-[UCFContentType("article", "Article", AllowAsRoot = true)]
+[UCFDocumentType("article", "Article", AllowAsRoot = true)]
 public partial class Article {
     [UCFProperty(
         "title",
@@ -42,7 +42,7 @@ public partial class Article {
 ```
 
 Classes and code-first properties must be `partial`; the generator supplies the generated members.
-Use `UCFComposite(typeof(OtherContentType))` to compose another Document Type rather than using C#
+Use `UCFComposite(typeof(OtherDocumentType))` to compose another Document Type rather than using C#
 inheritance. See the [getting started guide](docs/getting-started.md) for a complete example and
 the [attribute reference](docs/attributes.md) for all supported settings.
 

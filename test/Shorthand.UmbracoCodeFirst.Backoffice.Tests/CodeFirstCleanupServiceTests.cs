@@ -23,7 +23,7 @@ public class CodeFirstCleanupServiceTests {
     }
 
     [Fact]
-    public async Task PreviewAsync_WhenOwnedContentTypeHasObsoleteMembers_ReturnsPropertiesAndGroups_Async() {
+    public async Task PreviewAsync_WhenOwnedDocumentTypeHasObsoleteMembers_ReturnsPropertiesAndGroups_Async() {
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -57,7 +57,7 @@ public class CodeFirstCleanupServiceTests {
     }
 
     [Fact]
-    public async Task PreviewAsync_IgnoresUnownedContentTypesAndReportsObsoleteDataTypes_Async() {
+    public async Task PreviewAsync_IgnoresUnownedDocumentTypesAndReportsObsoleteDataTypes_Async() {
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         var dataType = A.Fake<IDataType>();
@@ -81,7 +81,7 @@ public class CodeFirstCleanupServiceTests {
     }
 
     [Fact]
-    public async Task PreviewAsync_ReportsOwnedContentTypeMissingFromRegistry_Async() {
+    public async Task PreviewAsync_ReportsOwnedDocumentTypeMissingFromRegistry_Async() {
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -97,12 +97,12 @@ public class CodeFirstCleanupServiceTests {
         var result = await service.PreviewAsync();
 
         result.Items.ShouldBe([
-            new("ContentType", "obsoletePage", "Obsolete Page"),
+            new("DocumentType", "obsoletePage", "Obsolete Page"),
         ]);
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenOwnedContentTypeIsObsolete_DeletesIt_Async() {
+    public async Task ApplyAsync_WhenOwnedDocumentTypeIsObsolete_DeletesIt_Async() {
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -123,7 +123,7 @@ public class CodeFirstCleanupServiceTests {
         var result = await service.ApplyAsync();
 
         result.Removed.ShouldBe([
-            new("ContentType", "obsoletePage", "Obsolete Page"),
+            new("DocumentType", "obsoletePage", "Obsolete Page"),
         ]);
         result.Failed.ShouldBeEmpty();
         A.CallTo(() => contentTypeService.DeleteAsync(

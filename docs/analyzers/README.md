@@ -10,7 +10,7 @@ declarations while you type and during builds. Every rule has its own page with 
 | [UCF102](UCF102.md) | Repeated layout configuration should use a shared attribute | Warning |
 | [UCF103](UCF103.md) | Repeated validation configuration should use a shared attribute | Info |
 | [UCF104](UCF104.md) | Unsupported code-first property type | Warning |
-| [UCF105](UCF105.md) | UCFProperty used outside a UCFContentType | Warning |
+| [UCF105](UCF105.md) | UCFProperty used outside a UCFDocumentType | Warning |
 | [UCF106](UCF106.md) | Invalid content composition target | Warning |
 | [UCF107](UCF107.md) | Invalid content composition graph (duplicate, self, cycle) | Warning |
 

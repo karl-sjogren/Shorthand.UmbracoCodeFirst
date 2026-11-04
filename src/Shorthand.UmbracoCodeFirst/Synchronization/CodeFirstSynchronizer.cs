@@ -39,13 +39,13 @@ public sealed class CodeFirstSynchronizer(
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .OrderBy(definition => definition.Alias, StringComparer.Ordinal)
             .ToList();
-        var contentTypes = definitions
+        var documentTypes = definitions
             .Where(definition => definition.Kind != CodeFirstDefinitionKind.DataType)
             .ToDictionary(definition => definition.Alias, StringComparer.Ordinal);
         HashSet<string> visiting = new(StringComparer.Ordinal);
         HashSet<string> visited = new(StringComparer.Ordinal);
 
-        foreach(var definition in contentTypes.Values
+        foreach(var definition in documentTypes.Values
                     .OrderBy(definition => definition.Alias, StringComparer.Ordinal)) {
             Visit(definition);
         }
@@ -62,7 +62,7 @@ public sealed class CodeFirstSynchronizer(
             }
 
             foreach(var compositionAlias in definition.CompositionAliases ?? []) {
-                if(contentTypes.TryGetValue(compositionAlias, out var composition)) {
+                if(documentTypes.TryGetValue(compositionAlias, out var composition)) {
                     Visit(composition);
                 }
             }

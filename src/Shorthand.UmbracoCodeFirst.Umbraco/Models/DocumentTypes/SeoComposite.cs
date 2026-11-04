@@ -1,9 +1,9 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
-namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.ContentTypes;
+namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
-[UCFContentType(
+[UCFDocumentType(
     "seoComposite",
     "SEO Composite",
     Icon = "icon-document")]

@@ -14,12 +14,12 @@ public sealed class CodeFirstCleanupService(
 
     public async Task<CodeFirstCleanupResponse> PreviewAsync() {
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
-        IReadOnlyList<IContentType> contentTypes = contentTypeService.GetAll().ToArray();
+        IReadOnlyList<IContentType> documentTypes = contentTypeService.GetAll().ToArray();
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.Ordinal);
-        var contentTypeAliases = registry.Definitions
+        var documentTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.Ordinal);
@@ -33,24 +33,24 @@ public sealed class CodeFirstCleanupService(
             }
         }
 
-        foreach(var contentType in contentTypes) {
-            if(!TryGetOwnedAlias(contentType.Description, out var alias)
+        foreach(var documentType in documentTypes) {
+            if(!TryGetOwnedAlias(documentType.Description, out var alias)
                 || alias is null) {
-                alias = contentType.Alias;
-                if(ownershipStore.Get(alias, contentType.Key) is null) {
+                alias = documentType.Alias;
+                if(ownershipStore.Get(alias, documentType.Key) is null) {
                     continue;
                 }
             }
 
-            if(!contentTypeAliases.Contains(alias)) {
-                items.Add(new("ContentType", alias, contentType.Name ?? alias));
+            if(!documentTypeAliases.Contains(alias)) {
+                items.Add(new("DocumentType", alias, documentType.Name ?? alias));
                 continue;
             }
 
             var definition = registry.Definitions.Single(
                 candidate => candidate.Kind == CodeFirstDefinitionKind.DocumentType
                     && candidate.Alias == alias);
-            AddObsoleteMembers(items, contentType, definition);
+            AddObsoleteMembers(items, documentType, definition);
         }
 
         return new(items);
@@ -98,7 +98,7 @@ public sealed class CodeFirstCleanupService(
             return true;
         }
 
-        if(item.Kind == "ContentType") {
+        if(item.Kind == "DocumentType") {
             var contentType = contentTypeService.Get(item.Alias);
             if(contentType is null || !IsOwned(contentType, item.Alias)) {
                 return false;

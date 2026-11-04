@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- `UCFDataType`, `UCFContentType`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
+- `UCFDataType`, `UCFDocumentType`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
   `UCFValidation`, `UCFComposite`, with derivable tab/group/validation attributes
 - Registry, published-model and Data Type `Alias` generation
 - Data Type creation/update including editor UI alias and raw JSON configuration
@@ -15,7 +15,7 @@
 
 ## Declared but not yet synchronized
 
-`UCFContentType` accepts these, and they reach the metadata, but the Umbraco adapter ignores them:
+`UCFDocumentType` accepts these, and they reach the metadata, but the Umbraco adapter ignores them:
 
 - `DefaultTemplateAlias`, `AllowedTemplateAliases`
 - `AllowedChildAliases`

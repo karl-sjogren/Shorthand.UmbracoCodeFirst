@@ -98,15 +98,15 @@ public class CodeFirstRegistryGeneratorTests {
     }
 
     [Fact]
-    public void GenerateRegistry_ContentTypeComposition_EmitsReferencedAlias() {
+    public void GenerateRegistry_DocumentTypeComposition_EmitsReferencedAlias() {
         // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
-                    public UCFContentTypeAttribute(string alias, string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string alias, string name) { }
                 }
 
                 [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
@@ -116,10 +116,10 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Base")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Base")]
                 public partial class Base;
 
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 [Shorthand.UmbracoCodeFirst.Attributes.UCFComposite(typeof(Base))]
                 public partial class Article;
             }
@@ -154,10 +154,10 @@ public class CodeFirstRegistryGeneratorTests {
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
-                    public UCFContentTypeAttribute(string alias, string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string alias, string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -169,14 +169,14 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 public partial class Article
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
                     public partial string Title { get; }
                 }
 
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("not-a-model", "Not a model")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("not-a-model", "Not a model")]
                 public class NotAModel
                 {
                 }
@@ -235,9 +235,9 @@ public class CodeFirstRegistryGeneratorTests {
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -248,7 +248,7 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("ProductPage")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("ProductPage")]
                 public partial class ProductPage
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("SEO URL", "text")]
@@ -284,9 +284,9 @@ public class CodeFirstRegistryGeneratorTests {
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -297,7 +297,7 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 public unsafe partial class Article
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Pointer", "textstring")]
@@ -353,9 +353,9 @@ public class CodeFirstRegistryGeneratorTests {
                         : base("marketingTab", "Marketing tab", 4) { }
                 }
 
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -366,7 +366,7 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 public partial class Article
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
@@ -420,9 +420,9 @@ public class CodeFirstRegistryGeneratorTests {
                 public sealed class ImplicitSeoTabAttribute()
                     : UCFTabAttribute("SEO", 4);
 
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -433,7 +433,7 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 public partial class Article
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
@@ -573,9 +573,9 @@ public class CodeFirstRegistryGeneratorTests {
                     public UCFDataTypeAttribute(string alias, string name, string editorAlias) { }
                 }
 
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -592,7 +592,7 @@ public class CodeFirstRegistryGeneratorTests {
                     "Umbraco.TextArea")]
                 public partial class CodeFirstLongTextDataType;
 
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Article")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
                 public partial class Article
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty(
@@ -646,9 +646,9 @@ public class CodeFirstRegistryGeneratorTests {
                         : base("^[A-Z]{3}-[0-9]{4}$", "Use the ABC-1234 format.") { }
                 }
 
-                public sealed class UCFContentTypeAttribute : global::System.Attribute
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
                 {
-                    public UCFContentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string name) { }
                 }
 
                 public sealed class UCFPropertyAttribute : global::System.Attribute
@@ -659,7 +659,7 @@ public class CodeFirstRegistryGeneratorTests {
 
             namespace Example
             {
-                [Shorthand.UmbracoCodeFirst.Attributes.UCFContentType("Product")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Product")]
                 public partial class Product
                 {
                     [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Code", "textstring")]

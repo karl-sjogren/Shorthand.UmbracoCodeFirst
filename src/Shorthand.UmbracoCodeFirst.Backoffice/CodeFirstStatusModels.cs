@@ -6,16 +6,16 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice;
 public sealed record CodeFirstStatusResponse(
     int DefinitionCount,
     int DataTypeCount,
-    int ContentTypeCount,
+    int DocumentTypeCount,
     int CreatedCount,
     int UpdatedCount,
     int UnchangedCount,
     int FailedCount,
     DateTimeOffset CompletedAt,
     IReadOnlyList<CodeFirstStatusItem> DataTypes,
-    IReadOnlyList<CodeFirstStatusItem> ContentTypes) {
+    IReadOnlyList<CodeFirstStatusItem> DocumentTypes) {
     public IReadOnlyList<CodeFirstStatusItem> Definitions =>
-        DataTypes.Concat(ContentTypes).ToArray();
+        DataTypes.Concat(DocumentTypes).ToArray();
 }
 
 public sealed record CodeFirstStatusItem(

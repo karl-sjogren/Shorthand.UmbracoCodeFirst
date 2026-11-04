@@ -54,7 +54,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("invalid_alias", "Product")]
+            [UCFDocumentType("invalid_alias", "Product")]
             public partial class Product;
             """;
 
@@ -70,7 +70,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product-page.é", "Product")]
+            [UCFDocumentType("product-page.é", "Product")]
             public partial class Product;
             """;
 
@@ -86,7 +86,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             public partial class Product;
             [UCFDataType("product", "Product editor", "text")]
             public partial class ProductEditor;
@@ -103,7 +103,7 @@ public class AnalyzerProjectTests {
     public void Analyze_DuplicateDerivedDefinitionAliases_ReportsDuplicateAliasDiagnostic() {
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("Product Page")]
+            [UCFDocumentType("Product Page")]
             public partial class Product;
             [UCFDataType("Product Page", "text")]
             public partial class ProductEditor;
@@ -118,7 +118,7 @@ public class AnalyzerProjectTests {
     public void Analyze_DuplicateDerivedPropertyAliases_ReportsDuplicateAliasDiagnostic() {
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("Article")]
+            [UCFDocumentType("Article")]
             public partial class Article {
                 [UCFProperty("Product Page", "text")]
                 public partial string First { get; }
@@ -137,12 +137,12 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("base", "Base")]
+            [UCFDocumentType("base", "Base")]
             public partial class Base {
                 [UCFProperty("title", "Title", "text")]
                 public partial string Title { get; }
             }
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             [UCFComposite(typeof(Base))]
             public partial class Article {
                 [UCFProperty("summary", "Summary", "text")]
@@ -159,19 +159,19 @@ public class AnalyzerProjectTests {
     }
 
     [Fact]
-    public void Analyze_SameCompositionReusedByMultipleContentTypes_DoesNotReportDuplicatePropertyAliasDiagnostic() {
+    public void Analyze_SameCompositionReusedByMultipleDocumentTypes_DoesNotReportDuplicatePropertyAliasDiagnostic() {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("seo", "SEO")]
+            [UCFDocumentType("seo", "SEO")]
             public partial class Seo {
                 [UCFProperty("description", "Description", "text")]
                 public partial string Description { get; }
             }
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             [UCFComposite(typeof(Seo))]
             public partial class Article;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             [UCFComposite(typeof(Seo))]
             public partial class Product;
             """;
@@ -189,12 +189,12 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("seo", "SEO")]
+            [UCFDocumentType("seo", "SEO")]
             public partial class Seo {
                 [UCFProperty("description", "Description", "text")]
                 public partial string Description { get; }
             }
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             [UCFComposite(typeof(Seo))]
             public partial class Article {
                 [UCFProperty("description", "Other description", "text")]
@@ -211,11 +211,11 @@ public class AnalyzerProjectTests {
     }
 
     [Fact]
-    public void Analyze_DuplicatePropertyAliasesWithinContentType_ReportsDuplicateAliasDiagnostic() {
+    public void Analyze_DuplicatePropertyAliasesWithinDocumentType_ReportsDuplicateAliasDiagnostic() {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             public partial class Article {
                 [UCFProperty("title", "Title", "text")]
                 public partial string Title { get; }
@@ -237,7 +237,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             public partial class Product {
                 [UCFProperty("name", "Name", "text")]
                 [UCFGroup("details", "Details")]
@@ -260,7 +260,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             public partial class Product {
                 [UCFProperty("name", "Name", "text")]
                 [UCFValidation("^[A-Z]+$", "Uppercase only")]
@@ -283,7 +283,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             public partial class Product {
                 [UCFProperty("value", "Value", "text")]
                 public partial void Value { get; }
@@ -299,7 +299,7 @@ public class AnalyzerProjectTests {
     }
 
     [Fact]
-    public void Analyze_PropertyOutsideContentType_ReportsContainingTypeDiagnostic() {
+    public void Analyze_PropertyOutsideDocumentType_ReportsContainingTypeDiagnostic() {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
@@ -314,18 +314,18 @@ public class AnalyzerProjectTests {
 
         // Assert
         diagnostics.ShouldContain(
-            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.PropertyOutsideContentTypeId);
+            diagnostic => diagnostic.Id == CodeFirstAttributeAnalyzer.PropertyOutsideDocumentTypeId);
     }
 
     [Fact]
-    public void Analyze_CompositionTargetWithoutContentType_ReportsInvalidTargetDiagnostic() {
+    public void Analyze_CompositionTargetWithoutDocumentType_ReportsInvalidTargetDiagnostic() {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
-            [UCFComposite(typeof(NotAContentType))]
+            [UCFDocumentType("product", "Product")]
+            [UCFComposite(typeof(NotADocumentType))]
             public partial class Product;
-            public partial class NotAContentType;
+            public partial class NotADocumentType;
             """;
 
         // Act
@@ -341,7 +341,7 @@ public class AnalyzerProjectTests {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst.Attributes;
-            [UCFContentType("product", "Product")]
+            [UCFDocumentType("product", "Product")]
             [UCFComposite(typeof(Product))]
             public partial class Product;
             """;
@@ -360,7 +360,7 @@ public class AnalyzerProjectTests {
             using Shorthand.UmbracoCodeFirst.Attributes;
             [UCFDataType("textEditor", "Umbraco.TextBox")]
             public partial class TextEditor;
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             public partial class Article {
                 [UCFProperty("title", "textEditor")]
                 public partial string Title { get; }
@@ -380,7 +380,7 @@ public class AnalyzerProjectTests {
             using Shorthand.UmbracoCodeFirst.Attributes;
             [UCFDataType("textEditor", "Umbraco.TextBox")]
             public partial class TextEditor;
-            [UCFContentType("article", "Article")]
+            [UCFDocumentType("article", "Article")]
             public partial class Article {
                 [UCFProperty("title", "textEditor")]
                 public partial int Title { get; }
@@ -433,9 +433,9 @@ public class AnalyzerProjectTests {
 
     private const string _attributeDefinitions = """
         namespace Shorthand.UmbracoCodeFirst.Attributes;
-        public sealed class UCFContentTypeAttribute : global::System.Attribute {
-            public UCFContentTypeAttribute(string name) { }
-            public UCFContentTypeAttribute(string alias, string name) { }
+        public sealed class UCFDocumentTypeAttribute : global::System.Attribute {
+            public UCFDocumentTypeAttribute(string name) { }
+            public UCFDocumentTypeAttribute(string alias, string name) { }
         }
         public sealed class UCFDataTypeAttribute : global::System.Attribute {
             public UCFDataTypeAttribute(string name, string editorAlias) { }
