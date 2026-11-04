@@ -16,14 +16,28 @@ Declares a Document Type. Only Document Types are supported; there is no media/m
 | `name` | ctor | Display name. |
 | `alias` | ctor (optional) | Umbraco alias. |
 | `Icon` | named | Icon alias, e.g. `icon-document`. |
-| `IsElement` | named | Marks an Element Type (also changes the generated model's `ModelItemType`). |
 | `AllowAsRoot` | named | Allowed at content root. |
-| `AllowInLibrary` | named | Allowed in the library. |
 | `DefaultTemplateAlias` | named | Metadata only – *not yet synchronized*. |
 | `AllowedTemplateAliases` | named | Metadata only – *not yet synchronized*. |
 | `AllowedChildAliases` | named | Metadata only – *not yet synchronized*. |
 | `Variations` | named | Metadata only – *not yet synchronized*. |
 | `IsListView` | named | Metadata only – *not yet synchronized*. |
+
+Not inherited; one per class.
+
+## `UCFElementType` – class
+
+Declares an Element Type. Element-only settings are kept separate from Document Types so
+templates, root permissions, allowed child types, and collection/list-view settings cannot be
+configured accidentally.
+
+| Argument | Kind | Description |
+| -------- | ---- | ----------- |
+| `name` | ctor | Display name. |
+| `alias` | ctor (optional) | Umbraco alias. |
+| `Icon` | named | Icon alias, e.g. `icon-document`. |
+| `AllowInLibrary` | named | Allowed in the library. |
+| `Variations` | named | Metadata only – *not yet synchronized*. |
 
 Not inherited; one per class.
 

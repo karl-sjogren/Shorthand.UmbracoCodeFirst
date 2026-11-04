@@ -4,7 +4,7 @@ Umbraco Document Types can be composed of other Document Types. C# inheritance c
 composed of several others, so composition is declared explicitly:
 
 ```csharp
-[UCFDocumentType("seoComposition", "SEO composition", IsElement = false)]
+[UCFDocumentType("seoComposition", "SEO composition")]
 public partial class SeoComposition { /* properties */ }
 
 [UCFDocumentType("productPage", "Product Page")]

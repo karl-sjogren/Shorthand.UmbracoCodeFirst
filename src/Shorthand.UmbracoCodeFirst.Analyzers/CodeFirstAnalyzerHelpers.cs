@@ -7,10 +7,10 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers;
 internal static class CodeFirstAnalyzerHelpers {
     public static bool HasDocumentTypeAttribute(ISymbol symbol) =>
         symbol.GetAttributes().Any(static attribute =>
-            attribute.AttributeClass?.Name == "UCFDocumentTypeAttribute");
+            attribute.AttributeClass?.Name is "UCFDocumentTypeAttribute" or "UCFElementTypeAttribute");
 
     public static bool HasDocumentTypeAttribute(AttributeData attribute) =>
-        attribute.AttributeClass?.Name == "UCFDocumentTypeAttribute";
+        attribute.AttributeClass?.Name is "UCFDocumentTypeAttribute" or "UCFElementTypeAttribute";
 
     public static string GetScopeName(AliasOccurrence occurrence) =>
         occurrence.Symbol.ContainingType?.ToDisplayString() ?? string.Empty;

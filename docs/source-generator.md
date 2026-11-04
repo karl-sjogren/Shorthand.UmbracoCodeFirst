@@ -26,7 +26,7 @@ Each definition carries:
 For every `UCFDocumentType` class a partial implementation is emitted in the class's own namespace:
 
 - `[PublishedModel("alias")]` and `: PublishedContentModel`
-- `ModelTypeAlias`, `ModelItemType` (`Content`, or `Element` if `IsElement`),
+- `ModelTypeAlias`, `ModelItemType` (`Content`, or `Element` for `UCFElementType`),
   `GetModelContentType`, `GetModelPropertyType<TValue>`
 - a constructor `(IPublishedContent, IPublishedValueFallback)`
 - one generated property per `UCFProperty`, implemented with

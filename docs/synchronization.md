@@ -53,7 +53,7 @@ compositions, tabs/groups, properties.
 
 For an existing **owned** Document Type, the following are reconciled:
 
-- Name, description, icon, `IsElement`, `AllowAsRoot`, `AllowInLibrary`
+- Name, description, icon, element status, `AllowAsRoot`, and `AllowInLibrary`
 - Compositions (added; owned ones removed when dropped from code)
 - Tabs and groups: created if missing; name, sort order and type (tab vs group) updated
 - Properties: created if missing; existing properties have name, description, sort order,

@@ -25,6 +25,55 @@ public class CodeFirstRegistryGeneratorTests {
         result.GeneratedSources.ShouldBeEmpty();
     }
 
+    [Fact]
+    public void GenerateRegistry_ElementType_EmitsElementMetadataAndModel() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFElementTypeAttribute : global::System.Attribute
+                {
+                    public UCFElementTypeAttribute(string name) { }
+                    public UCFElementTypeAttribute(string alias, string name) { }
+                    public bool AllowInLibrary { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFElementType("seoElement")]
+                public partial class SeoElement;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                source,
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatorResult = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single();
+        var registrySource = generatorResult.GeneratedSources
+            .Single(generatedSource => generatedSource.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+        var modelSource = generatorResult.GeneratedSources
+            .Single(generatedSource => generatedSource.HintName.Contains("SeoElement", StringComparison.Ordinal))
+            .SourceText
+            .ToString();
+
+        registrySource.ShouldContain("CodeFirstTypeSettings(");
+        registrySource.ShouldContain("true,");
+        modelSource.ShouldContain("ModelItemType = PublishedItemType.Element");
+    }
+
     [Theory]
     [InlineData("", "")]
     [InlineData("Body text", "bodyText")]

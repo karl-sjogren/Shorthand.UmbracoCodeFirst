@@ -8,9 +8,7 @@ public class AttributeContractTests {
         // Arrange
         var attribute = new UCFDocumentTypeAttribute("productPage", "Product Page") {
             Icon = "icon-barcode",
-            IsElement = true,
             AllowAsRoot = true,
-            AllowInLibrary = true,
             DefaultTemplateAlias = "productTemplate",
             AllowedTemplateAliases = ["productTemplate", "default"],
             AllowedChildAliases = ["variant"],
@@ -26,6 +24,20 @@ public class AttributeContractTests {
         attribute.Name.ShouldBe("Product Page");
         attribute.AllowedTemplateAliases.ShouldBe(["productTemplate", "default"]);
         attribute.AllowedChildAliases.ShouldBe(["variant"]);
+    }
+
+    [Fact]
+    public void UCFElementTypeAttribute_ExplicitSettings_PreservesValues() {
+        var attribute = new UCFElementTypeAttribute("productElement", "Product Element") {
+            Icon = "icon-barcode",
+            AllowInLibrary = true,
+            Variations = "Culture",
+        };
+
+        attribute.Alias.ShouldBe("productElement");
+        attribute.Name.ShouldBe("Product Element");
+        attribute.AllowInLibrary.ShouldBeTrue();
+        attribute.Variations.ShouldBe("Culture");
     }
 
     [Fact]
