@@ -1,6 +1,6 @@
 # Shorthand.UmbracoCodeFirst
 
-Code-first definitions for Umbraco Document Types and Data Types.
+Code-first definitions for Umbraco Document Types, Media Types, Member Types, and Data Types.
 
 > [!WARNING]
 > This whole project was vibe coded over a few evenings and the code quality is not great.
@@ -8,19 +8,19 @@ Code-first definitions for Umbraco Document Types and Data Types.
 > a lot further refinement to become a robust and production-ready library. But it's kinda cool.
 
 Instead of configuring every definition manually in the Umbraco backoffice, declare partial C#
-classes and properties with `UCFDocumentType`, `UCFDataType`, `UCFProperty`, tabs, groups,
-validation attributes, and compositions. A Roslyn source generator creates the definition registry
-and typed published-model members. When the Umbraco application starts, the synchronizer creates or
-updates the matching definitions.
+classes and properties with `UCFDocumentType`, `UCFMediaType`, `UCFMemberType`, `UCFDataType`,
+`UCFProperty`, tabs, groups, validation attributes, and compositions. A Roslyn source generator
+creates the definition registry and typed published-model members. When the Umbraco application
+starts, the synchronizer creates or updates the matching definitions.
 
 The repository also contains a backoffice extension under **Settings > Advanced > Code First**.
 It displays generated definitions, synchronization results, failures, and an explicit cleanup
 preview for obsolete code-first-owned items.
 
-> **Current status:** This is an active MVP. Document Types, Data Types, compositions, generated
-> published models, analyzers, synchronization, and the backoffice status page are implemented.
-> Media Types and Member Types are not implemented yet, and synchronization is intentionally
-> non-destructive. See the [limitations and roadmap](docs/limitations-and-roadmap.md).
+> **Current status:** This is an active MVP. Document Types, Element Types, Media Types, Member
+> Types, Data Types, compositions, generated published models, analyzers, synchronization, typed
+> editor configurations, and the backoffice status page are implemented. Synchronization is
+> intentionally non-destructive. See the [limitations and roadmap](docs/limitations-and-roadmap.md).
 
 ## Example
 
@@ -52,29 +52,42 @@ the [attribute reference](docs/attributes.md) for all supported settings.
 
 ## How it works
 
-```text
-C# partial classes and attributes
-              |
-              v
-Roslyn source generator and analyzers
-              |
-              +--> definition registry
-              +--> typed published models
-              +--> compile-time diagnostics
-              |
-              v
-CodeFirstSynchronizer after Umbraco boots
-              |
-              v
-Umbraco Data Types and Document Types
-              |
-              v
-Settings > Advanced > Code First
+```mermaid
+flowchart TD
+    A["C# partial classes and attributes"] --> B["Roslyn source generator and analyzers"]
+    B --> C["Definition registry"]
+    B --> D["Typed published models"]
+    B --> E["Compile-time diagnostics"]
+    B --> F["CodeFirstSynchronizer after Umbraco boots"]
+    F --> G["Umbraco Data Types and Document Types"]
+    G --> H["Settings > Advanced > Code First"]
 ```
 
 Definitions are reconciled by stable aliases and code-first ownership markers. Existing manual
 definitions are preserved, and synchronization does not delete obsolete definitions or properties.
 Destructive cleanup is a separate, explicit backoffice action with a preview and confirmation step.
+
+## Supported definitions and editor configuration
+
+The source generator and synchronizer support:
+
+- **Document Types and Element Types** with descriptions, icons, compositions, folders, variations,
+  allowed children, tabs, groups, properties, validation, templates, and generated published models.
+- **Media Types and Member Types** with folders, variations, allowed children, tabs, groups,
+  properties, validation, and ownership-aware synchronization.
+- **Data Types** with generated editor aliases/UI aliases and catalog-driven configuration bases.
+  The built-in `UmbracoEditors` catalog covers all documented editors, including scalar settings and
+  structured JSON settings for blocks, pickers, crops, colors, dropdowns, and rich text. Typed
+  configuration is available through `UCFDataType.ConfigurationType`; `ConfigurationJson` remains
+  available as a raw compatibility escape hatch.
+
+## Analyzer diagnostics
+
+The Roslyn analyzer package validates aliases, declaration structure, compositions, property types,
+and property-editor compatibility during development and builds. The [analyzer guide](docs/analyzers/README.md)
+links to help pages for each diagnostic, including the available code fix for repeated layout
+configuration. The source generator also reports generator-specific errors documented in the
+[source generator guide](docs/source-generator.md#generator-diagnostics).
 
 ## Repository structure
 

@@ -5,7 +5,7 @@ public class AnalyzerInfrastructureTests : AnalyzerTestBase {
     public void AnalyzerDescriptors_HaveDocumentationLinks_ReturnFeatureBranchUris() {
         const string documentationBaseUrl =
             "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/" +
-            "feature/initial-implementation/docs/analyzers";
+            "develop/docs/analyzers";
         var descriptors = AllAnalyzers
             .SelectMany(static analyzer => analyzer.SupportedDiagnostics)
             .ToDictionary(
