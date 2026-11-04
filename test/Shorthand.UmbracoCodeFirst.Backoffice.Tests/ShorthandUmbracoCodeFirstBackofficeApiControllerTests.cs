@@ -33,6 +33,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
         A.CallTo(() => contentType.Key).Returns(documentTypeKey);
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => contentTypeService.Get("article")).Returns(contentType);
+        var mediaTypeService = A.Fake<IMediaTypeService>();
+        var memberTypeService = A.Fake<IMemberTypeService>();
 
         var registry = new TestRegistry([
             new(CodeFirstDefinitionKind.DataType, "text", "Text", "Umbraco.TextBox", []),
@@ -42,13 +44,52 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
 
         // Act
         var response = await new ShorthandUmbracoCodeFirstBackofficeApiController()
-            .StatusAsync(registry, reportStore, dataTypeService, contentTypeService);
+            .StatusAsync(
+                registry,
+                reportStore,
+                dataTypeService,
+                contentTypeService,
+                mediaTypeService,
+                memberTypeService);
 
         // Assert
         response.DataTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/data-type/edit/{dataTypeKey:D}");
         response.DocumentTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/document-type/edit/{documentTypeKey:D}");
+    }
+
+    [Fact]
+    public async Task StatusAsync_MapsMediaAndMemberTypeUrls_Async() {
+        var mediaTypeKey = Guid.NewGuid();
+        var memberTypeKey = Guid.NewGuid();
+        var mediaType = A.Fake<IMediaType>();
+        var memberType = A.Fake<IMemberType>();
+        A.CallTo(() => mediaType.Key).Returns(mediaTypeKey);
+        A.CallTo(() => memberType.Key).Returns(memberTypeKey);
+        var mediaTypeService = A.Fake<IMediaTypeService>();
+        var memberTypeService = A.Fake<IMemberTypeService>();
+        A.CallTo(() => mediaTypeService.Get("imageAsset")).Returns(mediaType);
+        A.CallTo(() => memberTypeService.Get("memberProfile")).Returns(memberType);
+
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.MediaType, "imageAsset", "Image Asset", null, []),
+            new(CodeFirstDefinitionKind.MemberType, "memberProfile", "Member Profile", null, []),
+        ]);
+
+        var response = await new ShorthandUmbracoCodeFirstBackofficeApiController()
+            .StatusAsync(
+                registry,
+                new SynchronizationReportStore(),
+                A.Fake<IDataTypeService>(),
+                A.Fake<IContentTypeService>(),
+                mediaTypeService,
+                memberTypeService);
+
+        response.MediaTypes.Single().BackofficeUrl.ShouldBe(
+            $"/umbraco/section/settings/workspace/media-type/edit/{mediaTypeKey:D}");
+        response.MemberTypes.Single().BackofficeUrl.ShouldBe(
+            $"/umbraco/section/settings/workspace/member-type/edit/{memberTypeKey:D}");
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)

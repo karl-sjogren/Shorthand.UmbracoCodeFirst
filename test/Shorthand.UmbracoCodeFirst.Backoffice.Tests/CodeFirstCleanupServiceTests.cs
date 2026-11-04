@@ -343,6 +343,8 @@ public class CodeFirstCleanupServiceTests {
             new TestRegistry(definitions),
             dataTypeService,
             contentTypeService,
+            A.Fake<IMediaTypeService>(),
+            A.Fake<IMemberTypeService>(),
             new CodeFirstOwnershipStore(keyValueService));
     }
 

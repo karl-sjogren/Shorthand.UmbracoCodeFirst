@@ -9,18 +9,31 @@ internal static class CodeFirstAttributeParser {
         out AliasOccurrence occurrence) {
         occurrence = null!;
         var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
-        if(attributeName is not ("UCFDocumentTypeAttribute" or "UCFElementTypeAttribute" or "UCFDataTypeAttribute" or "UCFPropertyAttribute")) {
+        if(attributeName is not (
+            "UCFDocumentTypeAttribute"
+            or "UCFElementTypeAttribute"
+            or "UCFMediaTypeAttribute"
+            or "UCFMemberTypeAttribute"
+            or "UCFDataTypeAttribute"
+            or "UCFPropertyAttribute")) {
             return false;
         }
 
         var hasExplicitAlias = attributeName switch {
-            "UCFDocumentTypeAttribute" or "UCFElementTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
+            "UCFDocumentTypeAttribute"
+                or "UCFElementTypeAttribute"
+                or "UCFMediaTypeAttribute"
+                or "UCFMemberTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
             "UCFDataTypeAttribute" => attribute.ConstructorArguments.Length >= 3,
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
         };
         var nameIndex = attributeName switch {
-            "UCFDocumentTypeAttribute" or "UCFElementTypeAttribute" or "UCFPropertyAttribute" when hasExplicitAlias => 1,
+            "UCFDocumentTypeAttribute"
+                or "UCFElementTypeAttribute"
+                or "UCFMediaTypeAttribute"
+                or "UCFMemberTypeAttribute"
+                or "UCFPropertyAttribute" when hasExplicitAlias => 1,
             "UCFDataTypeAttribute" when hasExplicitAlias => 1,
             _ => 0,
         };

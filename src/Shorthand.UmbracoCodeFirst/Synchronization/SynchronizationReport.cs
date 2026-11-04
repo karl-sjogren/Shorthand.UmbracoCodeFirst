@@ -27,6 +27,8 @@ public sealed record SynchronizationReport(
     public int UnchangedCount => Items.Count(item => item.Status == SynchronizationStatus.Unchanged);
 
     public int FailedCount => Items.Count(item => item.Status == SynchronizationStatus.Failed);
+
+    public int SkippedCount => Items.Count(item => item.Status == SynchronizationStatus.Skipped);
 }
 
 public interface ISynchronizationReportStore {

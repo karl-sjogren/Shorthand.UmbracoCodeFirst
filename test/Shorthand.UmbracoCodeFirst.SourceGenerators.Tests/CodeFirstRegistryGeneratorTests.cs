@@ -5,6 +5,53 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_MediaAndMemberTypes_EmitsDistinctDefinitionKinds() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFMediaTypeAttribute(string name)
+                    : global::System.Attribute;
+                public sealed class UCFMemberTypeAttribute(string name)
+                    : global::System.Attribute;
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFMediaType("Image Asset")]
+                public partial class ImageAsset;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFMemberType("Member Profile")]
+                public partial class MemberProfile;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(
+                source,
+                cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        generatedSource.ShouldContain("CodeFirstDefinitionKind.MediaType");
+        generatedSource.ShouldContain("\"imageAsset\"");
+        generatedSource.ShouldContain("CodeFirstDefinitionKind.MemberType");
+        generatedSource.ShouldContain("\"memberProfile\"");
+    }
+
+    [Fact]
     public void GenerateRegistry_NoDefinitions_DoesNotEmitEmptyRegistry() {
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());

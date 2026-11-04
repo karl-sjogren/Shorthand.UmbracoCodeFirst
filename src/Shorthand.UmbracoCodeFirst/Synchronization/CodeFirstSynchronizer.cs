@@ -67,6 +67,12 @@ public sealed class CodeFirstSynchronizer(
                 }
             }
 
+            foreach(var childAlias in definition.Settings?.AllowedChildAliases ?? []) {
+                if(documentTypes.TryGetValue(childAlias, out var child)) {
+                    Visit(child);
+                }
+            }
+
             visiting.Remove(definition.Alias);
             visited.Add(definition.Alias);
             ordered.Add(definition);

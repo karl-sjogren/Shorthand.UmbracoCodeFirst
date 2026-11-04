@@ -19,6 +19,10 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private const string _elementTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFElementTypeAttribute";
 
+    private const string _mediaTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMediaTypeAttribute";
+
+    private const string _memberTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMemberTypeAttribute";
+
     private const string _dataTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDataTypeAttribute";
 
     private const string _propertyAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFPropertyAttribute";
@@ -337,12 +341,19 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         INamedTypeSymbol definition,
         Compilation compilation,
         IReadOnlyDictionary<string, string> dataTypeAliases) {
-        var documentTypeAttribute = FindDocumentTypeAttribute(definition);
-        if (documentTypeAttribute is not null) {
-            var name = GetNameArgument(documentTypeAttribute);
-            var alias = GetAliasArgument(documentTypeAttribute, name);
+        var contentTypeAttribute = FindContentTypeAttribute(definition);
+        if (contentTypeAttribute is not null) {
+            var name = GetNameArgument(contentTypeAttribute);
+            var alias = GetAliasArgument(contentTypeAttribute, name);
+            var kind = IsAttribute(contentTypeAttribute, _mediaTypeAttributeMetadataName)
+                ? "MediaType"
+                : IsAttribute(contentTypeAttribute, _memberTypeAttributeMetadataName)
+                    ? "MemberType"
+                    : "DocumentType";
             builder.Append("new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinition(");
-            builder.Append("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinitionKind.DocumentType, ");
+            builder.Append("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinitionKind.");
+            builder.Append(kind);
+            builder.Append(", ");
             builder.Append(
                 SymbolDisplay.FormatLiteral(alias, true));
             builder.Append(", ");
@@ -420,7 +431,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
             builder.Indent--;
             builder.Append("], ");
-            builder.Append(BuildTypeSettings(documentTypeAttribute, definition));
+            builder.Append(BuildTypeSettings(contentTypeAttribute, definition));
             builder.Append(", null, null, null, ");
             builder.Append(BuildCompositionAliases(definition));
             builder.Append(", ");
@@ -586,6 +597,15 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             IsDerivedAttribute(attribute, _documentTypeAttributeMetadataName)
             || IsAttribute(attribute, _elementTypeAttributeMetadataName));
 
+    private static AttributeData? FindContentTypeAttribute(ISymbol symbol) =>
+        symbol.GetAttributes().FirstOrDefault(attribute =>
+            IsDerivedAttribute(attribute, _documentTypeAttributeMetadataName)
+            || IsAttribute(
+                attribute,
+                _elementTypeAttributeMetadataName,
+                _mediaTypeAttributeMetadataName,
+                _memberTypeAttributeMetadataName));
+
     private static AttributeData? FindLayoutAttribute(ISymbol symbol, string metadataName) =>
         symbol.GetAttributes().FirstOrDefault(attribute => IsDerivedAttribute(attribute, metadataName));
 
@@ -715,7 +735,12 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private static bool IsDefinitionAttribute(AttributeData attribute) =>
         IsDerivedAttribute(attribute, _documentTypeAttributeMetadataName)
-        || IsAttribute(attribute, _elementTypeAttributeMetadataName, _dataTypeAttributeMetadataName);
+        || IsAttribute(
+            attribute,
+            _elementTypeAttributeMetadataName,
+            _mediaTypeAttributeMetadataName,
+            _memberTypeAttributeMetadataName,
+            _dataTypeAttributeMetadataName);
 
     internal static string ToAlias(string value) {
         var words = new List<string>();

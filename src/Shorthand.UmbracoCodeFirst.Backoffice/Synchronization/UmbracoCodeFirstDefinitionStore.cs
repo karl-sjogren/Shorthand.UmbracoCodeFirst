@@ -14,7 +14,12 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     IDataTypeService dataTypeService,
     IDataTypeContainerService dataTypeContainerService,
     IContentTypeService contentTypeService,
+    IMediaTypeService mediaTypeService,
+    IMemberTypeService memberTypeService,
     IContentTypeContainerService contentTypeContainerService,
+    IMediaTypeContainerService mediaTypeContainerService,
+    IMemberTypeContainerService memberTypeContainerService,
+    ITemplateService templateService,
     PropertyEditorCollection propertyEditors,
     IConfigurationEditorJsonSerializer configurationSerializer,
     IShortStringHelper shortStringHelper,
@@ -29,7 +34,85 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
         return definition.Kind == CodeFirstDefinitionKind.DataType
             ? await ApplyDataTypeAsync(definition)
-            : await ApplyDocumentTypeAsync(definition);
+            : definition.Kind == CodeFirstDefinitionKind.DocumentType
+                ? await ApplyDocumentTypeAsync(definition)
+                : definition.Kind == CodeFirstDefinitionKind.MediaType
+                    ? await ApplyMediaTypeAsync(definition)
+                    : await ApplyMemberTypeAsync(definition);
+    }
+
+    private Task<SynchronizationStatus> ApplyMediaTypeAsync(CodeFirstDefinition definition) =>
+        ApplyNonDocumentTypeAsync(
+            definition,
+            mediaTypeService,
+            folderPath => GetMediaTypeParentIdAsync(folderPath),
+            (parentId, alias) => new MediaType(shortStringHelper, parentId) {
+                Alias = alias,
+            });
+
+    private Task<SynchronizationStatus> ApplyMemberTypeAsync(CodeFirstDefinition definition) =>
+        ApplyNonDocumentTypeAsync(
+            definition,
+            memberTypeService,
+            folderPath => GetMemberTypeParentIdAsync(folderPath),
+            (parentId, alias) => new MemberType(shortStringHelper, parentId) {
+                Alias = alias,
+            });
+
+    private async Task<SynchronizationStatus> ApplyNonDocumentTypeAsync<T>(
+        CodeFirstDefinition definition,
+        IContentTypeBaseService<T> service,
+        Func<string?, Task<int>> getParentId,
+        Func<int, string, T> factory)
+        where T : class, IContentTypeComposition {
+        var existing = service.Get(definition.Alias);
+        if(existing is null) {
+            var parentId = await getParentId(definition.FolderPath);
+            var created = factory(parentId, definition.Alias);
+            created.Name = definition.Name;
+            ApplyTypeSettings(created, definition.Settings);
+            ApplyAllowedChildren(created, definition.Settings, service.Get);
+            await ApplyGroupsAndPropertiesAsync(created, definition);
+            var result = await service.CreateAsync(created, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+            if(!result.Success) {
+                throw new InvalidOperationException(
+                    $"Could not create the {definition.Kind} '{definition.Alias}': {result.Result}.");
+            }
+
+            var createdType = service.Get(definition.Alias)
+                ?? throw new InvalidOperationException(
+                    $"The created {definition.Kind} '{definition.Alias}' could not be loaded.");
+            ownershipStore.Set(definition.Alias, createdType.Key, []);
+            return SynchronizationStatus.Created;
+        }
+
+        if(ownershipStore.Get(definition.Alias, existing.Key) is null) {
+            return SynchronizationStatus.Skipped;
+        }
+
+        var changed = existing.Name != definition.Name;
+        existing.Name = definition.Name;
+        var parentIdForExisting = await getParentId(definition.FolderPath);
+        if(existing.ParentId != parentIdForExisting) {
+            existing.ParentId = parentIdForExisting;
+            changed = true;
+        }
+
+        changed |= ApplyTypeSettings(existing, definition.Settings);
+        changed |= ApplyAllowedChildren(existing, definition.Settings, service.Get);
+        changed |= await ApplyGroupsAndPropertiesAsync(existing, definition);
+        if(!changed) {
+            return SynchronizationStatus.Unchanged;
+        }
+
+        var update = await service.UpdateAsync(existing, Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        if(!update.Success) {
+            throw new InvalidOperationException(
+                $"Could not update the {definition.Kind} '{definition.Alias}': {update.Result}.");
+        }
+
+        ownershipStore.Set(definition.Alias, existing.Key, []);
+        return SynchronizationStatus.Updated;
     }
 
     private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
@@ -108,6 +191,8 @@ public sealed class UmbracoCodeFirstDefinitionStore(
             };
             ApplyTypeSettings(created, definition.Settings);
             ApplyCompositions(created, definition);
+            ApplyAllowedChildren(created, definition.Settings, contentTypeService.Get);
+            await ApplyTemplatesAsync(created, definition.Settings);
             await ApplyGroupsAndPropertiesAsync(created, definition);
             return await CreateContentTypeAsync(created, definition);
         }
@@ -127,11 +212,13 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         changed |= ApplyTypeSettings(contentType, definition.Settings);
+        changed |= ApplyAllowedChildren(contentType, definition.Settings, contentTypeService.Get);
         changed |= ApplyPropertyGroups(contentType, definition);
         changed |= ApplyCompositions(
             contentType,
             definition,
             ownership?.CompositionAliases ?? legacyCompositions);
+        changed |= await ApplyTemplatesAsync(contentType, definition.Settings);
         changed |= await ApplyGroupsAndPropertiesAsync(contentType, definition);
 
         if(!changed) {
@@ -216,15 +303,21 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<int> GetContentTypeParentIdAsync(string? folderPath) {
+        return await GetContentTypeParentIdAsync(folderPath, contentTypeContainerService);
+    }
+
+    private static async Task<int> GetContentTypeParentIdAsync(
+        string? folderPath,
+        IContentTypeContainerService containerService) {
         var parentId = -1;
         Guid? parentKey = null;
         foreach(var segment in GetFolderSegments(folderPath)) {
-            var container = (await contentTypeContainerService.GetAllAsync())
+            var container = (await containerService.GetAllAsync())
                 .FirstOrDefault(candidate =>
                     candidate.ParentId == parentId
                     && string.Equals(candidate.Name, segment, StringComparison.Ordinal));
             if(container is null) {
-                var result = await contentTypeContainerService.CreateAsync(
+                var result = await containerService.CreateAsync(
                     null,
                     segment,
                     parentKey,
@@ -232,6 +325,64 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                 if(!result.Success || result.Result is null) {
                     throw new InvalidOperationException(
                         $"Could not create the Document Type folder '{segment}': {result.Status}.");
+                }
+
+                container = result.Result;
+            }
+
+            parentId = container.Id;
+            parentKey = container.Key;
+        }
+
+        return parentId;
+    }
+
+    private async Task<int> GetMediaTypeParentIdAsync(string? folderPath) {
+        var parentId = -1;
+        Guid? parentKey = null;
+        foreach(var segment in GetFolderSegments(folderPath)) {
+            var container = (await mediaTypeContainerService.GetAllAsync())
+                .FirstOrDefault(candidate =>
+                    candidate.ParentId == parentId
+                    && string.Equals(candidate.Name, segment, StringComparison.Ordinal));
+            if(container is null) {
+                var result = await mediaTypeContainerService.CreateAsync(
+                    null,
+                    segment,
+                    parentKey,
+                    Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                if(!result.Success || result.Result is null) {
+                    throw new InvalidOperationException(
+                        $"Could not create the Media Type folder '{segment}': {result.Result}.");
+                }
+
+                container = result.Result;
+            }
+
+            parentId = container.Id;
+            parentKey = container.Key;
+        }
+
+        return parentId;
+    }
+
+    private async Task<int> GetMemberTypeParentIdAsync(string? folderPath) {
+        var parentId = -1;
+        Guid? parentKey = null;
+        foreach(var segment in GetFolderSegments(folderPath)) {
+            var container = (await memberTypeContainerService.GetAllAsync())
+                .FirstOrDefault(candidate =>
+                    candidate.ParentId == parentId
+                    && string.Equals(candidate.Name, segment, StringComparison.Ordinal));
+            if(container is null) {
+                var result = await memberTypeContainerService.CreateAsync(
+                    null,
+                    segment,
+                    parentKey,
+                    Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                if(!result.Success || result.Result is null) {
+                    throw new InvalidOperationException(
+                        $"Could not create the Member Type folder '{segment}': {result.Result}.");
                 }
 
                 container = result.Result;
@@ -351,7 +502,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
         };
 
     private async Task<bool> ApplyGroupsAndPropertiesAsync(
-        IContentType contentType,
+        IContentTypeComposition contentType,
         CodeFirstDefinition definition) {
         var changed = ApplyPropertyGroups(contentType, definition);
         foreach(var property in definition.Properties) {
@@ -412,7 +563,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private static bool ApplyPropertyGroups(
-        IContentType contentType,
+        IContentTypeComposition contentType,
         CodeFirstDefinition definition) {
         var changed = false;
         var desiredAliases = definition.EffectiveTabs
@@ -446,7 +597,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private static bool ApplyPropertyGroup(
-        IContentType contentType,
+        IContentTypeComposition contentType,
         string definitionAlias,
         CodeFirstGroupDefinition definition,
         PropertyGroupType type) {
@@ -508,7 +659,7 @@ public sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private static bool ApplyTypeSettings(
-        IContentType contentType,
+        IContentTypeComposition contentType,
         CodeFirstTypeSettings? settings) {
         if(settings is null) {
             return false;
@@ -538,6 +689,97 @@ public sealed class UmbracoCodeFirstDefinitionStore(
 
         if(contentType.AllowedInLibrary != settings.AllowInLibrary) {
             contentType.AllowedInLibrary = settings.AllowInLibrary;
+            changed = true;
+        }
+
+        if(settings.Variations is not null) {
+            var variationValue = string.Equals(
+                settings.Variations,
+                "Invariant",
+                StringComparison.OrdinalIgnoreCase)
+                ? nameof(ContentVariation.Nothing)
+                : settings.Variations;
+            if(!Enum.TryParse<ContentVariation>(variationValue, true, out var variations)) {
+                throw new InvalidOperationException(
+                    $"The content type variations value '{settings.Variations}' is invalid.");
+            }
+
+            if(contentType.Variations != variations) {
+                contentType.Variations = variations;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private static bool ApplyAllowedChildren<T>(
+        IContentTypeComposition contentType,
+        CodeFirstTypeSettings? settings,
+        Func<string, T?> resolve)
+        where T : class, IContentTypeComposition {
+        var aliases = settings?.AllowedChildAliases ?? [];
+        var desired = aliases
+            .Select((alias, index) => {
+                var child = resolve(alias)
+                    ?? throw new InvalidOperationException(
+                        $"The content type '{contentType.Alias}' references unknown allowed child '{alias}'.");
+                return new ContentTypeSort(child.Key, index, child.Alias);
+            })
+            .ToArray();
+
+        var existing = contentType.AllowedContentTypes ?? [];
+        if(existing.Select(item => item.Alias).SequenceEqual(desired.Select(item => item.Alias))) {
+            return false;
+        }
+
+        contentType.AllowedContentTypes = desired;
+        return true;
+    }
+
+    private async Task<bool> ApplyTemplatesAsync(
+        IContentType contentType,
+        CodeFirstTypeSettings? settings) {
+        if(settings is null) {
+            return false;
+        }
+
+        var allowedAliases = settings.AllowedTemplateAliases ?? [];
+        var templates = new List<ITemplate>(allowedAliases.Count);
+        foreach(var alias in allowedAliases) {
+            var template = await templateService.GetAsync(alias)
+                ?? throw new InvalidOperationException(
+                    $"The document type '{contentType.Alias}' references unknown template '{alias}'.");
+            templates.Add(template);
+        }
+
+        var changed = !(contentType.AllowedTemplates ?? [])
+            .Select(template => template.Alias)
+            .SequenceEqual(templates.Select(template => template.Alias));
+        if(changed) {
+            contentType.AllowedTemplates = templates;
+        }
+
+        if(settings.DefaultTemplateAlias is null) {
+            return changed;
+        }
+
+        var defaultTemplate = await templateService.GetAsync(settings.DefaultTemplateAlias)
+            ?? throw new InvalidOperationException(
+                $"The document type '{contentType.Alias}' references unknown default template " +
+                $"'{settings.DefaultTemplateAlias}'.");
+        if(!templates.Any(template =>
+                string.Equals(template.Alias, defaultTemplate.Alias, StringComparison.Ordinal))) {
+            throw new InvalidOperationException(
+                $"The default template '{defaultTemplate.Alias}' must be included in the allowed " +
+                $"templates for document type '{contentType.Alias}'.");
+        }
+
+        if(!string.Equals(
+                contentType.DefaultTemplate?.Alias,
+                defaultTemplate.Alias,
+                StringComparison.Ordinal)) {
+            contentType.SetDefaultTemplate(defaultTemplate);
             changed = true;
         }
 

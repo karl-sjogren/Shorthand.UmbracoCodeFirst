@@ -48,17 +48,25 @@ unknown reference fails that Document Type.
 
 ## Document Types
 
-For a new Document Type: create with name, description, icon, element/root/library flags, then
-compositions, tabs/groups, properties.
+For a new Document, Media or Member Type: create with name, description, icon, root/library and
+variation settings, allowed children where applicable, then tabs/groups and properties.
 
 For an existing **owned** Document Type, the following are reconciled:
 
 - Name, description, icon, element status, `AllowAsRoot`, and `AllowInLibrary`
+- Variations and allowed child aliases
+- Document Type templates: allowed templates and default template
 - Compositions (added; owned ones removed when dropped from code)
 - Tabs and groups: created if missing; name, sort order and type (tab vs group) updated
 - Properties: created if missing; existing properties have name, description, sort order,
   mandatory, validation expression/message and label-on-top updated, and are moved to the desired
   tab/group
+
+### Explicit cleanup and dry-run diagnostics
+
+The `cleanup-preview` endpoint and the combined `reconciliation-preview` endpoint report obsolete
+owned definitions and structural members without changing Umbraco. Applying cleanup is a separate
+explicit operation. Manual or unowned definitions and composition members are preserved.
 
 ### Never done automatically
 
@@ -68,11 +76,8 @@ For an existing **owned** Document Type, the following are reconciled:
 - Touching items that are not code-first-owned
 - Removing compositions that were not previously added by code-first
 
-### Not yet applied
-
-These are present in the metadata (and visible to the generator) but the Umbraco adapter does not
-write them yet: default template, allowed templates, allowed child types, variations and list view.
-They are tracked in [Limitations and roadmap](limitations-and-roadmap.md).
+List-view intent is reported but not persisted from the current boolean metadata because Umbraco
+requires a concrete list-view definition key.
 
 ## Error handling
 

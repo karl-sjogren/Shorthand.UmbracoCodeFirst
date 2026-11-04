@@ -150,6 +150,54 @@ public sealed class IntegrationTestDefinitionRegistry : ICodeFirstDefinitionRegi
                 IsElement: true,
                 AllowInLibrary: true),
             FolderPath: "Integration/Elements"),
+        new(
+                CodeFirstDefinitionKind.MemberType,
+                "integrationMember",
+                "Integration Member",
+                null,
+                [
+                    new(
+                        "displayName",
+                        "Display name",
+                        IntegrationTextDataType.Alias,
+                        GroupAlias: "profile",
+                        GroupName: "Profile",
+                        Mandatory: true),
+                    new(
+                        "biography",
+                        "Biography",
+                        IntegrationTextDataType.Alias,
+                        GroupAlias: "profile",
+                        GroupName: "Profile",
+                        SortOrder: 1),
+                ],
+                Settings: new(Description: "Integration member type.", Icon: "icon-user"),
+                FolderPath: "Integration/Members"),
+        new(
+                CodeFirstDefinitionKind.MediaType,
+                "integrationMedia",
+                "Integration Media",
+                null,
+                [
+                    new(
+                        "caption",
+                        "Caption",
+                        IntegrationTextDataType.Alias,
+                        GroupAlias: "image",
+                        GroupName: "Image"),
+                    new(
+                        "altText",
+                        "Alt text",
+                        IntegrationTextDataType.Alias,
+                        GroupAlias: "image",
+                        GroupName: "Image",
+                        SortOrder: 1),
+                ],
+                Settings: new(
+                    Description: "Integration media type.",
+                    Icon: "icon-picture",
+                    AllowAsRoot: true),
+                FolderPath: "Integration/Media"),
     ];
 
     public IReadOnlyList<CodeFirstDefinition> Definitions { get; }

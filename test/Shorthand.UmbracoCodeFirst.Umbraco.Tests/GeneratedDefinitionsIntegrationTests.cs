@@ -30,10 +30,18 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         var contentTypeService = scope.ServiceProvider.GetRequiredService<IContentTypeService>();
         var contentTypeContainerService =
             scope.ServiceProvider.GetRequiredService<IContentTypeContainerService>();
+        var mediaTypeService = scope.ServiceProvider.GetRequiredService<IMediaTypeService>();
+        var memberTypeService = scope.ServiceProvider.GetRequiredService<IMemberTypeService>();
+        var mediaTypeContainerService =
+            scope.ServiceProvider.GetRequiredService<IMediaTypeContainerService>();
+        var memberTypeContainerService =
+            scope.ServiceProvider.GetRequiredService<IMemberTypeContainerService>();
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToList();
         var composedPage = contentTypeService.Get("integrationComposedPage");
         var richDocument = contentTypeService.Get("integrationRichDocument");
         var element = contentTypeService.Get("integrationElement");
+        var media = mediaTypeService.Get("integrationMedia");
+        var member = memberTypeService.Get("integrationMember");
         var dataTypeContainers = await dataTypeContainerService.GetAllAsync();
         var contentTypeContainers = await contentTypeContainerService.GetAllAsync();
         var dataTypeRootFolder = dataTypeContainers.Single(container =>
@@ -57,6 +65,12 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         var contentTypeFolder = contentTypeContainers.Single(container =>
             container.Name == "Pages"
             && container.ParentId == contentTypeRootFolder.Id);
+        var mediaFolder = (await mediaTypeContainerService.GetAllAsync()).Single(container =>
+            container.Name == "Media"
+            && container.ParentId != -1);
+        var memberFolder = (await memberTypeContainerService.GetAllAsync()).Single(container =>
+            container.Name == "Members"
+            && container.ParentId != -1);
 
         // Assert
         dataTypes.Select(dataType => dataType.Name).ShouldContain("Integration Text");
@@ -92,6 +106,15 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         element!.IsElement.ShouldBeTrue();
         element.AllowedInLibrary.ShouldBeTrue();
         element.ParentId.ShouldBe(elementContentTypeFolder.Id);
+        media.ShouldNotBeNull();
+        media!.Icon.ShouldBe("icon-picture");
+        media.AllowedAsRoot.ShouldBeTrue();
+        media.ParentId.ShouldBe(mediaFolder.Id);
+        media.PropertyTypes.Select(property => property.Alias).ShouldContain("caption");
+        member.ShouldNotBeNull();
+        member!.Icon.ShouldBe("icon-user");
+        member.ParentId.ShouldBe(memberFolder.Id);
+        member.PropertyTypes.Single(property => property.Alias == "displayName").Mandatory.ShouldBeTrue();
     }
 
     [Fact]

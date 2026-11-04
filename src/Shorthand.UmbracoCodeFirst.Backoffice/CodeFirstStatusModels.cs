@@ -8,16 +8,21 @@ public sealed record CodeFirstStatusResponse(
     int DataTypeCount,
     int DocumentTypeCount,
     int ElementTypeCount,
+    int MediaTypeCount,
+    int MemberTypeCount,
     int CreatedCount,
     int UpdatedCount,
     int UnchangedCount,
+    int SkippedCount,
     int FailedCount,
     DateTimeOffset CompletedAt,
     IReadOnlyList<CodeFirstStatusItem> DataTypes,
     IReadOnlyList<CodeFirstStatusItem> DocumentTypes,
-    IReadOnlyList<CodeFirstStatusItem> ElementTypes) {
+    IReadOnlyList<CodeFirstStatusItem> ElementTypes,
+    IReadOnlyList<CodeFirstStatusItem> MediaTypes,
+    IReadOnlyList<CodeFirstStatusItem> MemberTypes) {
     public IReadOnlyList<CodeFirstStatusItem> Definitions =>
-        DataTypes.Concat(DocumentTypes).Concat(ElementTypes).ToArray();
+        DataTypes.Concat(DocumentTypes).Concat(ElementTypes).Concat(MediaTypes).Concat(MemberTypes).ToArray();
 }
 
 public sealed record CodeFirstStatusItem(
@@ -25,6 +30,18 @@ public sealed record CodeFirstStatusItem(
     string Alias,
     string Name,
     string Folder,
+    string? Description,
+    string? Icon,
+    bool AllowAsRoot,
+    bool AllowInLibrary,
+    string? DefaultTemplateAlias,
+    IReadOnlyList<string> AllowedTemplateAliases,
+    IReadOnlyList<string> AllowedChildAliases,
+    string? Variations,
+    bool IsListView,
+    IReadOnlyList<string> CompositionAliases,
+    IReadOnlyList<CodeFirstStatusLayoutItem> Groups,
+    IReadOnlyList<CodeFirstStatusLayoutItem> Tabs,
     string? EditorAlias,
     string? EditorUiAlias,
     bool IsElement,
@@ -33,6 +50,11 @@ public sealed record CodeFirstStatusItem(
     string? Message,
     string? BackofficeUrl,
     IReadOnlyList<CodeFirstStatusProperty> Properties);
+
+public sealed record CodeFirstStatusLayoutItem(
+    string Alias,
+    string Name,
+    int SortOrder);
 
 public sealed record CodeFirstStatusProperty(
     string Alias,
@@ -68,6 +90,22 @@ public static class CodeFirstStatusMapping {
                     definition.Alias,
                     definition.Name,
                     string.IsNullOrWhiteSpace(definition.FolderPath) ? "/" : definition.FolderPath,
+                    definition.Settings?.Description,
+                    definition.Settings?.Icon,
+                    definition.Settings?.AllowAsRoot == true,
+                    definition.Settings?.AllowInLibrary == true,
+                    definition.Settings?.DefaultTemplateAlias,
+                    definition.Settings?.AllowedTemplateAliases ?? [],
+                    definition.Settings?.AllowedChildAliases ?? [],
+                    definition.Settings?.Variations,
+                    definition.Settings?.IsListView == true,
+                    definition.CompositionAliases ?? [],
+                    definition.EffectiveGroups
+                        .Select(group => new CodeFirstStatusLayoutItem(group.Alias, group.Name, group.SortOrder))
+                        .ToArray(),
+                    definition.EffectiveTabs
+                        .Select(tab => new CodeFirstStatusLayoutItem(tab.Alias, tab.Name, tab.SortOrder))
+                        .ToArray(),
                     definition.EditorAlias,
                     definition.EditorUiAlias,
                     definition.Settings?.IsElement == true,
@@ -105,9 +143,13 @@ public static class CodeFirstStatusMapping {
             definitions.Count(definition =>
                 definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
                 && definition.IsElement),
+            definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MediaType)),
+            definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MemberType)),
             report.CreatedCount,
             report.UpdatedCount,
             report.UnchangedCount,
+            definitions.Count(definition =>
+                definition.Status == nameof(SynchronizationStatus.Skipped)),
             report.FailedCount,
             report.CompletedAt,
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DataType)).ToArray(),
@@ -116,6 +158,8 @@ public static class CodeFirstStatusMapping {
                 && definition.IsElement == false).ToArray(),
             definitions.Where(definition =>
                 definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
-                && definition.IsElement).ToArray());
+                && definition.IsElement).ToArray(),
+            definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MediaType)).ToArray(),
+            definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MemberType)).ToArray());
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
+using Shorthand.UmbracoCodeFirst.Backoffice.Reconciliation;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Api.Management.Routing;
@@ -27,7 +28,9 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
         [FromServices] ICodeFirstDefinitionRegistry registry,
         [FromServices] ISynchronizationReportStore reportStore,
         [FromServices] IDataTypeService dataTypeService,
-        [FromServices] IContentTypeService contentTypeService) {
+        [FromServices] IContentTypeService contentTypeService,
+        [FromServices] IMediaTypeService mediaTypeService,
+        [FromServices] IMemberTypeService memberTypeService) {
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
         Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string> urls = [];
 
@@ -41,13 +44,18 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
                         string.Equals(value as string, definition.Alias, StringComparison.Ordinal))
                     ?.Key,
                 CodeFirstDefinitionKind.DocumentType => contentTypeService.Get(definition.Alias)?.Key,
+                CodeFirstDefinitionKind.MediaType => mediaTypeService.Get(definition.Alias)?.Key,
+                CodeFirstDefinitionKind.MemberType => memberTypeService.Get(definition.Alias)?.Key,
                 _ => null,
             };
 
             if(key is not null) {
-                var path = definition.Kind == CodeFirstDefinitionKind.DataType
-                    ? "data-type"
-                    : "document-type";
+                var path = definition.Kind switch {
+                    CodeFirstDefinitionKind.DataType => "data-type",
+                    CodeFirstDefinitionKind.MediaType => "media-type",
+                    CodeFirstDefinitionKind.MemberType => "member-type",
+                    _ => "document-type",
+                };
                 urls[(definition.Kind, definition.Alias)] =
                     $"/umbraco/section/settings/workspace/{path}/edit/{key.Value:D}";
             }
@@ -61,6 +69,13 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
     public Task<CodeFirstCleanupResponse> CleanupPreviewAsync(
         [FromServices] CodeFirstCleanupService cleanupService) =>
         cleanupService.PreviewAsync();
+
+    [HttpGet("reconciliation-preview")]
+    [ProducesResponseType<CodeFirstReconciliationPreview>(StatusCodes.Status200OK)]
+    public async Task<CodeFirstReconciliationPreview> ReconciliationPreviewAsync(
+        [FromServices] ISynchronizationReportStore reportStore,
+        [FromServices] CodeFirstCleanupService cleanupService) =>
+        new(reportStore.Current, await cleanupService.PreviewAsync());
 
     [HttpPost("cleanup")]
     [ProducesResponseType<CodeFirstCleanupResult>(StatusCodes.Status200OK)]

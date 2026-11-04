@@ -7,7 +7,8 @@ public sealed record CodeFirstCleanupItem(
     string Kind,
     string Alias,
     string Name,
-    string? ParentAlias = null);
+    string? ParentAlias = null,
+    string? ParentKind = null);
 
 public sealed record CodeFirstCleanupResult(
     int RemovedCount,

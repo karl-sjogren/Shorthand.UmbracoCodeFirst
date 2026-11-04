@@ -3,6 +3,8 @@ namespace Shorthand.UmbracoCodeFirst.Metadata;
 public enum CodeFirstDefinitionKind {
     DataType,
     DocumentType,
+    MediaType,
+    MemberType,
 }
 
 public sealed record CodeFirstPropertyDefinition(

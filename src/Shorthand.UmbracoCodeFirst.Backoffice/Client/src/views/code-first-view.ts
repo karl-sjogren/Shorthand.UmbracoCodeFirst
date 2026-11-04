@@ -1,12 +1,28 @@
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { css, html, customElement, state } from "@umbraco-cms/backoffice/external/lit";
 import { client } from "../api/client.gen.js";
+import {
+  formatEditorAliases,
+  getSynchronizationCssClass,
+} from "./code-first-view.helpers.js";
 
 type StatusItem = {
   kind: string;
   alias: string;
   name: string;
   folder: string;
+  description?: string;
+  icon?: string;
+  allowAsRoot: boolean;
+  allowInLibrary: boolean;
+  defaultTemplateAlias?: string;
+  allowedTemplateAliases: string[];
+  allowedChildAliases: string[];
+  variations?: string;
+  isListView: boolean;
+  compositionAliases: string[];
+  groups: LayoutItem[];
+  tabs: LayoutItem[];
   editorAlias?: string;
   editorUiAlias?: string;
   isElement: boolean;
@@ -15,6 +31,12 @@ type StatusItem = {
   message?: string;
   backofficeUrl?: string;
   properties: StatusProperty[];
+};
+
+type LayoutItem = {
+  alias: string;
+  name: string;
+  sortOrder: number;
 };
 
 type StatusProperty = {
@@ -38,14 +60,19 @@ type StatusResponse = {
   dataTypeCount: number;
   documentTypeCount: number;
   elementTypeCount: number;
+  mediaTypeCount: number;
+  memberTypeCount: number;
   createdCount: number;
   updatedCount: number;
   unchangedCount: number;
+  skippedCount: number;
   failedCount: number;
   completedAt: string;
   dataTypes: StatusItem[];
   documentTypes: StatusItem[];
   elementTypes: StatusItem[];
+  mediaTypes: StatusItem[];
+  memberTypes: StatusItem[];
 };
 
 type CleanupItem = {
@@ -95,9 +122,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   }
 
   private formatEditor(definition: StatusItem): string {
-    return [definition.editorUiAlias, definition.editorAlias]
-      .filter((alias): alias is string => Boolean(alias))
-      .join(" | ");
+    return formatEditorAliases(definition.editorAlias, definition.editorUiAlias);
   }
 
   override render() {
@@ -122,9 +147,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             <p>${this.localize.term("codeFirst_pageDescription")}</p>
             <div class="header-meta">
               <span
-                class=${this.status.failedCount > 0
-                  ? "sync-status sync-status-error"
-                  : "sync-status"}
+                class=${getSynchronizationCssClass(this.status.failedCount)}
               >
                 <span class="status-dot"></span>
                 ${this.getSynchronizationLabel()}
@@ -164,8 +187,17 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             this.status.elementTypeCount,
             "codeFirst_elementTypes",
           )}
+          ${this.renderSummaryMetric(
+            this.status.mediaTypeCount,
+            "codeFirst_mediaTypes",
+          )}
+          ${this.renderSummaryMetric(
+            this.status.memberTypeCount,
+            "codeFirst_memberTypes",
+          )}
           ${this.renderSummaryMetric(this.status.createdCount, "codeFirst_created")}
           ${this.renderSummaryMetric(this.status.updatedCount, "codeFirst_updated")}
+          ${this.renderSummaryMetric(this.status.skippedCount, "codeFirst_skipped")}
           ${this.renderSummaryMetric(
             this.status.failedCount,
             "codeFirst_failed",
@@ -187,6 +219,16 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_elementTypesHeadline"),
         this.status.elementTypes,
+        true,
+      )}
+      ${this.renderDefinitionTable(
+        this.localize.term("codeFirst_mediaTypesHeadline"),
+        this.status.mediaTypes,
+        true,
+      )}
+      ${this.renderDefinitionTable(
+        this.localize.term("codeFirst_memberTypesHeadline"),
+        this.status.memberTypes,
         true,
       )}
     `;
@@ -421,12 +463,14 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   }
 
   private renderProperties(definition: StatusItem) {
-    if (definition.properties.length === 0) {
-      return html`<p>${this.localize.term("codeFirst_noProperties")}</p>`;
-    }
-
     return html`
       <div class="property-details">
+        ${this.renderDefinitionSettings(definition)}
+        ${definition.properties.length === 0
+          ? html`<p>${this.localize.term("codeFirst_noProperties")}</p>`
+          : ""}
+        ${definition.properties.length > 0
+          ? html`
         <strong
           >${this.localize.term("codeFirst_propertiesFor", definition.name)}</strong
         >
@@ -482,8 +526,83 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             `,
           )}
         </uui-table>
+          `
+          : ""}
       </div>
     `;
+  }
+
+  private renderDefinitionSettings(definition: StatusItem) {
+    const layout = [...definition.tabs, ...definition.groups];
+    const hasSettings =
+      Boolean(definition.description) ||
+      Boolean(definition.icon) ||
+      definition.allowAsRoot ||
+      definition.allowInLibrary ||
+      Boolean(definition.variations) ||
+      definition.isListView ||
+      Boolean(definition.defaultTemplateAlias) ||
+      definition.allowedTemplateAliases.length > 0 ||
+      definition.allowedChildAliases.length > 0 ||
+      definition.compositionAliases.length > 0 ||
+      layout.length > 0;
+
+    if (!hasSettings) {
+      return "";
+    }
+
+    return html`
+      <div class="definition-settings">
+        <strong>${this.localize.term("codeFirst_settings")}</strong>
+        ${definition.description
+          ? html`<p>${definition.description}</p>`
+          : ""}
+        <dl>
+          ${definition.icon
+            ? html`<dt>${this.localize.term("codeFirst_icon")}</dt><dd>${definition.icon}</dd>`
+            : ""}
+          ${definition.allowAsRoot
+            ? html`<dt>${this.localize.term("codeFirst_allowedAsRoot")}</dt><dd>Yes</dd>`
+            : ""}
+          ${definition.allowInLibrary
+            ? html`<dt>${this.localize.term("codeFirst_allowedInLibrary")}</dt><dd>Yes</dd>`
+            : ""}
+          ${definition.variations
+            ? html`<dt>${this.localize.term("codeFirst_variations")}</dt><dd>${definition.variations}</dd>`
+            : ""}
+          ${definition.isListView
+            ? html`<dt>${this.localize.term("codeFirst_listView")}</dt><dd>Yes</dd>`
+            : ""}
+          ${definition.defaultTemplateAlias
+            ? html`<dt>${this.localize.term("codeFirst_defaultTemplate")}</dt><dd>${definition.defaultTemplateAlias}</dd>`
+            : ""}
+        </dl>
+        ${this.renderAliasList(
+          "codeFirst_allowedTemplates",
+          definition.allowedTemplateAliases,
+        )}
+        ${this.renderAliasList(
+          "codeFirst_allowedChildren",
+          definition.allowedChildAliases,
+        )}
+        ${this.renderAliasList(
+          "codeFirst_compositions",
+          definition.compositionAliases,
+        )}
+        ${layout.length > 0
+          ? html`<p>
+              <strong>${this.localize.term("codeFirst_layout")}</strong>:
+              ${layout.map((item) => `${item.name} (${item.alias})`).join(", ")}
+            </p>`
+          : ""}
+      </div>
+    `;
+  }
+
+  private renderAliasList(labelKey: string, aliases: string[]) {
+    return aliases.length > 0
+      ? html`<p><strong>${this.localize.term(labelKey)}</strong>: ${aliases.join(", ")}</p>`
+      : "";
   }
 
   @state()

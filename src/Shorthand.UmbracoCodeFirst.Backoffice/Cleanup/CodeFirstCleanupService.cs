@@ -9,6 +9,8 @@ public sealed class CodeFirstCleanupService(
     ICodeFirstDefinitionRegistry registry,
     IDataTypeService dataTypeService,
     IContentTypeService contentTypeService,
+    IMediaTypeService mediaTypeService,
+    IMemberTypeService memberTypeService,
     CodeFirstOwnershipStore ownershipStore) {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
 
@@ -22,12 +24,22 @@ public sealed class CodeFirstCleanupService(
             .GroupBy(contentType => contentType.Alias, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
+        IReadOnlyList<IMediaType> mediaTypes = mediaTypeService.GetAll().ToArray();
+        IReadOnlyList<IMemberType> memberTypes = memberTypeService.GetAll().ToArray();
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var documentTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
+            .Select(definition => definition.Alias)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mediaTypeAliases = registry.Definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.MediaType)
+            .Select(definition => definition.Alias)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var memberTypeAliases = registry.Definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.MemberType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         List<CodeFirstCleanupItem> items = [];
@@ -58,6 +70,14 @@ public sealed class CodeFirstCleanupService(
                 candidate => candidate.Kind == CodeFirstDefinitionKind.DocumentType
                     && string.Equals(candidate.Alias, alias, StringComparison.OrdinalIgnoreCase));
             AddObsoleteMembers(items, documentType, definition);
+        }
+
+        foreach(var mediaType in mediaTypes) {
+            AddTypeCleanupItems(items, mediaType, CodeFirstDefinitionKind.MediaType, mediaTypeAliases);
+        }
+
+        foreach(var memberType in memberTypes) {
+            AddTypeCleanupItems(items, memberType, CodeFirstDefinitionKind.MemberType, memberTypeAliases);
         }
 
         return new(items);
@@ -122,12 +142,53 @@ public sealed class CodeFirstCleanupService(
             return true;
         }
 
+        if(item.Kind == "MediaType") {
+            var mediaType = mediaTypeService.Get(item.Alias);
+            if(mediaType is null || !IsOwned(mediaType, item.Alias)) {
+                return false;
+            }
+
+            var result = await mediaTypeService.DeleteAsync(
+                mediaType.Key,
+                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+            if(result != Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success) {
+                throw new InvalidOperationException(
+                    $"Could not delete the media type '{item.Alias}': {result}.");
+            }
+
+            return true;
+        }
+
+        if(item.Kind == "MemberType") {
+            var memberType = memberTypeService.Get(item.Alias);
+            if(memberType is null || !IsOwned(memberType, item.Alias)) {
+                return false;
+            }
+
+            var result = await memberTypeService.DeleteAsync(
+                memberType.Key,
+                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+            if(result != Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success) {
+                throw new InvalidOperationException(
+                    $"Could not delete the member type '{item.Alias}': {result}.");
+            }
+
+            return true;
+        }
+
         if(item.ParentAlias is null) {
             return false;
         }
 
-        var parent = contentTypeService.Get(item.ParentAlias);
-        if(parent is null || !IsOwned(parent, item.ParentAlias)) {
+        IContentTypeComposition? parent = item.ParentKind switch {
+            nameof(CodeFirstDefinitionKind.MediaType) => mediaTypeService.Get(item.ParentAlias),
+            nameof(CodeFirstDefinitionKind.MemberType) => memberTypeService.Get(item.ParentAlias),
+            _ => contentTypeService.Get(item.ParentAlias),
+        };
+        var owned = parent is IContentType typedContentType
+            ? IsOwned(typedContentType, item.ParentAlias)
+            : parent is not null && IsOwned(parent, item.ParentAlias);
+        if(parent is null || !owned) {
             return false;
         }
 
@@ -150,15 +211,26 @@ public sealed class CodeFirstCleanupService(
             parent.RemovePropertyGroup(item.Alias);
         }
 
-        await contentTypeService.UpdateAsync(
-            parent,
-            Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        if(item.ParentKind == nameof(CodeFirstDefinitionKind.MediaType)) {
+            await mediaTypeService.UpdateAsync(
+                (IMediaType)parent,
+                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        } else if(item.ParentKind == nameof(CodeFirstDefinitionKind.MemberType)) {
+            await memberTypeService.UpdateAsync(
+                (IMemberType)parent,
+                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        } else {
+            await contentTypeService.UpdateAsync(
+                (IContentType)parent,
+                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+        }
+
         return true;
     }
 
     private static void AddObsoleteMembers(
         ICollection<CodeFirstCleanupItem> items,
-        IContentType contentType,
+        IContentTypeComposition contentType,
         CodeFirstDefinition definition) {
         var propertiesByAlias = definition.Properties
             .ToDictionary(property => property.Alias, StringComparer.OrdinalIgnoreCase);
@@ -173,7 +245,14 @@ public sealed class CodeFirstCleanupService(
                             property.Alias,
                             desiredProperty.Alias,
                             StringComparison.Ordinal))) {
-            items.Add(new("Property", property.Alias, property.Name, definition.Alias));
+            items.Add(new(
+                "Property",
+                property.Alias,
+                property.Name,
+                definition.Alias,
+                definition.Kind == CodeFirstDefinitionKind.DocumentType
+                    ? null
+                    : definition.Kind.ToString()));
         }
 
         var desiredGroupAliases = definition.EffectiveGroups
@@ -202,9 +281,36 @@ public sealed class CodeFirstCleanupService(
                 group.Type == PropertyGroupType.Tab ? "Tab" : "Group",
                 group.Alias,
                 group.Name ?? group.Alias,
-                definition.Alias));
+                definition.Alias,
+                definition.Kind == CodeFirstDefinitionKind.DocumentType
+                    ? null
+                    : definition.Kind.ToString()));
         }
     }
+
+    private void AddTypeCleanupItems<T>(
+        ICollection<CodeFirstCleanupItem> items,
+        T type,
+        CodeFirstDefinitionKind kind,
+        IReadOnlySet<string> aliases)
+        where T : class, IContentTypeComposition {
+        if(!IsOwned(type, type.Alias)) {
+            return;
+        }
+
+        if(!aliases.Contains(type.Alias)) {
+            items.Add(new(kind.ToString(), type.Alias, type.Name ?? type.Alias));
+            return;
+        }
+
+        var definition = registry.Definitions.Single(candidate =>
+            candidate.Kind == kind
+            && string.Equals(candidate.Alias, type.Alias, StringComparison.OrdinalIgnoreCase));
+        AddObsoleteMembers(items, type, definition);
+    }
+
+    private bool IsOwned(IContentTypeComposition type, string alias) =>
+        ownershipStore.Get(alias, type.Key) is not null;
 
     private bool IsOwned(IContentType contentType, string alias) =>
         ownershipStore.Get(alias, contentType.Key) is not null

@@ -43,6 +43,18 @@ public class CodeFirstStatusMappingTests {
                 "Umbraco.Decimal",
                 [],
                 EditorUiAlias: "Umb.PropertyEditorUi.Decimal"),
+            new(
+                CodeFirstDefinitionKind.MediaType,
+                "imageAsset",
+                "Image Asset",
+                null,
+                [new("caption", "Caption", "text")]),
+            new(
+                CodeFirstDefinitionKind.MemberType,
+                "memberProfile",
+                "Member Profile",
+                null,
+                [new("displayName", "Display name", "text", Mandatory: true)]),
         ]);
         var reports = new SynchronizationReportStore();
         reports.Set(new SynchronizationReport(
@@ -72,11 +84,15 @@ public class CodeFirstStatusMappingTests {
             });
 
         // Assert
-        result.DefinitionCount.ShouldBe(3);
+        result.DefinitionCount.ShouldBe(5);
         result.DataTypeCount.ShouldBe(1);
         result.DocumentTypeCount.ShouldBe(1);
         result.ElementTypeCount.ShouldBe(1);
-        result.Definitions.Select(item => item.Alias).ShouldBe(["decimal", "productPage", "seoComposite"]);
+        result.MediaTypeCount.ShouldBe(1);
+        result.MemberTypeCount.ShouldBe(1);
+        result.SkippedCount.ShouldBe(3);
+        result.Definitions.Select(item => item.Alias)
+            .ShouldBe(["decimal", "productPage", "seoComposite", "imageAsset", "memberProfile"]);
         result.Definitions.Single(item => item.Alias == "productPage").ShouldSatisfyAllConditions(
             item => item.Status.ShouldBe(nameof(SynchronizationStatus.Created)),
             item => item.PropertyCount.ShouldBe(1),
@@ -106,6 +122,13 @@ public class CodeFirstStatusMappingTests {
             item => item.Folder.ShouldBe("Shared/Elements"),
             item => item.Status.ShouldBe(nameof(SynchronizationStatus.Failed)),
             item => item.Message.ShouldBe("Element synchronization failed."));
+        result.MediaTypes.Single().ShouldSatisfyAllConditions(
+            item => item.Alias.ShouldBe("imageAsset"),
+            item => item.PropertyCount.ShouldBe(1));
+        result.MemberTypes.Single().ShouldSatisfyAllConditions(
+            item => item.Alias.ShouldBe("memberProfile"),
+            item => item.PropertyCount.ShouldBe(1),
+            item => item.Properties.Single().Mandatory.ShouldBeTrue());
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)
