@@ -7,4 +7,5 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
     PropertyEditors.UmbracoEditors.DateTime.Alias,
     EditorUiAlias = PropertyEditors.UmbracoEditors.DateTime.UiAlias,
     ConfigurationJson = """{"format":"yyyy-MM-dd"}""")]
+[UCFFolderPath("CodeFirst")]
 public partial class CodeFirstDateDataType;

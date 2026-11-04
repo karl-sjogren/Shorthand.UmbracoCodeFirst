@@ -6,6 +6,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 [UCFDocumentType(
     "Happy Sparkles",
     Icon = "icon-document")]
+[UCFFolderPath("Compositions")]
 public partial class HappySparkles {
     [UCFProperty(
         "Sparkles",

@@ -7,4 +7,5 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
     PropertyEditors.UmbracoEditors.Decimal.Alias,
     EditorUiAlias = PropertyEditors.UmbracoEditors.Decimal.UiAlias,
     ConfigurationJson = """{"step":0.01}""")]
+[UCFFolderPath("CodeFirst")]
 public partial class CodeFirstDecimalDataType;

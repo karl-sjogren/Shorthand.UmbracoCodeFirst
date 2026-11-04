@@ -7,4 +7,5 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
     PropertyEditors.UmbracoEditors.Boolean.Alias,
     EditorUiAlias = PropertyEditors.UmbracoEditors.Boolean.UiAlias,
     ConfigurationJson = """{"default":false}""")]
+[UCFFolderPath("CodeFirst")]
 public partial class CodeFirstBooleanDataType;

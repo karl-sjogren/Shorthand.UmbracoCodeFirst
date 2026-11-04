@@ -22,6 +22,7 @@
 - `UCF105` reports UCF properties declared outside a UCF Document Type.
 
 Detailed documentation for each diagnostic is available under `docs/analyzers`.
+
 ### UCF106 - Invalid content composition target
 
 Reports `UCFComposite` declarations that reference a class without `UCFDocumentTypeAttribute`.
