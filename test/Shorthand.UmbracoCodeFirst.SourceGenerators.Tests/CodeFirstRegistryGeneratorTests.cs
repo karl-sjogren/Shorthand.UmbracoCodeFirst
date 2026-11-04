@@ -139,6 +139,16 @@ public class CodeFirstRegistryGeneratorTests {
         modelSource.ShouldContain("public static IPublishedPropertyType GetModelPropertyType<TValue>");
         modelSource.ShouldContain("public partial global::System.String Title => this.Value<global::System.String>");
         modelSource.ShouldContain("[ImplementPropertyType(\"title\")]");
+        modelSource.ShouldContain(
+            """
+                /// <summary>
+                ///   Title
+                /// </summary>
+                [GeneratedCode("Shorthand.UmbracoCodeFirst.SourceGenerators", "1.0")]
+                [MaybeNull]
+                [ImplementPropertyType("title")]
+                public partial global::System.String Title => this.Value<global::System.String>(_publishedValueFallback, "title");
+            """);
     }
 
     [Fact]

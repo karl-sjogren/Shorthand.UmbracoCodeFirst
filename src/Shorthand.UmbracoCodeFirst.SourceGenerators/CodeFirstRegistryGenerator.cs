@@ -188,13 +188,16 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.Append("public new const string ModelTypeAlias = ");
         builder.Append(SymbolDisplay.FormatLiteral(alias, true));
         builder.AppendLine(";");
+        builder.AppendLine();
         builder.AppendLine("[GeneratedCode(\"Shorthand.UmbracoCodeFirst.SourceGenerators\", \"1.0\")]");
         builder.Append("public new const PublishedItemType ModelItemType = PublishedItemType.");
         builder.AppendLine(isElement ? "Element;" : "Content;");
+        builder.AppendLine();
         builder.AppendLine("[GeneratedCode(\"Shorthand.UmbracoCodeFirst.SourceGenerators\", \"1.0\")]");
         builder.AppendLine("[return: MaybeNull]");
         builder.AppendLine("public new static IPublishedContentType GetModelContentType(IPublishedContentTypeCache contentTypeCache)");
         builder.AppendLine("    => PublishedModelUtility.GetModelContentType(contentTypeCache, ModelItemType, ModelTypeAlias);");
+        builder.AppendLine();
         builder.AppendLine("[GeneratedCode(\"Shorthand.UmbracoCodeFirst.SourceGenerators\", \"1.0\")]");
         builder.AppendLine("[return: MaybeNull]");
         builder.Append("public static IPublishedPropertyType GetModelPropertyType<TValue>(IPublishedContentTypeCache contentTypeCache, ");
@@ -202,6 +205,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.Append(definition.Name);
         builder.AppendLine(", TValue>> selector)");
         builder.AppendLine("    => PublishedModelUtility.GetModelPropertyType(GetModelContentType(contentTypeCache)!, selector);");
+        builder.AppendLine();
         builder.AppendLine("#pragma warning restore 0109");
         builder.AppendLine();
         builder.AppendLine("private readonly IPublishedValueFallback _publishedValueFallback;");
@@ -241,10 +245,10 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 : $"{propertyName}: {GetStringArgument(descriptionAttribute, 0)}";
 
             builder.AppendLine();
-            builder.AppendLine("///<summary>");
-            builder.Append("/// ");
+            builder.AppendLine("/// <summary>");
+            builder.Append("///   ");
             builder.AppendLine(summary);
-            builder.AppendLine("///</summary>");
+            builder.AppendLine("/// </summary>");
             builder.AppendLine("[GeneratedCode(\"Shorthand.UmbracoCodeFirst.SourceGenerators\", \"1.0\")]");
             builder.AppendLine("[MaybeNull]");
             builder.Append("[ImplementPropertyType(");
@@ -747,26 +751,36 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private sealed class IndentedStringBuilder {
         private readonly System.Text.StringBuilder _builder = new();
+        private bool _atLineStart = true;
 
         public int Indent { get; set; }
 
         public void Append(string value) {
+            AppendIndent();
             _builder.Append(value);
         }
 
         public void AppendLine() {
             _builder.AppendLine();
+            _atLineStart = true;
         }
 
         public void AppendLine(string value) {
-            if (_builder.Length == 0 || _builder[_builder.Length - 1] == '\n') {
-                _builder.Append(' ', Indent * 4);
-            }
-
+            AppendIndent();
             _builder.AppendLine(value);
+            _atLineStart = true;
         }
 
         public override string ToString() => _builder.ToString();
+
+        private void AppendIndent() {
+            if (!_atLineStart) {
+                return;
+            }
+
+            _builder.Append(' ', Indent * 4);
+            _atLineStart = false;
+        }
     }
 
     private sealed class GroupMetadata(string alias, string name, int sortOrder) {
