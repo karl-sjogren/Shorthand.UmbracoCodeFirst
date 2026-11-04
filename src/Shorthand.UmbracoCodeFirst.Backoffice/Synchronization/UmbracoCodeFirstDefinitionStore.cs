@@ -399,6 +399,12 @@ public sealed class UmbracoCodeFirstDefinitionStore(
                         : property.TabName ?? desiredGroupAlias);
             }
 
+            var addedProperty = contentType.PropertyTypes
+                .FirstOrDefault(candidate => candidate.Alias == property.Alias);
+            if(addedProperty is not null) {
+                ApplyPropertySettings(addedProperty, property);
+            }
+
             changed = true;
         }
 

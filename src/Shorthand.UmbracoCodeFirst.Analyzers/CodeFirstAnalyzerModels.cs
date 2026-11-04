@@ -36,11 +36,15 @@ internal sealed class CompositionOccurrence(
     INamedTypeSymbol source,
     INamedTypeSymbol target,
     Location? location,
-    bool targetHasDocumentType) {
+    bool targetHasDocumentType,
+    bool sourceIsElement,
+    bool targetIsElement) {
     public INamedTypeSymbol Source { get; } = source;
     public INamedTypeSymbol Target { get; } = target;
     public Location? Location { get; } = location;
     public bool TargetHasDocumentType { get; } = targetHasDocumentType;
+    public bool SourceIsElement { get; } = sourceIsElement;
+    public bool TargetIsElement { get; } = targetIsElement;
 }
 
 internal sealed class DataTypeOccurrence(string alias, string editorAlias, ISymbol symbol) {

@@ -204,6 +204,106 @@ public class CodeFirstCleanupServiceTests {
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenPropertyAliasOnlyDiffersByCase_RemovesTheStaleProperty_Async() {
+        var dataTypeService = A.Fake<IDataTypeService>();
+        var contentTypeService = A.Fake<IContentTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+        var contentType = CreateContentType(
+            "compositeElement",
+            "Composite Element",
+            "shorthand.umbraco-codefirst:compositeElement");
+        AddProperty(contentType, "CopyrightYear", "Copyright year", "content");
+        AddProperty(contentType, "copyrightYear", "Copyright year", "content");
+        var persistedContentType = AsContentType(contentType);
+        A.CallTo(() => contentTypeService.GetAll()).Returns([persistedContentType]);
+        A.CallTo(() => contentTypeService.Get("compositeElement")).Returns(persistedContentType);
+        var service = CreateService(
+            dataTypeService,
+            contentTypeService,
+            [new(
+                CodeFirstDefinitionKind.DocumentType,
+                "compositeElement",
+                "Composite Element",
+                null,
+                [new("copyrightYear", "Copyright year", "integer")])]);
+
+        var result = await service.ApplyAsync();
+
+        result.Removed.ShouldBe([
+            new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
+        ]);
+        result.Failed.ShouldBeEmpty();
+        A.CallTo(() => persistedContentType.RemovePropertyType("CopyrightYear"))
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() => contentTypeService.UpdateAsync(persistedContentType, A<Guid>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task PreviewAsync_WhenPersistedTypeAliasHasDifferentCase_FindsObsoleteProperties_Async() {
+        var dataTypeService = A.Fake<IDataTypeService>();
+        var contentTypeService = A.Fake<IContentTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+        var contentType = CreateContentType(
+            "CompositeElement",
+            "Composite Element",
+            "shorthand.umbraco-codefirst:CompositeElement");
+        AddProperty(contentType, "CopyrightYear", "Copyright year", "content");
+        AddProperty(contentType, "copyrightYear", "Copyright year", "content");
+        A.CallTo(() => contentTypeService.GetAll())
+            .Returns([AsContentType(contentType)]);
+        var service = CreateService(
+            dataTypeService,
+            contentTypeService,
+            [new(
+                CodeFirstDefinitionKind.DocumentType,
+                "compositeElement",
+                "Composite Element",
+                null,
+                [new("copyrightYear", "Copyright year", "integer")])]);
+
+        var result = await service.PreviewAsync();
+
+        result.Items.ShouldBe([
+            new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
+        ]);
+    }
+
+    [Fact]
+    public async Task PreviewAsync_WhenElementTypeIsOnlyReturnedByDirectLookup_FindsObsoleteProperties_Async() {
+        var dataTypeService = A.Fake<IDataTypeService>();
+        var contentTypeService = A.Fake<IContentTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+        var contentType = CreateContentType(
+            "compositeElement",
+            "Composite Element",
+            "shorthand.umbraco-codefirst:compositeElement");
+        AddProperty(contentType, "CopyrightYear", "Copyright year", "content");
+        AddProperty(contentType, "copyrightYear", "Copyright year", "content");
+        var persistedContentType = AsContentType(contentType);
+        A.CallTo(() => contentTypeService.GetAll()).Returns([]);
+        A.CallTo(() => contentTypeService.Get("compositeElement")).Returns(persistedContentType);
+        var service = CreateService(
+            dataTypeService,
+            contentTypeService,
+            [new(
+                CodeFirstDefinitionKind.DocumentType,
+                "compositeElement",
+                "Composite Element",
+                null,
+                [new("copyrightYear", "Copyright year", "integer")])]);
+
+        var result = await service.PreviewAsync();
+
+        result.Items.ShouldBe([
+            new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
+        ]);
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenUpdateFails_ReportsEachFailure_Async() {
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();

@@ -467,7 +467,7 @@ public class CodeFirstRegistryGeneratorTests {
 
         // Assert
         generatedSource.ShouldContain("\"seo\", \"SEO\", 4");
-        generatedSource.ShouldContain("\"description\"");
+        generatedSource.ShouldContain("\"description\", \"Description\"");
     }
 
     [Fact]
@@ -515,6 +515,59 @@ public class CodeFirstRegistryGeneratorTests {
         // Assert
         generatedSource.ShouldContain("\"Umbraco.TextBox\"");
         generatedSource.ShouldContain("\"Umb.PropertyEditorUi.TextBox\"");
+    }
+
+    [Fact]
+    public void GenerateRegistry_DataTypeEditorType_EmitsUnquotedEditorAliases() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute
+                {
+                    public UCFDataTypeAttribute(string name, global::System.Type editor) { }
+                    public string? Alias { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                public static class TextBox
+                {
+                    public const string Alias = "Umbraco.TextBox";
+                    public const string UiAlias = "Umb.PropertyEditorUi.TextBox";
+                }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType(
+                    "Text",
+                    typeof(TextBox))]
+                public partial class TextDataType;
+            }
+            """;
+
+        // Act
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var generatedSource = driver
+            .RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult()
+            .Results
+            .Single()
+            .GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText
+            .ToString();
+
+        // Assert
+        generatedSource.ShouldContain("\"Umbraco.TextBox\",");
+        generatedSource.ShouldContain("\"Umb.PropertyEditorUi.TextBox\"");
+        generatedSource.ShouldNotContain("\"\\\"Umbraco.TextBox\\\"\"");
+        generatedSource.ShouldNotContain("\"\\\"Umb.PropertyEditorUi.TextBox\\\"\"");
     }
 
     [Fact]

@@ -14,15 +14,22 @@ public sealed class CodeFirstCleanupService(
 
     public async Task<CodeFirstCleanupResponse> PreviewAsync() {
         IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
-        IReadOnlyList<IContentType> documentTypes = contentTypeService.GetAll().ToArray();
+        IReadOnlyList<IContentType> documentTypes = contentTypeService.GetAll()
+            .Concat(registry.Definitions
+                .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
+                .Select(definition => contentTypeService.Get(definition.Alias))
+                .OfType<IContentType>())
+            .GroupBy(contentType => contentType.Alias, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
-            .ToHashSet(StringComparer.Ordinal);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var documentTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
             .Select(definition => definition.Alias)
-            .ToHashSet(StringComparer.Ordinal);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         List<CodeFirstCleanupItem> items = [];
 
         foreach(var dataType in dataTypes) {
@@ -49,7 +56,7 @@ public sealed class CodeFirstCleanupService(
 
             var definition = registry.Definitions.Single(
                 candidate => candidate.Kind == CodeFirstDefinitionKind.DocumentType
-                    && candidate.Alias == alias);
+                    && string.Equals(candidate.Alias, alias, StringComparison.OrdinalIgnoreCase));
             AddObsoleteMembers(items, documentType, definition);
         }
 
@@ -153,16 +160,19 @@ public sealed class CodeFirstCleanupService(
         ICollection<CodeFirstCleanupItem> items,
         IContentType contentType,
         CodeFirstDefinition definition) {
-        var propertyAliases = definition.Properties
-            .Select(property => property.Alias)
-            .ToHashSet(StringComparer.Ordinal);
+        var propertiesByAlias = definition.Properties
+            .ToDictionary(property => property.Alias, StringComparer.OrdinalIgnoreCase);
         var compositionPropertyAliases = contentType.CompositionPropertyTypes
             .Select(property => property.Alias)
             .ToHashSet(StringComparer.Ordinal);
 
         foreach(var property in contentType.PropertyTypes
                     .Where(property => !compositionPropertyAliases.Contains(property.Alias))
-                    .Where(property => !propertyAliases.Contains(property.Alias))) {
+                    .Where(property => !propertiesByAlias.TryGetValue(property.Alias, out var desiredProperty)
+                        || !string.Equals(
+                            property.Alias,
+                            desiredProperty.Alias,
+                            StringComparison.Ordinal))) {
             items.Add(new("Property", property.Alias, property.Name, definition.Alias));
         }
 
@@ -175,7 +185,11 @@ public sealed class CodeFirstCleanupService(
             .ToHashSet(StringComparer.Ordinal);
         var obsoletePropertyAliases = contentType.PropertyTypes
             .Where(property => !compositionPropertyAliases.Contains(property.Alias))
-            .Where(property => !propertyAliases.Contains(property.Alias))
+            .Where(property => !propertiesByAlias.TryGetValue(property.Alias, out var desiredProperty)
+                || !string.Equals(
+                    property.Alias,
+                    desiredProperty.Alias,
+                    StringComparison.Ordinal))
             .Select(property => property.Alias)
             .ToHashSet(StringComparer.Ordinal);
 

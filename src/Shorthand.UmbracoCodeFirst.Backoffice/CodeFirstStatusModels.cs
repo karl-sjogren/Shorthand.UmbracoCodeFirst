@@ -7,23 +7,27 @@ public sealed record CodeFirstStatusResponse(
     int DefinitionCount,
     int DataTypeCount,
     int DocumentTypeCount,
+    int ElementTypeCount,
     int CreatedCount,
     int UpdatedCount,
     int UnchangedCount,
     int FailedCount,
     DateTimeOffset CompletedAt,
     IReadOnlyList<CodeFirstStatusItem> DataTypes,
-    IReadOnlyList<CodeFirstStatusItem> DocumentTypes) {
+    IReadOnlyList<CodeFirstStatusItem> DocumentTypes,
+    IReadOnlyList<CodeFirstStatusItem> ElementTypes) {
     public IReadOnlyList<CodeFirstStatusItem> Definitions =>
-        DataTypes.Concat(DocumentTypes).ToArray();
+        DataTypes.Concat(DocumentTypes).Concat(ElementTypes).ToArray();
 }
 
 public sealed record CodeFirstStatusItem(
     string Kind,
     string Alias,
     string Name,
+    string Folder,
     string? EditorAlias,
     string? EditorUiAlias,
+    bool IsElement,
     int PropertyCount,
     string Status,
     string? Message,
@@ -63,8 +67,10 @@ public static class CodeFirstStatusMapping {
                     definition.Kind.ToString(),
                     definition.Alias,
                     definition.Name,
+                    string.IsNullOrWhiteSpace(definition.FolderPath) ? "/" : definition.FolderPath,
                     definition.EditorAlias,
                     definition.EditorUiAlias,
+                    definition.Settings?.IsElement == true,
                     definition.Properties.Count,
                     result?.Status.ToString() ?? SynchronizationStatus.Skipped.ToString(),
                     result?.Message,
@@ -93,13 +99,23 @@ public static class CodeFirstStatusMapping {
         return new CodeFirstStatusResponse(
             definitions.Count,
             definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DataType)),
-            definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)),
+            definitions.Count(definition =>
+                definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
+                && definition.IsElement == false),
+            definitions.Count(definition =>
+                definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
+                && definition.IsElement),
             report.CreatedCount,
             report.UpdatedCount,
             report.UnchangedCount,
             report.FailedCount,
             report.CompletedAt,
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DataType)).ToArray(),
-            definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)).ToArray());
+            definitions.Where(definition =>
+                definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
+                && definition.IsElement == false).ToArray(),
+            definitions.Where(definition =>
+                definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType)
+                && definition.IsElement).ToArray());
     }
 }

@@ -11,4 +11,5 @@ public static class CodeFirstDiagnosticIds {
     public const string InvalidCompositionGraph = "UCF107";
     public const string UnknownEditorAlias = "UCF108";
     public const string IncompatibleEditorType = "UCF109";
+    public const string IncompatibleCompositionType = "UCF110";
 }

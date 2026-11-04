@@ -25,6 +25,13 @@ public class CodeFirstStatusMappingTests {
                     SortOrder: 2,
                     Mandatory: true)]),
             new(
+                CodeFirstDefinitionKind.DocumentType,
+                "seoComposite",
+                "SEO Composite",
+                null,
+                [],
+                new CodeFirstTypeSettings(IsElement: true)),
+            new(
                 CodeFirstDefinitionKind.DataType,
                 "decimal",
                 "Decimal",
@@ -54,10 +61,11 @@ public class CodeFirstStatusMappingTests {
             });
 
         // Assert
-        result.DefinitionCount.ShouldBe(2);
+        result.DefinitionCount.ShouldBe(3);
         result.DataTypeCount.ShouldBe(1);
         result.DocumentTypeCount.ShouldBe(1);
-        result.Definitions.Select(item => item.Alias).ShouldBe(["decimal", "productPage"]);
+        result.ElementTypeCount.ShouldBe(1);
+        result.Definitions.Select(item => item.Alias).ShouldBe(["decimal", "productPage", "seoComposite"]);
         result.Definitions.Single(item => item.Alias == "productPage").ShouldSatisfyAllConditions(
             item => item.Status.ShouldBe(nameof(SynchronizationStatus.Created)),
             item => item.PropertyCount.ShouldBe(1),
@@ -73,9 +81,14 @@ public class CodeFirstStatusMappingTests {
             .ShouldBe(nameof(SynchronizationStatus.Skipped));
         result.DataTypes.Single().ShouldSatisfyAllConditions(
             item => item.Alias.ShouldBe("decimal"),
+            item => item.Folder.ShouldBe("/"),
             item => item.EditorAlias.ShouldBe("Umbraco.Decimal"),
             item => item.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.Decimal"));
         result.DocumentTypes.Single().Alias.ShouldBe("productPage");
+        result.DocumentTypes.Single().Folder.ShouldBe("/");
+        result.ElementTypes.Single().ShouldSatisfyAllConditions(
+            item => item.Alias.ShouldBe("seoComposite"),
+            item => item.IsElement.ShouldBeTrue());
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)

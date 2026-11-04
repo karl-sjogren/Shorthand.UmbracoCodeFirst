@@ -6,8 +6,10 @@ type StatusItem = {
   kind: string;
   alias: string;
   name: string;
+  folder: string;
   editorAlias?: string;
   editorUiAlias?: string;
+  isElement: boolean;
   propertyCount: number;
   status: string;
   message?: string;
@@ -35,6 +37,7 @@ type StatusResponse = {
   definitionCount: number;
   dataTypeCount: number;
   documentTypeCount: number;
+  elementTypeCount: number;
   createdCount: number;
   updatedCount: number;
   unchangedCount: number;
@@ -42,6 +45,7 @@ type StatusResponse = {
   completedAt: string;
   dataTypes: StatusItem[];
   documentTypes: StatusItem[];
+  elementTypes: StatusItem[];
 };
 
 type CleanupItem = {
@@ -156,6 +160,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             this.status.documentTypeCount,
             "codeFirst_documentTypes",
           )}
+          ${this.renderSummaryMetric(
+            this.status.elementTypeCount,
+            "codeFirst_elementTypes",
+          )}
           ${this.renderSummaryMetric(this.status.createdCount, "codeFirst_created")}
           ${this.renderSummaryMetric(this.status.updatedCount, "codeFirst_updated")}
           ${this.renderSummaryMetric(
@@ -174,6 +182,11 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_documentTypesHeadline"),
         this.status.documentTypes,
+        true,
+      )}
+      ${this.renderDefinitionTable(
+        this.localize.term("codeFirst_elementTypesHeadline"),
+        this.status.elementTypes,
         true,
       )}
     `;
@@ -319,9 +332,11 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             <uui-table-head-cell
               >${this.localize.term("codeFirst_name")}</uui-table-head-cell
             >
-            <uui-table-head-cell
-              >${this.localize.term("codeFirst_alias")}</uui-table-head-cell
-            >
+            ${showProperties
+              ? html`<uui-table-head-cell
+                  >${this.localize.term("codeFirst_alias")}</uui-table-head-cell
+                >`
+              : ""}
             ${showProperties
               ? html`<uui-table-head-cell
                   >${this.localize.term("codeFirst_properties")}</uui-table-head-cell
@@ -329,6 +344,9 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
               : html`<uui-table-head-cell
                   >${this.localize.term("codeFirst_editor")}</uui-table-head-cell
                 >`}
+            <uui-table-head-cell
+              >${this.localize.term("codeFirst_folder")}</uui-table-head-cell
+            >
             <uui-table-head-cell
               >${this.localize.term("codeFirst_status")}</uui-table-head-cell
             >
@@ -357,12 +375,15 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                       >`
                     : definition.name}
                 </uui-table-cell>
-                <uui-table-cell>${definition.alias}</uui-table-cell>
+                ${showProperties
+                  ? html`<uui-table-cell>${definition.alias}</uui-table-cell>`
+                  : ""}
                 <uui-table-cell>
                   ${showProperties
                     ? definition.propertyCount
                     : this.formatEditor(definition)}
                 </uui-table-cell>
+                <uui-table-cell>${definition.folder}</uui-table-cell>
                 <uui-table-cell>
                   <span
                     class=${this.isFailed(definition) || definition.message
@@ -386,7 +407,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
               ${this.expandedAlias === definition.alias
                 ? html`
                     <uui-table-row class="details-row">
-                      <uui-table-cell colspan="4">
+                      <uui-table-cell colspan=${showProperties ? 5 : 4}>
                         ${this.renderProperties(definition)}
                       </uui-table-cell>
                     </uui-table-row>

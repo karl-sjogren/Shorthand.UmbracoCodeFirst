@@ -255,8 +255,8 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             }
 
             var propertyAttribute = FindAttribute(property, _propertyAttributeMetadataName)!;
-            var propertyName = GetNameArgument(propertyAttribute);
-            var propertyAlias = GetAliasArgument(propertyAttribute, propertyName);
+            var propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
+            var (propertyName, propertyAlias) = GetPropertyMetadata(propertyAttribute, propertySyntax);
             var propertyType = property.Type.ToDisplayString(
                 SymbolDisplayFormat.FullyQualifiedFormat
                     .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier));
@@ -359,15 +359,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 }
 
                 var propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
-                var propertyName = GetNameArgument(propertyAttribute);
-                if (propertyName.Length == 0) {
-                    propertyName = GetSyntaxStringArgument(propertySyntax, 1);
-                }
-
-                var propertyAlias = GetAliasArgument(propertyAttribute, propertyName);
-                if (propertyAlias.Length == 0) {
-                    propertyAlias = GetSyntaxStringArgument(propertySyntax, 0);
-                }
+                var (propertyName, propertyAlias) = GetPropertyMetadata(propertyAttribute, propertySyntax);
 
                 var descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
                 var groupAttribute = FindLayoutAttribute(property, _groupAttributeMetadataName);
@@ -479,6 +471,25 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             _ => GetStringArgument(attribute, 1),
         };
 
+    private static (string Name, string Alias) GetPropertyMetadata(
+        AttributeData attribute,
+        AttributeSyntax? syntax) {
+        var explicitAlias = attribute.ConstructorArguments.Length >= 3;
+        var name = GetNameArgument(attribute);
+        if (name.Length == 0) {
+            name = GetSyntaxStringArgument(syntax, explicitAlias ? 1 : 0);
+        }
+
+        var alias = GetAliasArgument(attribute, name);
+        if (alias.Length == 0) {
+            alias = explicitAlias
+                ? GetSyntaxStringArgument(syntax, 0)
+                : ToAlias(name);
+        }
+
+        return (name, alias);
+    }
+
     private static bool HasDataTypeAliasProperty(AttributeData attribute) =>
         IsAttribute(attribute, _dataTypeAttributeMetadataName)
         && attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() is true;
@@ -554,7 +565,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static string GetDataTypeEditorUiArgument(AttributeData attribute) =>
         HasDataTypeAliasProperty(attribute)
             ? attribute.ConstructorArguments.Length == 2
-                ? GetEditorTypeValueArgument(attribute, 1, "UiAlias")
+                ? SymbolDisplay.FormatLiteral(GetEditorTypeValueArgument(attribute, 1, "UiAlias"), true)
                 : SymbolDisplay.FormatLiteral(GetStringArgument(attribute, 2), true)
             : GetNamedStringLiteral(attribute, "EditorUiAlias");
 
@@ -564,7 +575,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
             .OfType<IFieldSymbol>()
             .Single(field => field.IsStatic && field.HasConstantValue);
 
-        return SymbolDisplay.FormatLiteral((string)member.ConstantValue!, true);
+        return (string)member.ConstantValue!;
     }
 
     private static AttributeData? FindAttribute(ISymbol symbol, string metadataName) =>

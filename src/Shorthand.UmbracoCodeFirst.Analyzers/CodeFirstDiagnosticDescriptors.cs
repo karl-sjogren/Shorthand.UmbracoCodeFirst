@@ -104,5 +104,15 @@ internal static class CodeFirstDiagnosticDescriptors {
         isEnabledByDefault: true,
         helpLinkUri: _documentationBaseUrl + "/UCF109.md",
         customTags: ["CompilationEnd"]);
+
+    public static readonly DiagnosticDescriptor IncompatibleCompositionType = new(
+        CodeFirstDiagnosticIds.IncompatibleCompositionType,
+        "Incompatible content composition type",
+        "Composition from '{0}' to '{1}' must use the same DocumentType or ElementType kind",
+        "CodeFirst",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        helpLinkUri: _documentationBaseUrl + "/UCF110.md",
+        customTags: ["CompilationEnd"]);
 #pragma warning restore RS2008
 }

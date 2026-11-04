@@ -11,6 +11,10 @@ public abstract class AnalyzerTestBase {
                 public UCFDocumentTypeAttribute(string name) { }
                 public UCFDocumentTypeAttribute(string alias, string name) { }
             }
+            public sealed class UCFElementTypeAttribute : global::System.Attribute {
+                public UCFElementTypeAttribute(string name) { }
+                public UCFElementTypeAttribute(string alias, string name) { }
+            }
             public sealed class UCFDataTypeAttribute : global::System.Attribute {
                 public UCFDataTypeAttribute(string name, string editorAlias) { }
                 public UCFDataTypeAttribute(string alias, string name, string editorAlias) { }
@@ -62,6 +66,7 @@ public abstract class AnalyzerTestBase {
         new InvalidCompositionGraphAnalyzer(),
         new EditorAliasAnalyzer(),
         new IncompatibleEditorTypeAnalyzer(),
+        new IncompatibleCompositionTypeAnalyzer(),
     ];
 
     protected static string Source(string source) {

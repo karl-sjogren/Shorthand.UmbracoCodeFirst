@@ -30,3 +30,8 @@ Reports `UCFComposite` declarations that reference a class without `UCFDocumentT
 ### UCF107 - Invalid content composition graph
 
 Reports duplicate, self-referencing, or cyclic Document Type compositions.
+
+### UCF110 - Incompatible content composition type
+
+Reports compositions between a Document Type and an Element Type. Composition sources and targets
+must use the same type kind.

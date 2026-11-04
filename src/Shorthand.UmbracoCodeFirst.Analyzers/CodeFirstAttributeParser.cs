@@ -130,7 +130,9 @@ internal static class CodeFirstAttributeParser {
             source,
             target,
             attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
-            target.GetAttributes().Any(CodeFirstAnalyzerHelpers.HasDocumentTypeAttribute));
+            target.GetAttributes().Any(CodeFirstAnalyzerHelpers.HasDocumentTypeAttribute),
+            source.GetAttributes().Any(static item => item.AttributeClass?.Name == "UCFElementTypeAttribute"),
+            target.GetAttributes().Any(static item => item.AttributeClass?.Name == "UCFElementTypeAttribute"));
         return true;
     }
 
