@@ -77,7 +77,8 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: 24.x
+        node-version: lts/*
+        check-latest: true
         cache: npm
         cache-dependency-path: src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
 
