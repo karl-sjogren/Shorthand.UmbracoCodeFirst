@@ -65,6 +65,6 @@
   <!-- Transitive pinnings -->
   <ItemGroup>
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.1" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.14" />
   </ItemGroup>
 </Project>
