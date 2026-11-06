@@ -87,22 +87,12 @@ jobs:
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Run Vitest tests
-      run: npm test -- --reporter=default --reporter=junit --outputFile=vitest-results.xml --coverage --coverage.reporter=text --coverage.reporter=cobertura --coverage.reporter=lcov
+      run: npm test -- --reporter=default --reporter=github-actions --reporter=junit --outputFile=vitest-results.xml --coverage
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Build backoffice client
       run: npm run build
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
-
-    - name: Upload backoffice client test results
-      uses: actions/upload-artifact@v7
-      with:
-        name: backoffice-client-results
-        path: |
-          src/Shorthand.UmbracoCodeFirst.Backoffice/Client/vitest-results.xml
-          src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/cobertura-coverage.xml
-          src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/lcov.info
-        if-no-files-found: error
 
   test-and-coverage-results:
     name: Publish test and coverage results
@@ -122,12 +112,6 @@ jobs:
         name: net-test-results
         path: ./
 
-    - name: Download backoffice client test results
-      uses: actions/download-artifact@v8
-      with:
-        name: backoffice-client-results
-        path: ./backoffice-client-results
-
     - name: Install .NET
       uses: actions/setup-dotnet@v6
       with:
@@ -136,7 +120,7 @@ jobs:
     - name: Generate coverage report
       uses: danielpalme/ReportGenerator-GitHub-Action@v5
       with:
-        reports: './**/*.cobertura.xml;./**/cobertura-coverage.xml;./backoffice-client-results/coverage/*.xml'
+        reports: './**/*.cobertura.xml;./**/cobertura-coverage.xml'
         targetdir: 'coverage-report'
         historydir: 'coverage-history'
         reporttypes: 'Html;MarkdownSummary;MarkdownDeltaSummary;Cobertura'
