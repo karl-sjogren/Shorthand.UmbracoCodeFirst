@@ -17,6 +17,7 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="PropertyEditors\umbraco-property-editors.json" />
+    <AdditionalFiles Include="Icons\umbraco-icons.json" />
   </ItemGroup>
 
 </Project>

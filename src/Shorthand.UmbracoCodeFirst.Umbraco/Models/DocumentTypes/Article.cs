@@ -5,7 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [UCFDocumentType(
     "Article",
-    Icon = "icon-document",
+    Icon = UmbracoIcons.Document,
     AllowAsRoot = true)]
 [UCFComposite(typeof(HappySparkles))]
 [UCFComposite(typeof(SeoComposite))]

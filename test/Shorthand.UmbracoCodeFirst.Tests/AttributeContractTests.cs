@@ -8,7 +8,7 @@ public class AttributeContractTests {
     public void UCFDocumentTypeAttribute_ExplicitSettings_PreservesValues() {
         // Arrange
         var attribute = new UCFDocumentTypeAttribute("productPage", "Product Page") {
-            Icon = "icon-barcode",
+            Icon = UmbracoIcons.Barcode,
             AllowAsRoot = true,
             DefaultTemplateAlias = "productTemplate",
             AllowedTemplateAliases = ["productTemplate", "default"],
@@ -23,6 +23,7 @@ public class AttributeContractTests {
         // Assert
         alias.ShouldBe("productPage");
         attribute.Name.ShouldBe("Product Page");
+        attribute.Icon.ShouldBe(UmbracoIcons.Barcode);
         attribute.AllowedTemplateAliases.ShouldBe(["productTemplate", "default"]);
         attribute.AllowedChildAliases.ShouldBe(["variant"]);
     }
@@ -30,7 +31,7 @@ public class AttributeContractTests {
     [Fact]
     public void UCFElementTypeAttribute_ExplicitSettings_PreservesValues() {
         var attribute = new UCFElementTypeAttribute("productElement", "Product Element") {
-            Icon = "icon-barcode",
+            Icon = "icon-custom",
             AllowInLibrary = true,
             Variations = "Culture",
         };
@@ -38,6 +39,7 @@ public class AttributeContractTests {
         attribute.Alias.ShouldBe("productElement");
         attribute.Name.ShouldBe("Product Element");
         attribute.AllowInLibrary.ShouldBeTrue();
+        attribute.Icon.ShouldBe("icon-custom");
         attribute.Variations.ShouldBe("Culture");
     }
 

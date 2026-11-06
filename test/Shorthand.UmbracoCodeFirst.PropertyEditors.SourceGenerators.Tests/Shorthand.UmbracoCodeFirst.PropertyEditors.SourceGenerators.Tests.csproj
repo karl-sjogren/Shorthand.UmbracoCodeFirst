@@ -11,6 +11,8 @@
   <ItemGroup>
     <EmbeddedResource Include="..\..\src\Shorthand.UmbracoCodeFirst\PropertyEditors\umbraco-property-editors.json"
                       Link="umbraco-property-editors.json" />
+    <EmbeddedResource Include="..\..\src\Shorthand.UmbracoCodeFirst\Icons\umbraco-icons.json"
+                      Link="umbraco-icons.json" />
   </ItemGroup>
 
 </Project>

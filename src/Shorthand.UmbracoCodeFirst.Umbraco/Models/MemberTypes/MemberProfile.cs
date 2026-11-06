@@ -3,7 +3,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.MemberTypes;
 
-[UCFMemberType("Member Profile", Icon = "icon-user")]
+[UCFMemberType("Member Profile", Icon = UmbracoIcons.User)]
 [UCFFolderPath("Profiles")]
 [UCFDescription("Profile fields managed by the code-first Member Type.")]
 public partial class MemberProfile {

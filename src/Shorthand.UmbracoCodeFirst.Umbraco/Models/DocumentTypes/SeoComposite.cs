@@ -6,7 +6,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 [UCFDocumentType(
     "seoComposite",
     "SEO Composite",
-    Icon = "icon-document")]
+    Icon = UmbracoIcons.Document)]
 [UCFFolderPath("Compositions")]
 public partial class SeoComposite {
     [UCFProperty(

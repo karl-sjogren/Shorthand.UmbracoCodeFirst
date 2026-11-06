@@ -3,7 +3,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.MediaTypes;
 
-[UCFMediaType("Image Asset", Icon = "icon-picture", AllowAsRoot = true)]
+[UCFMediaType("Image Asset", Icon = UmbracoIcons.Picture, AllowAsRoot = true)]
 [UCFFolderPath("Assets")]
 [UCFDescription("Images managed by the code-first Media Type.")]
 public partial class ImageAsset {

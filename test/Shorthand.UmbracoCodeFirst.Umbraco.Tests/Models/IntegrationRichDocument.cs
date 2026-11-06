@@ -2,7 +2,7 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
-[UCFDocumentType("integrationRichDocument", "Integration Rich Document", Icon = "icon-document")]
+[UCFDocumentType("integrationRichDocument", "Integration Rich Document", Icon = UmbracoIcons.Document)]
 [UCFDescription("Initial rich document description")]
 [UCFFolderPath("Integration/Rich")]
 public partial class IntegrationRichDocument {

@@ -5,7 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.Elements;
 
 [UCFElementType(
     "CoolElement",
-    Icon = "icon-document",
+    Icon = UmbracoIcons.Document,
     AllowInLibrary = true)]
 [UCFComposite(typeof(CompositeElement))]
 [UCFDescription("A really cool element")]

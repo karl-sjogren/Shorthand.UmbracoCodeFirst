@@ -5,7 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [UCFDocumentType(
     "Landing Page",
-    Icon = "icon-home",
+    Icon = UmbracoIcons.Home,
     AllowAsRoot = true)]
 [UCFDescription("A page used as a site landing page.")]
 public partial class LandingPage {

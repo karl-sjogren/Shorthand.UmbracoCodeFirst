@@ -5,7 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [UCFDocumentType(
     "Product Page",
-    Icon = "icon-barcode",
+    Icon = UmbracoIcons.Barcode,
     AllowAsRoot = true,
     IsListView = true,
     Variations = "Invariant")]

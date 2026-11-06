@@ -5,7 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.Elements;
 
 [UCFElementType(
     "CompositeElement",
-    Icon = "icon-document",
+    Icon = UmbracoIcons.Document,
     AllowInLibrary = false)]
 [UCFDescription("A really cool element")]
 [UCFFolderPath("Elements/Compositions/In/A/Deep/Folders")]
