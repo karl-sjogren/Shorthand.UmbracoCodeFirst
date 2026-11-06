@@ -1,4 +1,4 @@
-# Shorthand.UmbracoCodeFirst
+# Shorthand.UmbracoCodeFirst [![codecov](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst/graph/badge.svg?token=Y1SnvwGAFf)](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst)
 
 Code-first definitions for Umbraco Document Types, Media Types, Member Types, and Data Types.
 
