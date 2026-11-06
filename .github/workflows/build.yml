@@ -83,7 +83,7 @@ jobs:
         cache-dependency-path: src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
 
     - name: Install client dependencies
-      run: npm ci
+      run: npm ci --force
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Run Vitest tests
