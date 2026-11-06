@@ -128,21 +128,6 @@ jobs:
         name: backoffice-client-results
         path: ./backoffice-client-results
 
-    - name: Create history folder
-      run: mkdir ./coverage-history
-      working-directory: ./
-
-    - name: Download historial coverage
-      uses: dawidd6/action-download-artifact@v28
-      with:
-        workflow_conclusion: success
-        branch: ${{ github.head_ref }}
-        name: coverage-history
-        path: ./coverage-history
-        check_artifacts:  true
-        search_artifacts: true
-        if_no_artifact_found: ignore
-
     - name: Install .NET
       uses: actions/setup-dotnet@v6
       with:
@@ -151,39 +136,12 @@ jobs:
     - name: Generate coverage report
       uses: danielpalme/ReportGenerator-GitHub-Action@v5
       with:
-        reports: './**/*.cobertura.xml;./**/cobertura-coverage.xml'
+        reports: './**/*.cobertura.xml;./**/cobertura-coverage.xml;./backoffice-client-results/coverage/*.xml'
         targetdir: 'coverage-report'
         historydir: 'coverage-history'
         reporttypes: 'Html;MarkdownSummary;MarkdownDeltaSummary;Cobertura'
         assemblyfilters: '-xunit*'
         verbosity: 'Info'
-
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v7
-      with:
-        name: coverage-report
-        path: coverage-report
-
-    - name: Upload backoffice client coverage
-      uses: actions/upload-artifact@v7
-      with:
-        name: backoffice-client-coverage
-        path: ./backoffice-client-results/coverage
-
-    - name: Upload backoffice client test results
-      uses: actions/upload-artifact@v7
-      with:
-        name: backoffice-client-test-results
-        path: ./backoffice-client-results/vitest-results.xml
-
-    - name: Publish backoffice client test summary
-      shell: bash
-      run: |
-        {
-          echo "## Backoffice client tests"
-          echo
-          echo "Vitest JUnit results and coverage are available in the \`backoffice-client-results\` and \`backoffice-client-coverage\` artifacts."
-        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload to Codecov
       uses: codecov/codecov-action@v7
@@ -192,21 +150,6 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage-report/Cobertura.xml
-
-    - name: Upload coverage history
-      uses: actions/upload-artifact@v7
-      with:
-        name: coverage-history
-        path: coverage-history
-
-    - name: Publish code coverage summary to run
-      uses: LouisBrunner/checks-action@v3.1.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        conclusion: ${{ job.status }}
-        name: 📝 Code coverage
-        output: "{\"summary\":\"Summary of code coverage. For more detailed information, download the full artifact from the run.\"}"
-        output_text_description_file: ./coverage-report/Summary.md
 
   net-build:
     name: .NET build
