@@ -30,11 +30,11 @@ jobs:
         cache-dependency-path: src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
 
     - name: Install client dependencies
-      run: npm ci
+      run: npm ci --force
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Run Vitest tests
-      run: npm test -- --reporter=default --reporter=junit --outputFile=vitest-results.xml --coverage --coverage.reporter=text --coverage.reporter=cobertura --coverage.reporter=lcov
+      run: npm test -- --reporter=default --reporter=github-actions
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
   frontend-build:
@@ -55,7 +55,7 @@ jobs:
         cache-dependency-path: src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
 
     - name: Install client dependencies
-      run: npm ci
+      run: npm ci --force
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Build backoffice client
