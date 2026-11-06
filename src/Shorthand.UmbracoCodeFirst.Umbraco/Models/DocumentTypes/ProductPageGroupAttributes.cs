@@ -3,33 +3,33 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class ProductDetailsTabAttribute()
+internal sealed class ProductDetailsTabAttribute()
     : UCFTabAttribute("Product details", 0);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class PricingGroupAttribute()
+internal sealed class PricingGroupAttribute()
     : UCFGroupAttribute("pricing", "Pricing", 1);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class PricingTabAttribute()
+internal sealed class PricingTabAttribute()
     : UCFTabAttribute("Pricing", 1);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class InventoryTabAttribute()
+internal sealed class InventoryTabAttribute()
     : UCFTabAttribute("Inventory", 2);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class MarketingTabAttribute()
+internal sealed class MarketingTabAttribute()
     : UCFTabAttribute("Marketing", 3);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class SeoTabAttribute()
+internal sealed class SeoTabAttribute()
     : UCFTabAttribute("SEO", 4);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class SupportTabAttribute()
+internal sealed class SupportTabAttribute()
     : UCFTabAttribute("Support", 5);
 
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class LifecycleTabAttribute()
+internal sealed class LifecycleTabAttribute()
     : UCFTabAttribute("Lifecycle", 6);

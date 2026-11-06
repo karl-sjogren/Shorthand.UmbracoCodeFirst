@@ -1,6 +1,6 @@
 namespace Umbraco.Aspire.AppHost.Extensions;
 
-public static partial class IDistributedApplicationBuilderExtensions {
+internal static partial class IDistributedApplicationBuilderExtensions {
     public static IDistributedApplicationBuilder AddSqlServer(
             this IDistributedApplicationBuilder builder,
             IResourceBuilder<ProjectResource> umbracoProject,

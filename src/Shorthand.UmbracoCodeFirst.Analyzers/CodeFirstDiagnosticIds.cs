@@ -1,6 +1,6 @@
 namespace Shorthand.UmbracoCodeFirst.Analyzers;
 
-public static class CodeFirstDiagnosticIds {
+internal static class CodeFirstDiagnosticIds {
     public const string InvalidAlias = "UCF100";
     public const string DuplicateAlias = "UCF101";
     public const string DuplicateLayout = "UCF102";

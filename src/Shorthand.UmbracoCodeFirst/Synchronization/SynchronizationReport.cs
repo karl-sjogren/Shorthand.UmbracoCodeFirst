@@ -1,25 +1,8 @@
-using Shorthand.UmbracoCodeFirst.Metadata;
-
 namespace Shorthand.UmbracoCodeFirst.Synchronization;
 
-public enum SynchronizationStatus {
-    Created,
-    Updated,
-    Unchanged,
-    Skipped,
-    Failed,
-}
-
-public sealed record SynchronizationItem(
-    CodeFirstDefinitionKind Kind,
-    string Alias,
-    string Name,
-    SynchronizationStatus Status,
-    string? Message = null);
-
 public sealed record SynchronizationReport(
-    DateTimeOffset CompletedAt,
-    IReadOnlyList<SynchronizationItem> Items) {
+        DateTimeOffset CompletedAt,
+        IReadOnlyList<SynchronizationItem> Items) {
     public int CreatedCount => Items.Count(item => item.Status == SynchronizationStatus.Created);
 
     public int UpdatedCount => Items.Count(item => item.Status == SynchronizationStatus.Updated);
@@ -29,18 +12,4 @@ public sealed record SynchronizationReport(
     public int FailedCount => Items.Count(item => item.Status == SynchronizationStatus.Failed);
 
     public int SkippedCount => Items.Count(item => item.Status == SynchronizationStatus.Skipped);
-}
-
-public interface ISynchronizationReportStore {
-    SynchronizationReport Current { get; }
-
-    void Set(SynchronizationReport report);
-}
-
-public sealed class SynchronizationReportStore : ISynchronizationReportStore {
-    private SynchronizationReport _current = new(DateTimeOffset.MinValue, []);
-
-    public SynchronizationReport Current => Volatile.Read(ref _current);
-
-    public void Set(SynchronizationReport report) => Volatile.Write(ref _current, report);
 }

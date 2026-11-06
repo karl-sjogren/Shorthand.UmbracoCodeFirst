@@ -9,6 +9,9 @@
     <Title>Shorthand.UmbracoCodeFirst.Backoffice</Title>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Include="Umbraco.Cms.Core.Constants" Alias="UmbracoConstants" />
+  </ItemGroup>
 
   <!-- Central package management - no versions -->
   <ItemGroup>
@@ -45,6 +48,10 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shorthand.UmbracoCodeFirst.Umbraco.Tests" />
   </ItemGroup>
 
 </Project>

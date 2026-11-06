@@ -16,7 +16,7 @@ public partial class ImageAsset {
     public string? AltText { get; set; }
 }
 
-public sealed class ImageAssetGroupAttribute : UCFGroupAttribute {
+internal sealed class ImageAssetGroupAttribute : UCFGroupAttribute {
     public ImageAssetGroupAttribute()
         : base("image", "Image") { }
 }

@@ -1,22 +1,24 @@
-using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
+using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
+using Umbraco.Cms.Core.Services.OperationStatus;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 
-public sealed class CodeFirstCleanupService(
-    ICodeFirstDefinitionRegistry registry,
-    IDataTypeService dataTypeService,
-    IContentTypeService contentTypeService,
-    IMediaTypeService mediaTypeService,
-    IMemberTypeService memberTypeService,
-    CodeFirstOwnershipStore ownershipStore) {
+internal sealed class CodeFirstCleanupService(
+        ICodeFirstDefinitionRegistry registry,
+        IDataTypeService dataTypeService,
+        IContentTypeService contentTypeService,
+        IMediaTypeService mediaTypeService,
+        IMemberTypeService memberTypeService,
+        ICodeFirstOwnershipStore ownershipStore) : ICodeFirstCleanupService {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
 
     public async Task<CodeFirstCleanupResponse> PreviewAsync() {
-        IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
-        IReadOnlyList<IContentType> documentTypes = contentTypeService.GetAll()
+        var dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
+
+        var documentTypes = contentTypeService.GetAll()
             .Concat(registry.Definitions
                 .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
                 .Select(definition => contentTypeService.Get(definition.Alias))
@@ -24,26 +26,32 @@ public sealed class CodeFirstCleanupService(
             .GroupBy(contentType => contentType.Alias, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
-        IReadOnlyList<IMediaType> mediaTypes = mediaTypeService.GetAll().ToArray();
-        IReadOnlyList<IMemberType> memberTypes = memberTypeService.GetAll().ToArray();
+
+        var mediaTypes = mediaTypeService.GetAll().ToArray();
+
+        var memberTypes = memberTypeService.GetAll().ToArray();
+
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var documentTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DocumentType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var mediaTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.MediaType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var memberTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.MemberType)
             .Select(definition => definition.Alias)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        List<CodeFirstCleanupItem> items = [];
 
+        var items = new List<CodeFirstCleanupItem>();
         foreach(var dataType in dataTypes) {
             if(TryGetOwnedAlias(dataType.ConfigurationData, out var alias)
                 && alias is not null
@@ -69,6 +77,7 @@ public sealed class CodeFirstCleanupService(
             var definition = registry.Definitions.Single(
                 candidate => candidate.Kind == CodeFirstDefinitionKind.DocumentType
                     && string.Equals(candidate.Alias, alias, StringComparison.OrdinalIgnoreCase));
+
             AddObsoleteMembers(items, documentType, definition);
         }
 
@@ -85,13 +94,13 @@ public sealed class CodeFirstCleanupService(
 
     public async Task<CodeFirstCleanupResult> ApplyAsync() {
         var preview = await PreviewAsync();
-        List<CodeFirstCleanupItem> removed = [];
-        List<CodeFirstCleanupFailure> failed = [];
+        var removed = new List<CodeFirstCleanupItem>();
+        var failed = new List<CodeFirstCleanupFailure>();
 
         foreach(var item in preview.Items
-                    .OrderBy(item => item.Kind is "Property" or "Group" or "Tab" ? 0 : 1)
-                    .ThenBy(item => item.ParentAlias, StringComparer.Ordinal)
-                    .ThenBy(item => item.Alias, StringComparer.Ordinal)) {
+                .OrderBy(item => item.Kind is "Property" or "Group" or "Tab" ? 0 : 1)
+                .ThenBy(item => item.ParentAlias, StringComparer.Ordinal)
+                .ThenBy(item => item.Alias, StringComparer.Ordinal)) {
             try {
                 if(await RemoveAsync(item)) {
                     removed.Add(item);
@@ -106,17 +115,19 @@ public sealed class CodeFirstCleanupService(
 
     private async Task<bool> RemoveAsync(CodeFirstCleanupItem item) {
         if(item.Kind == "DataType") {
-            var dataType = (await dataTypeService.GetAllAsync())
+            var dataTypes = await dataTypeService.GetAllAsync();
+            var dataType = dataTypes
                 .FirstOrDefault(candidate =>
                     TryGetOwnedAlias(candidate.ConfigurationData, out var alias)
                     && string.Equals(alias, item.Alias, StringComparison.Ordinal));
+
             if(dataType is null) {
                 return false;
             }
 
             var result = await dataTypeService.DeleteAsync(
                 dataType.Key,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                UmbracoConstants.Security.SuperUserKey);
             if(!result.Success) {
                 throw new InvalidOperationException(
                     $"Could not delete the data type '{item.Alias}': {result.Status}.");
@@ -133,8 +144,8 @@ public sealed class CodeFirstCleanupService(
 
             var result = await contentTypeService.DeleteAsync(
                 contentType.Key,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
-            if(result != Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success) {
+                UmbracoConstants.Security.SuperUserKey);
+            if(result != ContentTypeOperationStatus.Success) {
                 throw new InvalidOperationException(
                     $"Could not delete the content type '{item.Alias}': {result}.");
             }
@@ -150,8 +161,8 @@ public sealed class CodeFirstCleanupService(
 
             var result = await mediaTypeService.DeleteAsync(
                 mediaType.Key,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
-            if(result != Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success) {
+                UmbracoConstants.Security.SuperUserKey);
+            if(result != ContentTypeOperationStatus.Success) {
                 throw new InvalidOperationException(
                     $"Could not delete the media type '{item.Alias}': {result}.");
             }
@@ -167,8 +178,8 @@ public sealed class CodeFirstCleanupService(
 
             var result = await memberTypeService.DeleteAsync(
                 memberType.Key,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
-            if(result != Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success) {
+                UmbracoConstants.Security.SuperUserKey);
+            if(result != ContentTypeOperationStatus.Success) {
                 throw new InvalidOperationException(
                     $"Could not delete the member type '{item.Alias}': {result}.");
             }
@@ -185,9 +196,11 @@ public sealed class CodeFirstCleanupService(
             nameof(CodeFirstDefinitionKind.MemberType) => memberTypeService.Get(item.ParentAlias),
             _ => contentTypeService.Get(item.ParentAlias),
         };
+
         var owned = parent is IContentType typedContentType
             ? IsOwned(typedContentType, item.ParentAlias)
             : parent is not null && IsOwned(parent, item.ParentAlias);
+
         if(parent is null || !owned) {
             return false;
         }
@@ -214,15 +227,15 @@ public sealed class CodeFirstCleanupService(
         if(item.ParentKind == nameof(CodeFirstDefinitionKind.MediaType)) {
             await mediaTypeService.UpdateAsync(
                 (IMediaType)parent,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                UmbracoConstants.Security.SuperUserKey);
         } else if(item.ParentKind == nameof(CodeFirstDefinitionKind.MemberType)) {
             await memberTypeService.UpdateAsync(
                 (IMemberType)parent,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                UmbracoConstants.Security.SuperUserKey);
         } else {
             await contentTypeService.UpdateAsync(
                 (IContentType)parent,
-                Umbraco.Cms.Core.Constants.Security.SuperUserKey);
+                UmbracoConstants.Security.SuperUserKey);
         }
 
         return true;

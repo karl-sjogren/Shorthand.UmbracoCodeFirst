@@ -1,3 +1,4 @@
+using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 

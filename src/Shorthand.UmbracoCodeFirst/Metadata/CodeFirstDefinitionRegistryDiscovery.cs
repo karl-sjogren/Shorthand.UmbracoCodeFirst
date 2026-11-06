@@ -13,6 +13,7 @@ public static class CodeFirstDefinitionRegistryDiscovery {
                 registryType.IsAssignableFrom(type) &&
                 type.GetConstructor(Type.EmptyTypes) is not null)
             .ToArray();
+
         var implementation = implementations
             .OrderByDescending(type => type.Name == "GeneratedCodeFirstDefinitionRegistry")
             .ThenBy(type => type.Assembly.GetName().Name, StringComparer.Ordinal)

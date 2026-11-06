@@ -1,3 +1,4 @@
+using Shorthand.UmbracoCodeFirst.Backoffice.Models;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 

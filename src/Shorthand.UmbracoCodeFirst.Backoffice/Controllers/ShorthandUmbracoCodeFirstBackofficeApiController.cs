@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
+using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
+using Shorthand.UmbracoCodeFirst.Backoffice.Models;
 using Shorthand.UmbracoCodeFirst.Backoffice.Reconciliation;
+using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
-using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Api.Management.Routing;
-using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Web.Common.Authorization;
 
@@ -25,22 +26,20 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
     [HttpGet("status")]
     [ProducesResponseType<CodeFirstStatusResponse>(StatusCodes.Status200OK)]
     public async Task<CodeFirstStatusResponse> StatusAsync(
-        [FromServices] ICodeFirstDefinitionRegistry registry,
-        [FromServices] ISynchronizationReportStore reportStore,
-        [FromServices] IDataTypeService dataTypeService,
-        [FromServices] IContentTypeService contentTypeService,
-        [FromServices] IMediaTypeService mediaTypeService,
-        [FromServices] IMemberTypeService memberTypeService) {
-        IReadOnlyList<IDataType> dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
-        Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string> urls = [];
+            [FromServices] ICodeFirstDefinitionRegistry registry,
+            [FromServices] ISynchronizationReportStore reportStore,
+            [FromServices] IDataTypeService dataTypeService,
+            [FromServices] IContentTypeService contentTypeService,
+            [FromServices] IMediaTypeService mediaTypeService,
+            [FromServices] IMemberTypeService memberTypeService) {
+        var dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
+        var urls = new Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string>();
 
         foreach(var definition in registry.Definitions) {
             var key = definition.Kind switch {
                 CodeFirstDefinitionKind.DataType => dataTypes
                     .FirstOrDefault(dataType =>
-                        dataType.ConfigurationData.TryGetValue(
-                            "shorthand.umbraco-codefirst",
-                            out var value) &&
+                        dataType.ConfigurationData.TryGetValue("shorthand.umbraco-codefirst", out var value) &&
                         string.Equals(value as string, definition.Alias, StringComparison.Ordinal))
                     ?.Key,
                 CodeFirstDefinitionKind.DocumentType => contentTypeService.Get(definition.Alias)?.Key,
@@ -67,19 +66,19 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
     [HttpGet("cleanup-preview")]
     [ProducesResponseType<CodeFirstCleanupResponse>(StatusCodes.Status200OK)]
     public Task<CodeFirstCleanupResponse> CleanupPreviewAsync(
-        [FromServices] CodeFirstCleanupService cleanupService) =>
+        [FromServices] ICodeFirstCleanupService cleanupService) =>
         cleanupService.PreviewAsync();
 
     [HttpGet("reconciliation-preview")]
     [ProducesResponseType<CodeFirstReconciliationPreview>(StatusCodes.Status200OK)]
     public async Task<CodeFirstReconciliationPreview> ReconciliationPreviewAsync(
         [FromServices] ISynchronizationReportStore reportStore,
-        [FromServices] CodeFirstCleanupService cleanupService) =>
+        [FromServices] ICodeFirstCleanupService cleanupService) =>
         new(reportStore.Current, await cleanupService.PreviewAsync());
 
     [HttpPost("cleanup")]
     [ProducesResponseType<CodeFirstCleanupResult>(StatusCodes.Status200OK)]
     public Task<CodeFirstCleanupResult> CleanupAsync(
-        [FromServices] CodeFirstCleanupService cleanupService) =>
+        [FromServices] ICodeFirstCleanupService cleanupService) =>
         cleanupService.ApplyAsync();
 }

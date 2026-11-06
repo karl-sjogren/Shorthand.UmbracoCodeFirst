@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Umbraco.Cms.Core.Services;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 
-public sealed class CodeFirstOwnershipStore(IKeyValueService keyValueService) {
+internal sealed class CodeFirstOwnershipStore(IKeyValueService keyValueService) : ICodeFirstOwnershipStore {
     private const string _keyPrefix = "shorthand.umbraco-codefirst:content-type:";
 
     public CodeFirstDocumentTypeOwnership? Get(string alias, Guid documentTypeKey) {

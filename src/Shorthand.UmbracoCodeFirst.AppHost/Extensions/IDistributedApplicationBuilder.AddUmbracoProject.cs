@@ -1,6 +1,6 @@
 namespace Umbraco.Aspire.AppHost.Extensions;
 
-public static partial class IDistributedApplicationBuilderExtensions {
+internal static partial class IDistributedApplicationBuilderExtensions {
     public static IResourceBuilder<ProjectResource> AddUmbracoProject<TProject>(this IDistributedApplicationBuilder builder, string projectName) where TProject : IProjectMetadata, new() {
         var project = builder.AddProject<TProject>(projectName)
             .WithExternalHttpEndpoints()

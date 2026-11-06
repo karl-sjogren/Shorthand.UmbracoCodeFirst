@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
+using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
+using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
@@ -294,7 +295,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
             .Name
             .ShouldBe("Manual property");
 
-        var cleanup = scope.ServiceProvider.GetRequiredService<CodeFirstCleanupService>();
+        var cleanup = scope.ServiceProvider.GetRequiredService<ICodeFirstCleanupService>();
         var cleanupPreview = await cleanup.PreviewAsync();
         cleanupPreview.Items.ShouldNotContain(item => item.Alias == "manualProperty");
     }

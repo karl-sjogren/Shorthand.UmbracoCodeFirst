@@ -1,0 +1,27 @@
+namespace Shorthand.UmbracoCodeFirst.Backoffice.Models;
+
+public sealed record CodeFirstStatusItem(
+    string Kind,
+    string Alias,
+    string Name,
+    string Folder,
+    string? Description,
+    string? Icon,
+    bool AllowAsRoot,
+    bool AllowInLibrary,
+    string? DefaultTemplateAlias,
+    IReadOnlyList<string> AllowedTemplateAliases,
+    IReadOnlyList<string> AllowedChildAliases,
+    string? Variations,
+    bool IsListView,
+    IReadOnlyList<string> CompositionAliases,
+    IReadOnlyList<CodeFirstStatusLayoutItem> Groups,
+    IReadOnlyList<CodeFirstStatusLayoutItem> Tabs,
+    string? EditorAlias,
+    string? EditorUiAlias,
+    bool IsElement,
+    int PropertyCount,
+    string Status,
+    string? Message,
+    string? BackofficeUrl,
+    IReadOnlyList<CodeFirstStatusProperty> Properties);

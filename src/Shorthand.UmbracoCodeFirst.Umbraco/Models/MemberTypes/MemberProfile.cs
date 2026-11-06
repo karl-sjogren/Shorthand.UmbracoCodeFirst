@@ -16,7 +16,7 @@ public partial class MemberProfile {
     public string? Biography { get; set; }
 }
 
-public sealed class MemberProfileGroupAttribute : UCFGroupAttribute {
+internal sealed class MemberProfileGroupAttribute : UCFGroupAttribute {
     public MemberProfileGroupAttribute()
         : base("profile", "Profile") { }
 }
