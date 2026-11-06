@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.csproj"
+    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.InternalSourceGenerators\Shorthand.UmbracoCodeFirst.InternalSourceGenerators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="PropertyEditors\umbraco-property-editors.json" />

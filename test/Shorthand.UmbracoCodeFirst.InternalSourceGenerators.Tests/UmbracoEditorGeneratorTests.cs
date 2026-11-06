@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests;
+namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
 public class UmbracoEditorGeneratorTests {
     [Fact]

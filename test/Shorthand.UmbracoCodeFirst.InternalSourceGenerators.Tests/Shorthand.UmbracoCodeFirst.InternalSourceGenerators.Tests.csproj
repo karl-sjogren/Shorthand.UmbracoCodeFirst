@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators\Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.csproj" />
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.InternalSourceGenerators\Shorthand.UmbracoCodeFirst.InternalSourceGenerators.csproj" />
   </ItemGroup>
 
   <ItemGroup>

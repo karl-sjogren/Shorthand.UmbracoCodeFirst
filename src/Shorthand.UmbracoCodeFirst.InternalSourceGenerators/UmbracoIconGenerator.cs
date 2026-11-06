@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators;
+namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators;
 
 [Generator]
 public sealed class UmbracoIconGenerator : IIncrementalGenerator {
@@ -117,6 +117,7 @@ public sealed class UmbracoIconGenerator : IIncrementalGenerator {
             builder.Append(" = \"");
             builder.Append(EscapeString(icon.Name));
             builder.AppendLine("\";");
+            builder.AppendLine();
         }
 
         builder.AppendLine("}");

@@ -12,7 +12,7 @@
   - `dotnet test test/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests.csproj --configuration Release`
   - `dotnet test test/Shorthand.UmbracoCodeFirst.Analyzers.Tests/Shorthand.UmbracoCodeFirst.Analyzers.Tests.csproj --configuration Release`
   - `dotnet test test/Shorthand.UmbracoCodeFirst.Backoffice.Tests/Shorthand.UmbracoCodeFirst.Backoffice.Tests.csproj --configuration Release`
-  - `dotnet test test/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests.csproj --configuration Release`
+  - `dotnet test test/Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests/Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests.csproj --configuration Release`
 - Opt-in Umbraco integration tests:
   - PowerShell: `$env:RUN_UMBRACO_INTEGRATION_TESTS='true'`
   - `dotnet test test/Shorthand.UmbracoCodeFirst.Umbraco.Tests/Shorthand.UmbracoCodeFirst.Umbraco.Tests.csproj --configuration Release`

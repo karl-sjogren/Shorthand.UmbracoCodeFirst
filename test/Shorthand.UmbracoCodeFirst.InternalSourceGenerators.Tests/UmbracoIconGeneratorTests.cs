@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace Shorthand.UmbracoCodeFirst.PropertyEditors.SourceGenerators.Tests;
+namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
 public class UmbracoIconGeneratorTests {
     [Fact]
@@ -22,6 +22,9 @@ public class UmbracoIconGeneratorTests {
         generatedSource.ShouldContain("public const string Document = \"icon-document\";");
         generatedSource.ShouldContain(
             "public const string ApplicationWindowAlt = \"icon-application-window-alt\";");
+        generatedSource.ShouldContain(
+            $"public const string ApplicationWindowAlt = \"icon-application-window-alt\";{Environment.NewLine}"
+            + $"{Environment.NewLine}    /// <summary>Umbraco icon 'icon-document'.</summary>");
     }
 
     [Fact]
