@@ -3,8 +3,8 @@ using Microsoft.CodeAnalysis;
 namespace Shorthand.UmbracoCodeFirst.Analyzers;
 
 internal static class CodeFirstDiagnosticDescriptors {
-    private const string _documentationBaseUrl =
-        "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/feature/initial-implementation/docs/analyzers";
+    internal const string DocumentationBaseUrl =
+        "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/develop/docs/analyzers";
 
 #pragma warning disable RS2008
     public static readonly DiagnosticDescriptor InvalidAlias = new(
@@ -14,7 +14,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF100.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF100.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor DuplicateAlias = new(
@@ -24,7 +24,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF101.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF101.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor DuplicateLayout = new(
@@ -34,7 +34,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF102.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF102.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor DuplicateValidation = new(
@@ -44,7 +44,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF103.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF103.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor UnsupportedPropertyType = new(
@@ -54,7 +54,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF104.md");
+        helpLinkUri: DocumentationBaseUrl + "/UCF104.md");
 
     public static readonly DiagnosticDescriptor PropertyOutsideDocumentType = new(
         CodeFirstDiagnosticIds.PropertyOutsideDocumentType,
@@ -63,7 +63,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF105.md");
+        helpLinkUri: DocumentationBaseUrl + "/UCF105.md");
 
     public static readonly DiagnosticDescriptor InvalidCompositionTarget = new(
         CodeFirstDiagnosticIds.InvalidCompositionTarget,
@@ -72,7 +72,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF106.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF106.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor InvalidCompositionGraph = new(
@@ -82,7 +82,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF107.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF107.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor UnknownEditorAlias = new(
@@ -92,7 +92,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF108.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF108.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor IncompatibleEditorType = new(
@@ -102,7 +102,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF109.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF109.md",
         customTags: ["CompilationEnd"]);
 
     public static readonly DiagnosticDescriptor IncompatibleCompositionType = new(
@@ -112,7 +112,7 @@ internal static class CodeFirstDiagnosticDescriptors {
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: _documentationBaseUrl + "/UCF110.md",
+        helpLinkUri: DocumentationBaseUrl + "/UCF110.md",
         customTags: ["CompilationEnd"]);
 #pragma warning restore RS2008
 }

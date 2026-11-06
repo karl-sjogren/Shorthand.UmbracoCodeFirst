@@ -3,9 +3,8 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class AnalyzerInfrastructureTests : AnalyzerTestBase {
     [Fact]
     public void AnalyzerDescriptors_HaveDocumentationLinks_ReturnFeatureBranchUris() {
-        const string documentationBaseUrl =
-            "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/" +
-            "develop/docs/analyzers";
+        const string documentationBaseUrl = CodeFirstDiagnosticDescriptors.DocumentationBaseUrl;
+
         var descriptors = AllAnalyzers
             .SelectMany(static analyzer => analyzer.SupportedDiagnostics)
             .ToDictionary(
