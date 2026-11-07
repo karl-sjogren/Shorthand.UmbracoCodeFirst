@@ -84,8 +84,15 @@ jobs:
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
     - name: Run Vitest tests
-      run: npm test -- --reporter=default --reporter=github-actions --reporter=junit --outputFile=vitest-results.xml --coverage
+      run: npm test -- --reporter=default --reporter=github-actions --reporter=junit --outputFile=vitest-results.xml --coverage --coverage.reporter=text --coverage.reporter=cobertura
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
+
+    - name: Upload frontend coverage
+      uses: actions/upload-artifact@v7
+      with:
+        name: backoffice-client-coverage
+        path: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/cobertura-coverage.xml
+        if-no-files-found: error
 
     - name: Build backoffice client
       run: npm run build
@@ -114,6 +121,12 @@ jobs:
       with:
         name: net-test-results
         path: ./
+
+    - name: Download frontend coverage
+      uses: actions/download-artifact@v8
+      with:
+        name: backoffice-client-coverage
+        path: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage
 
     - name: Install .NET
       uses: actions/setup-dotnet@v6

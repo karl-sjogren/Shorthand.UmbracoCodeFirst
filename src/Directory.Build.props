@@ -23,7 +23,7 @@
     <RepositoryUrl>https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/</RepositoryUrl>
     <PackageProjectUrl>https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>analyzer;umbraco</PackageTags>
+    <PackageTags>analyzer;umbraco;source-generators;poc;experimental</PackageTags>
     <PackageDescription>Provides analyzers and source generators for Umbraco CodeFirst development.</PackageDescription>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>package-readme.md</PackageReadmeFile>
