@@ -149,6 +149,7 @@ jobs:
       if: env.PUBLISH_CODECOV
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage-report/Cobertura.xml,src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/cobertura-coverage.xml
 
   net-build:
     name: .NET build
