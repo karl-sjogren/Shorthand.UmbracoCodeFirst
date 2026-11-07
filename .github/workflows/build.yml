@@ -149,8 +149,6 @@ jobs:
       if: env.PUBLISH_CODECOV
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: coverage-report/Cobertura.xml
-        disable_search: true
 
   net-build:
     name: .NET build
