@@ -8,6 +8,9 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators;
 public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
     private const string _fileName = "umbraco-property-editors.json";
 
+    private static readonly string _generatedCodeAttribute =
+        $"[global::System.CodeDom.Compiler.GeneratedCode(\"Shorthand.UmbracoCodeFirst.InternalSourceGenerators\", \"{typeof(UmbracoEditorGenerator).Assembly.GetName().Version}\")]";
+
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var metadata = context.AdditionalTextsProvider
             .Where(static text => text.Path.EndsWith(_fileName, StringComparison.OrdinalIgnoreCase))
@@ -117,6 +120,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         builder.AppendLine();
         builder.AppendLine("namespace Shorthand.UmbracoCodeFirst.PropertyEditors;");
         builder.AppendLine();
+        builder.AppendLine(_generatedCodeAttribute);
         builder.AppendLine("public sealed record UmbracoEditor(");
         builder.AppendLine("    string Alias,");
         builder.AppendLine("    string? UiAlias = null,");
@@ -128,12 +132,14 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         builder.AppendLine("/// <summary>");
         builder.AppendLine("/// Constants for the built-in Umbraco property editors.");
         builder.AppendLine("/// </summary>");
+        builder.AppendLine(_generatedCodeAttribute);
         builder.AppendLine("public static class UmbracoEditors {");
 
         foreach(var editor in result.Entries!) {
             var className = GetClassName(editor.Id);
             builder.AppendLine($"    /// <summary>{EscapeXml(editor.Description)}</summary>");
             builder.AppendLine($"    /// <remarks><see href=\"{editor.DocumentationUrl}\">Documentation</see></remarks>");
+            builder.AppendLine($"    {_generatedCodeAttribute}");
             builder.AppendLine($"    public static class {className} {{");
             builder.AppendLine($"        public const string Alias = \"{EscapeString(editor.Alias)}\";");
             builder.AppendLine($"        public const string UiAlias = \"{EscapeString(editor.UiAlias)}\";");
@@ -145,6 +151,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             builder.AppendLine();
         }
 
+        builder.AppendLine($"    {_generatedCodeAttribute}");
         builder.AppendLine("    public static class Numeric {");
         builder.AppendLine("        public const string Alias = Integer.Alias;");
         builder.AppendLine("        public const string UiAlias = Integer.UiAlias;");
@@ -158,6 +165,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         StringBuilder builder,
         IReadOnlyList<ConfigurationPropertyMetadata> properties) {
         builder.AppendLine();
+        builder.AppendLine($"        {_generatedCodeAttribute}");
         builder.AppendLine(
             "        public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition {");
         foreach(var property in properties) {

@@ -115,6 +115,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.AppendLine();
         builder.AppendLine("namespace Shorthand.UmbracoCodeFirst.Generated;");
         builder.AppendLine();
+        AppendGeneratedCodeAttribute(builder, fullyQualified: true);
         builder.AppendLine("public sealed class GeneratedCodeFirstDefinitionRegistry : global::Shorthand.UmbracoCodeFirst.Metadata.ICodeFirstDefinitionRegistry {");
         builder.Indent++;
         builder.Append("public global::System.Collections.Generic.IReadOnlyList<global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinition> ");
@@ -257,8 +258,10 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         builder.AppendLine();
         builder.AppendLine("#pragma warning restore 0109");
         builder.AppendLine();
+        AppendGeneratedCodeAttribute(builder);
         builder.AppendLine("private readonly IPublishedValueFallback _publishedValueFallback;");
         builder.AppendLine();
+        AppendGeneratedCodeAttribute(builder);
         builder.Append("public ");
         builder.Append(definition.Name);
         builder.AppendLine("(IPublishedContent content, IPublishedValueFallback publishedValueFallback)");

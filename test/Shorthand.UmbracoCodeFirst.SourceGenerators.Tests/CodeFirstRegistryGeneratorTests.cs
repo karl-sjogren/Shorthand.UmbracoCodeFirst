@@ -1,9 +1,77 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
+    [Fact]
+    public void GenerateClasses_MarksRegistryAndPartialMembersButNotPartialTypes() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDocumentTypeAttribute(string name) : global::System.Attribute;
+                public sealed class UCFDataTypeAttribute(string name, string editorAlias, string editorUiAlias)
+                    : global::System.Attribute;
+                public sealed class UCFPropertyAttribute(string name, string dataTypeAlias)
+                    : global::System.Attribute;
+            }
+
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
+                public partial class Article
+                {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "text")]
+                    public partial string Title { get; }
+                }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Text", "text", "text")]
+                public partial class Text;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Both")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Both", "text", "text")]
+                public partial class Both;
+
+                [global::System.CodeDom.Compiler.GeneratedCode("Existing", "1")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Existing")]
+                public partial class Existing;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var references = new[] {
+            typeof(object).Assembly.Location,
+            typeof(System.CodeDom.Compiler.GeneratedCodeAttribute).Assembly.Location,
+        }.Distinct(StringComparer.Ordinal).Select(path => MetadataReference.CreateFromFile(path));
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var classes = driver.RunGenerators(compilation, TestContext.Current.CancellationToken)
+            .GetRunResult().Results.Single().GeneratedSources
+            .SelectMany(generated => generated.SyntaxTree.GetRoot(TestContext.Current.CancellationToken)
+                .DescendantNodes().OfType<ClassDeclarationSyntax>())
+            .ToArray();
+
+        var registry = classes.Single(declaration =>
+            declaration.Identifier.ValueText == "GeneratedCodeFirstDefinitionRegistry");
+        registry.AttributeLists.SelectMany(list => list.Attributes)
+            .ShouldContain(attribute => attribute.Name.ToString().EndsWith("GeneratedCode", StringComparison.Ordinal));
+
+        var partialClasses = classes.Where(declaration => declaration.Modifiers.Any(SyntaxKind.PartialKeyword)).ToArray();
+        partialClasses.Length.ShouldBe(5);
+        foreach(var declaration in partialClasses) {
+            declaration.AttributeLists.SelectMany(list => list.Attributes)
+                .ShouldNotContain(attribute => attribute.Name.ToString().EndsWith("GeneratedCode", StringComparison.Ordinal));
+            declaration.Members.ShouldAllBe(member => member.AttributeLists
+                .SelectMany(list => list.Attributes)
+                .Any(attribute => attribute.Name.ToString().EndsWith("GeneratedCode", StringComparison.Ordinal)));
+        }
+    }
+
     [Fact]
     public void GenerateRegistry_MediaAndMemberTypes_EmitsDistinctDefinitionKinds() {
         const string source = """

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
@@ -25,6 +26,11 @@ public class UmbracoIconGeneratorTests {
         generatedSource.ShouldContain(
             $"public const string ApplicationWindowAlt = \"icon-application-window-alt\";{Environment.NewLine}"
             + $"{Environment.NewLine}    /// <summary>Umbraco icon 'icon-document'.</summary>");
+        var iconClass = CSharpSyntaxTree.ParseText(generatedSource, cancellationToken: TestContext.Current.CancellationToken)
+            .GetRoot(TestContext.Current.CancellationToken)
+            .DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
+        iconClass.AttributeLists.SelectMany(list => list.Attributes)
+            .ShouldContain(attribute => attribute.Name.ToString() == "global::System.CodeDom.Compiler.GeneratedCode");
     }
 
     [Fact]

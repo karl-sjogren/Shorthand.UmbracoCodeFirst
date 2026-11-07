@@ -9,6 +9,9 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators;
 public sealed class UmbracoIconGenerator : IIncrementalGenerator {
     private const string _fileName = "umbraco-icons.json";
 
+    private static readonly string _generatedCodeAttribute =
+        $"[global::System.CodeDom.Compiler.GeneratedCode(\"Shorthand.UmbracoCodeFirst.InternalSourceGenerators\", \"{typeof(UmbracoIconGenerator).Assembly.GetName().Version}\")]";
+
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var metadata = context.AdditionalTextsProvider
             .Where(static text => text.Path.EndsWith(_fileName, StringComparison.OrdinalIgnoreCase))
@@ -106,6 +109,7 @@ public sealed class UmbracoIconGenerator : IIncrementalGenerator {
         builder.AppendLine("/// <summary>");
         builder.AppendLine("/// Constants for the built-in Umbraco icons.");
         builder.AppendLine("/// </summary>");
+        builder.AppendLine(_generatedCodeAttribute);
         builder.AppendLine("public static class UmbracoIcons {");
 
         foreach(var icon in result.Entries!) {

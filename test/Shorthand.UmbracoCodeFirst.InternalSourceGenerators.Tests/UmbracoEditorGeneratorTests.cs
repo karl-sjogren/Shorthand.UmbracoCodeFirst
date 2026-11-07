@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
@@ -57,6 +58,13 @@ public class UmbracoEditorGeneratorTests {
         generatedSource.ShouldContain("int? MaxChars");
         generatedSource.ShouldContain("public const string Alias = \"Umbraco.TextBox\"");
         generatedSource.ShouldContain("ReturnType");
+        var generatedTypes = CSharpSyntaxTree.ParseText(generatedSource, cancellationToken: TestContext.Current.CancellationToken)
+            .GetRoot(TestContext.Current.CancellationToken)
+            .DescendantNodes().OfType<TypeDeclarationSyntax>().ToArray();
+        generatedTypes.Length.ShouldBe(5);
+        generatedTypes.ShouldAllBe(type => type.AttributeLists
+            .SelectMany(list => list.Attributes)
+            .Any(attribute => attribute.Name.ToString() == "global::System.CodeDom.Compiler.GeneratedCode"));
     }
 
     [Fact]
