@@ -1,4 +1,3 @@
-using System.IO.Abstractions;
 using System.Reflection;
 using System.Runtime.Loader;
 using Microsoft.AspNetCore.Builder;
@@ -8,7 +7,6 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
     private const string _sqlServerImage = "mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04";
-    private readonly IFileSystem _fileSystem = new FileSystem();
     private readonly CancellationTokenSource _startupTimeout = new(TimeSpan.FromMinutes(5));
     private MsSqlContainer? _sqlServer;
     private WebApplication? _application;
@@ -29,10 +27,10 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
             return;
         }
 
-        var assemblyDirectory = _fileSystem.Path.GetDirectoryName(typeof(UmbracoIntegrationFixture).Assembly.Location)!;
+        var assemblyDirectory = Path.GetDirectoryName(typeof(UmbracoIntegrationFixture).Assembly.Location)!;
         _assemblyResolver = (_, assemblyName) => {
-            var assemblyPath = _fileSystem.Path.Combine(assemblyDirectory, $"{assemblyName.Name}.dll");
-            return _fileSystem.File.Exists(assemblyPath)
+            var assemblyPath = Path.Combine(assemblyDirectory, $"{assemblyName.Name}.dll");
+            return File.Exists(assemblyPath)
                 ? AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath)
                 : null;
         };

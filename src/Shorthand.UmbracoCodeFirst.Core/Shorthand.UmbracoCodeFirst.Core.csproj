@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>GeneratedSources</CompilerGeneratedFilesOutputPath>
+    <AssemblyName>Shorthand.UmbracoCodeFirst.Core</AssemblyName>
+    <RootNamespace>Shorthand.UmbracoCodeFirst</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="GeneratedSources/**/*" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.InternalSourceGenerators\Shorthand.UmbracoCodeFirst.InternalSourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="PropertyEditors\umbraco-property-editors.json" />
+    <AdditionalFiles Include="Icons\umbraco-icons.json" />
+  </ItemGroup>
+
+</Project>

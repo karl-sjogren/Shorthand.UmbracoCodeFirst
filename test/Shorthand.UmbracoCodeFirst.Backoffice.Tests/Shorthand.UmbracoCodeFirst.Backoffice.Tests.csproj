@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Backoffice\Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
-    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst\Shorthand.UmbracoCodeFirst.csproj" />
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Core\Shorthand.UmbracoCodeFirst.Core.csproj" />
   </ItemGroup>
 
 </Project>

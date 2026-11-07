@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst\Shorthand.UmbracoCodeFirst.csproj" />
+    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Core\Shorthand.UmbracoCodeFirst.Core.csproj" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Backoffice\Shorthand.UmbracoCodeFirst.Backoffice.csproj" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.ServiceDefaults\Shorthand.UmbracoCodeFirst.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
