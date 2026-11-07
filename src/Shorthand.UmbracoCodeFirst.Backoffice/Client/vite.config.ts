@@ -7,6 +7,7 @@ export default defineConfig({
       enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
       bundleName: "shorthand-umbraco-code-first-backoffice",
       uploadToken: process.env.CODECOV_TOKEN,
+      gitService: "github",
     }),
   ],
   build: {
