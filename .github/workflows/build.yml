@@ -186,7 +186,7 @@ jobs:
     name: NuGet Publish
     needs: net-build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop' # Only publish from the develop branch for now
 
     permissions:
       id-token: write
