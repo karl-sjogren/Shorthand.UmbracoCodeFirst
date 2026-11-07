@@ -55,9 +55,6 @@ jobs:
     - name: Run .NET tests
       run: dotnet test --coverage --coverage-output-format cobertura --coverage-settings ./test/coverage.config --report-trx --no-build --configuration Release --no-progress
 
-    - name: Run backoffice .NET tests
-      run: dotnet test ./test/Shorthand.UmbracoCodeFirst.Backoffice.Tests/Shorthand.UmbracoCodeFirst.Backoffice.Tests.csproj --no-build --configuration Release --no-progress
-
     - name: Upload test results
       uses: actions/upload-artifact@v7
       with:
@@ -140,6 +137,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage-report/Cobertura.xml
+        disable_search: true
 
   net-build:
     name: .NET build
