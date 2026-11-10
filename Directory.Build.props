@@ -10,6 +10,21 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <Authors>Karl-Johan Sjögren</Authors>
+    <RepositoryUrl>https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>analyzer;umbraco;source-generators;poc;experimental</PackageTags>
+    <PackageDescription>Provides analyzers and source generators for Umbraco CodeFirst development.</PackageDescription>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>package-readme.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../resources/package-readme.md" Pack="true" PackagePath="/"  />
+  </ItemGroup>
+
+  <PropertyGroup>
     <!-- Build configuration -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors> <!-- A package restored for your project has a known vulnerability. -->
