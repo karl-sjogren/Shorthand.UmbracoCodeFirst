@@ -605,7 +605,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
     private static string GetDataTypeEditorUiArgument(AttributeData attribute) =>
         HasDataTypeAliasProperty(attribute)
-            ? attribute.ConstructorArguments.Length == 2
+            ? attribute.ConstructorArguments[1].Kind == TypedConstantKind.Type
                 ? SymbolDisplay.FormatLiteral(GetEditorTypeValueArgument(attribute, 1, "UiAlias"), true)
                 : SymbolDisplay.FormatLiteral(GetStringArgument(attribute, 2), true)
             : GetNamedStringLiteral(attribute, "EditorUiAlias");
@@ -829,11 +829,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         AttributeData attribute,
         INamedTypeSymbol definition,
         SourceProductionContext context) {
-        var typeArgument = attribute.NamedArguments
-            .FirstOrDefault(candidate => candidate.Key == "ConfigurationType");
-        if(typeArgument.Key is not null &&
-            typeArgument.Value.Kind == TypedConstantKind.Type &&
-            typeArgument.Value.Value is INamedTypeSymbol typedConfigurationType) {
+        if(GetConfigurationType(attribute) is { } typedConfigurationType) {
             var typedJson = BuildConfigurationJson(
                 typedConfigurationType,
                 attribute,
@@ -857,15 +853,25 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         return "null";
     }
 
+    private static INamedTypeSymbol? GetConfigurationType(AttributeData attribute) {
+        var namedArgument = attribute.NamedArguments
+            .FirstOrDefault(candidate => candidate.Key == "ConfigurationType");
+        if(namedArgument.Key is not null) {
+            return namedArgument.Value.Value as INamedTypeSymbol;
+        }
+
+        return attribute.ConstructorArguments.Length >= 3
+            && attribute.ConstructorArguments[1].Kind == TypedConstantKind.Type
+            && attribute.ConstructorArguments[2].Kind == TypedConstantKind.Type
+                ? attribute.ConstructorArguments[2].Value as INamedTypeSymbol
+                : null;
+    }
+
     private static string BuildEditorConfiguration(
         AttributeData attribute,
         INamedTypeSymbol definition,
         SourceProductionContext context) {
-        var typeArgument = attribute.NamedArguments
-            .FirstOrDefault(candidate => candidate.Key == "ConfigurationType");
-        if(typeArgument.Key is null ||
-            typeArgument.Value.Kind != TypedConstantKind.Type ||
-            typeArgument.Value.Value is not INamedTypeSymbol configurationType) {
+        if(GetConfigurationType(attribute) is not { } configurationType) {
             return "null";
         }
 

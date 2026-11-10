@@ -1,8 +1,11 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
+using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
+using Shorthand.UmbracoCodeFirst.PropertyEditors;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
@@ -15,6 +18,60 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 [Trait("Category", "Integration")]
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
+    [Fact]
+    public async Task Store_DropdownConfiguration_CreatesAndUpdatesDataType_Async() {
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var store = scope.ServiceProvider.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            "integrationCodingLanguage",
+            "Integration Coding Language",
+            UmbracoEditors.Dropdown.Alias,
+            [],
+            EditorUiAlias: UmbracoEditors.Dropdown.UiAlias,
+            EditorConfiguration: CodeFirstEditorConfiguration.FromType(
+                typeof(IntegrationDropdownConfiguration),
+                UmbracoEditors.Dropdown.Alias));
+
+        var created = await store.ApplyAsync(definition, TestContext.Current.CancellationToken);
+        created.ShouldBe(SynchronizationStatus.Created);
+
+        var createdDataType = (await dataTypeService.GetAllAsync())
+            .Single(dataType => dataType.Name == definition.Name);
+        JsonSerializer.SerializeToElement(createdDataType.ConfigurationData["items"])
+            .EnumerateArray().Select(item => item.GetString())
+            .ShouldBe(["csharp", "javascript"]);
+
+        var updatedDefinition = definition with {
+            ConfigurationJson = """{"items":["csharp","typescript","bash"],"multiple":false}""",
+            EditorConfiguration = null,
+        };
+        var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(scope.ServiceProvider);
+        var updated = await restartedStore.ApplyAsync(updatedDefinition, TestContext.Current.CancellationToken);
+        updated.ShouldBe(SynchronizationStatus.Updated);
+
+        var persisted = (await dataTypeService.GetAllAsync())
+            .Single(dataType => dataType.Name == definition.Name);
+        persisted.EditorAlias.ShouldBe(UmbracoEditors.Dropdown.Alias);
+        persisted.EditorUiAlias.ShouldBe(UmbracoEditors.Dropdown.UiAlias);
+        dataTypeService.ValidateConfigurationData(persisted).ShouldBeEmpty();
+        JsonSerializer.SerializeToElement(persisted.ConfigurationData["items"])
+            .EnumerateArray().Select(item => item.GetString())
+            .ShouldBe(["csharp", "typescript", "bash"]);
+    }
+
+    public sealed class IntegrationDropdownConfiguration : UmbracoEditors.Dropdown.Configuration {
+        public IntegrationDropdownConfiguration() {
+            Items = JsonSerializer.SerializeToElement(new[] { "csharp", "javascript" });
+            Multiple = false;
+        }
+    }
+
     [Fact]
     public async Task UmbracoHost_WithSqlServerContainer_PersistsGeneratedDefinitions_Async() {
         // Arrange

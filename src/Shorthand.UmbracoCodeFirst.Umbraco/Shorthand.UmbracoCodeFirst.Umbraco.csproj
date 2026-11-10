@@ -10,8 +10,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Umbraco.Cms"/>
-    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice"/>
+    <PackageReference Include="Umbraco.Cms" />
+    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Umbraco.Cms.Core.Constants" Alias="UmbracoConstants" />
+    <Using Include="Shorthand.UmbracoCodeFirst.PropertyEditors" />
   </ItemGroup>
 
   <ItemGroup>

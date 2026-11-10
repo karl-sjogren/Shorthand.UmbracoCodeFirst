@@ -4,7 +4,6 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
 [UCFDocumentType(
-    "seoComposite",
     "SEO Composite",
     Icon = UmbracoIcons.Document)]
 [UCFFolderPath("Compositions")]

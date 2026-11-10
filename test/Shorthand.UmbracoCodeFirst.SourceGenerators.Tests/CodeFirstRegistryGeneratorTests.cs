@@ -840,6 +840,84 @@ public class CodeFirstRegistryGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_EditorAndConfigurationTypes_EmitsAliasesAndConfiguration() {
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Metadata
+            {
+                public abstract class CodeFirstEditorConfigurationDefinition { }
+            }
+
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute
+                {
+                    public UCFDataTypeAttribute(string name, global::System.Type editor, global::System.Type configurationType) { }
+                    public string? Alias { get; set; }
+                    public global::System.Type? ConfigurationType { get; set; }
+                }
+            }
+
+            namespace Example
+            {
+                public static class IntegerEditor
+                {
+                    public const string Alias = "Umbraco.Integer";
+                    public const string UiAlias = "Umb.PropertyEditorUi.Integer";
+                }
+
+                public class IntegerConfiguration : Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition { }
+                public static class ConstantConfiguration { public const int Min = 3; }
+                public static class OverrideConfiguration { public const int Min = 7; }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Runtime", typeof(IntegerEditor), typeof(IntegerConfiguration))]
+                public partial class RuntimeDataType;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Constant", typeof(IntegerEditor), typeof(ConstantConfiguration))]
+                public partial class ConstantDataType;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Override", typeof(IntegerEditor), typeof(ConstantConfiguration),
+                    ConfigurationType = typeof(OverrideConfiguration))]
+                public partial class OverrideDataType;
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("No Configuration", typeof(IntegerEditor), typeof(ConstantConfiguration),
+                    ConfigurationType = null)]
+                public partial class NoConfigurationDataType;
+            }
+            """;
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult();
+        result.Diagnostics.ShouldBeEmpty();
+        var generatedSource = result.Results.Single().GeneratedSources
+            .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
+            .SourceText.ToString();
+
+        var definitions = generatedSource.Split('\n')
+            .Where(line => line.Contains("CodeFirstDefinitionKind.DataType", StringComparison.Ordinal))
+            .ToArray();
+        definitions.Length.ShouldBe(4);
+        foreach(var definition in definitions) {
+            definition.ShouldContain("\"Umbraco.Integer\"");
+            definition.ShouldContain("\"Umb.PropertyEditorUi.Integer\"");
+        }
+
+        definitions.Single(line => line.Contains("\"Runtime\"", StringComparison.Ordinal))
+            .ShouldContain("CodeFirstEditorConfiguration.FromType(typeof(global::Example.IntegerConfiguration), \"Umbraco.Integer\", 1)");
+        definitions.Single(line => line.Contains("\"Constant\"", StringComparison.Ordinal))
+            .ShouldContain("\\\"min\\\":3");
+        definitions.Single(line => line.Contains("\"Override\"", StringComparison.Ordinal))
+            .ShouldContain("\\\"min\\\":7");
+        definitions.Single(line => line.Contains("\"No Configuration\"", StringComparison.Ordinal))
+            .TrimEnd().ShouldEndWith(", null),");
+    }
+
+    [Fact]
     public void GenerateDataTypeAlias_DataTypeDeclaration_EmitsCompileTimeConstant() {
         // Arrange
         const string source = """

@@ -1,9 +1,22 @@
+using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public class GeneratedDefinitionsRegistryTests {
+    [Fact]
+    public void AppRegistry_ConfiguredInteger_ContainsEditorAliasesAndSettings() {
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+        var definition = registry.Definitions.Single(definition => definition.Alias == "codeFirstInteger");
+
+        definition.EditorAlias.ShouldBe("Umbraco.Integer");
+        definition.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.Integer");
+        definition.EditorConfiguration.ShouldNotBeNull();
+        definition.EditorConfiguration.EditorId.ShouldBe("Umbraco.Integer");
+        definition.EffectiveConfigurationJson.ShouldBe("{\"max\":1000000,\"min\":0}");
+    }
+
     [Fact]
     public void IntegrationRegistry_ContainsDependenciesAndLayout() {
         var registry = new IntegrationTestDefinitionRegistry();

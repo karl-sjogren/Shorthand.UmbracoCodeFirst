@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
@@ -25,7 +26,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         PropertyEditorCollection propertyEditors,
         IConfigurationEditorJsonSerializer configurationSerializer,
         IShortStringHelper shortStringHelper,
-        ICodeFirstOwnershipStore ownershipStore) : ICodeFirstDefinitionStore {
+        ICodeFirstOwnershipStore ownershipStore,
+        ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
 
@@ -34,19 +36,44 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if(definition.Kind == CodeFirstDefinitionKind.DataType) {
-            return await ApplyDataTypeAsync(definition);
-        }
+        logger.LogDebug(
+            "Applying code-first {DefinitionKind} {DefinitionAlias} ({DefinitionName})",
+            definition.Kind,
+            definition.Alias,
+            definition.Name);
 
-        if(definition.Kind == CodeFirstDefinitionKind.DocumentType) {
-            return await ApplyDocumentTypeAsync(definition);
-        }
+        try {
+            var status = definition.Kind switch {
+                CodeFirstDefinitionKind.DataType => await ApplyDataTypeAsync(definition),
+                CodeFirstDefinitionKind.DocumentType => await ApplyDocumentTypeAsync(definition),
+                CodeFirstDefinitionKind.MediaType => await ApplyMediaTypeAsync(definition),
+                _ => await ApplyMemberTypeAsync(definition),
+            };
 
-        if(definition.Kind == CodeFirstDefinitionKind.MediaType) {
-            return await ApplyMediaTypeAsync(definition);
-        }
+            if(status == SynchronizationStatus.Skipped) {
+                logger.LogWarning(
+                    "Skipped code-first {DefinitionKind} {DefinitionAlias} because the existing definition is not owned by code-first",
+                    definition.Kind,
+                    definition.Alias);
+            } else {
+                logger.LogDebug(
+                    "Applied code-first {DefinitionKind} {DefinitionAlias}: {Status}",
+                    definition.Kind,
+                    definition.Alias,
+                    status);
+            }
 
-        return await ApplyMemberTypeAsync(definition);
+            return status;
+        } catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested) {
+            throw;
+        } catch(Exception exception) {
+            logger.LogError(
+                exception,
+                "Failed to apply code-first {DefinitionKind} {DefinitionAlias}",
+                definition.Kind,
+                definition.Alias);
+            throw;
+        }
     }
 
     private Task<SynchronizationStatus> ApplyMediaTypeAsync(CodeFirstDefinition definition) =>
@@ -152,8 +179,17 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             }
 
             if(existing.EditorUiAlias != definition.EditorUiAlias) {
+                logger.LogDebug(
+                    "Changing UI editor alias for data type {DefinitionAlias} from {PreviousEditorUiAlias} to {EditorUiAlias}",
+                    definition.Alias,
+                    existing.EditorUiAlias,
+                    definition.EditorUiAlias);
                 existing.EditorUiAlias = definition.EditorUiAlias;
                 changed = true;
+            }
+
+            if(!string.IsNullOrWhiteSpace(definition.EffectiveConfigurationJson)) {
+                logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
             }
 
             changed |= ApplyConfiguration(existing, definition.EffectiveConfigurationJson);
@@ -175,6 +211,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 [_ownershipKey] = definition.Alias,
             },
         };
+
+        if(!string.IsNullOrWhiteSpace(definition.EffectiveConfigurationJson)) {
+            logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
+        }
 
         ApplyConfiguration(dataType, definition.EffectiveConfigurationJson);
 
@@ -325,6 +365,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 }
 
                 container = result.Result;
+                logger.LogDebug(
+                    "Created data type folder {FolderName} under parent {ParentId}",
+                    segment,
+                    parentId);
             }
 
             parentId = container.Id;
@@ -338,7 +382,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return await GetContentTypeParentIdAsync(folderPath, contentTypeContainerService);
     }
 
-    private static async Task<int> GetContentTypeParentIdAsync(
+    private async Task<int> GetContentTypeParentIdAsync(
             string? folderPath,
             IContentTypeContainerService containerService) {
         var parentId = -1;
@@ -363,6 +407,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 }
 
                 container = result.Result;
+                logger.LogDebug(
+                    "Created document type folder {FolderName} under parent {ParentId}",
+                    segment,
+                    parentId);
             }
 
             parentId = container.Id;
@@ -395,6 +443,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 }
 
                 container = result.Result;
+                logger.LogDebug(
+                    "Created media type folder {FolderName} under parent {ParentId}",
+                    segment,
+                    parentId);
             }
 
             parentId = container.Id;
@@ -427,6 +479,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 }
 
                 container = result.Result;
+                logger.LogDebug(
+                    "Created member type folder {FolderName} under parent {ParentId}",
+                    segment,
+                    parentId);
             }
 
             parentId = container.Id;
@@ -460,6 +516,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             }
 
             contentType.RemoveContentType(existingAlias);
+            logger.LogDebug(
+                "Removing owned composition {CompositionAlias} from document type {DefinitionAlias}",
+                existingAlias,
+                definition.Alias);
             changed = true;
         }
 
@@ -472,6 +532,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             if(!contentType.ContentTypeCompositionExists(compositionAlias)) {
                 contentType.AddContentType(composition);
+                logger.LogDebug(
+                    "Adding composition {CompositionAlias} to document type {DefinitionAlias}",
+                    compositionAlias,
+                    definition.Alias);
                 changed = true;
             }
         }
@@ -505,6 +569,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
         contentType.Description = string.Join(Environment.NewLine, descriptionLines);
         ownershipStore.Set(alias, contentType.Key, compositionAliases);
+        logger.LogDebug("Migrated legacy ownership for document type {DefinitionAlias}", alias);
         return true;
     }
 
@@ -528,6 +593,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private static object ConvertJsonElement(JsonElement element) =>
         element.ValueKind switch {
             JsonValueKind.Object => element.EnumerateObject().ToDictionary(property => property.Name, property => ConvertJsonElement(property.Value)),
+            JsonValueKind.Array when element.EnumerateArray().All(item => item.ValueKind == JsonValueKind.String)
+                => element.EnumerateArray().Select(item => item.GetString()!).ToArray(),
             JsonValueKind.Array => element.EnumerateArray()
                 .Select(ConvertJsonElement)
                 .ToArray(),
@@ -558,7 +625,14 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             var desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
             if(existingProperty is not null) {
-                changed |= ApplyPropertySettings(existingProperty, property);
+                if(ApplyPropertySettings(existingProperty, property)) {
+                    logger.LogDebug(
+                        "Updating property {PropertyAlias} on {DefinitionKind} {DefinitionAlias}",
+                        property.Alias,
+                        definition.Kind,
+                        definition.Alias);
+                    changed = true;
+                }
 
                 var currentGroupAlias = contentType
                     .PropertyGroups
@@ -572,6 +646,13 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                             $"to group '{desiredGroupAlias ?? "<none>"}'.");
                     }
 
+                    logger.LogDebug(
+                        "Moving property {PropertyAlias} on {DefinitionKind} {DefinitionAlias} from group {PreviousGroupAlias} to {GroupAlias}",
+                        property.Alias,
+                        definition.Kind,
+                        definition.Alias,
+                        currentGroupAlias,
+                        desiredGroupAlias);
                     changed = true;
                 }
 
@@ -601,6 +682,13 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 ApplyPropertySettings(addedProperty, property);
             }
 
+            logger.LogDebug(
+                "Adding property {PropertyAlias} using data type {DataTypeAlias} to {DefinitionKind} {DefinitionAlias} in group {GroupAlias}",
+                property.Alias,
+                property.DataTypeAlias,
+                definition.Kind,
+                definition.Alias,
+                desiredGroupAlias);
             changed = true;
         }
 

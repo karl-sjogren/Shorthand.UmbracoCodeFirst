@@ -11,14 +11,15 @@
   },
   "devDependencies": {
     "@codecov/vite-plugin": "^2.0.1",
-    "@hey-api/openapi-ts": "^0.97.3",
-    "@umbraco-cms/backoffice": "^17.5.3",
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@types/node": "^26.6.6",
+    "@umbraco-cms/backoffice": "^18.3.1",
     "@vitest/coverage-v8": "^5.1.0",
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.1",
     "cross-env": "^10.1.0",
     "node-fetch": "^3.3.2",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
     "vitest": "^5.1.0"
   }
 }
