@@ -59,7 +59,7 @@
     <PackageVersion Include="Umbraco.Cms.Web.Website" Version="18.3.1" />
     <PackageVersion Include="Umbraco.Cms" Version="18.3.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.3" />
   </ItemGroup>
 
   <!-- Transitive pinnings -->
