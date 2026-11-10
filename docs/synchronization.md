@@ -46,6 +46,14 @@ Created or found Data Types are cached for the run so Document Types can referen
 immediately. Property Data Type references resolve only against owned (code-first) Data Types; an
 unknown reference fails that Document Type.
 
+Typed block Data Types are staged: a new Data Type is first created with a minimal configuration,
+element types are synchronized, and then block references are resolved to persisted element keys.
+This also permits an element to contain a property using the block Data Type. Existing block
+configuration is not replaced if references, typed/raw conflicts, or block configuration validation
+fail. Missing, ambiguous, failed, non-element, or unowned element references produce a failed
+report. Unchanged typed block configuration is not rewritten on subsequent synchronizations.
+See [Block editors](property-editors.md#block-editors) for authoring and key stability.
+
 ## Document Types
 
 For a new Document, Media or Member Type: create with name, description, icon, root/library and

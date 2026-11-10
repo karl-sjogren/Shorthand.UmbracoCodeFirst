@@ -21,7 +21,7 @@ public class UmbracoEditorGeneratorTests {
                   "documentationUrl": "https://docs.umbraco.com/example",
                   "configuration": {
                     "properties": [
-                      { "name": "MaxChars", "type": "int" }
+                      { "name": "MaxChars", "type": "int", "comment": "Limit <characters> & values.\nSecond line." }
                     ]
                   }
                 }
@@ -56,6 +56,16 @@ public class UmbracoEditorGeneratorTests {
         generatedSource.ShouldContain(
             "public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition");
         generatedSource.ShouldContain("int? MaxChars");
+        generatedSource.ShouldContain(
+            "/// Limit &lt;characters&gt; &amp; values." + Environment.NewLine
+            + "            /// Second line." + Environment.NewLine
+            + "            /// </summary>" + Environment.NewLine
+            + "            public int? MaxChars");
+        var syntaxTree = CSharpSyntaxTree.ParseText(
+            generatedSource,
+            new CSharpParseOptions(documentationMode: DocumentationMode.Diagnose),
+            cancellationToken: TestContext.Current.CancellationToken);
+        syntaxTree.GetDiagnostics(TestContext.Current.CancellationToken).ShouldBeEmpty();
         generatedSource.ShouldContain("public const string Alias = \"Umbraco.TextBox\"");
         generatedSource.ShouldContain("ReturnType");
         var generatedTypes = CSharpSyntaxTree.ParseText(generatedSource, cancellationToken: TestContext.Current.CancellationToken)
@@ -73,18 +83,53 @@ public class UmbracoEditorGeneratorTests {
         using var document = JsonDocument.Parse(metadata);
         var editors = document.RootElement.GetProperty("editors");
 
-        editors.GetArrayLength().ShouldBe(37);
+        editors.GetArrayLength().ShouldBe(38);
         editors.EnumerateArray().ShouldAllBe(editor =>
             editor.GetProperty("configuration").GetProperty("properties").ValueKind
                 == JsonValueKind.Array);
+        foreach(var editor in editors.EnumerateArray()) {
+            foreach(var property in editor.GetProperty("configuration").GetProperty("properties").EnumerateArray()) {
+                string.IsNullOrWhiteSpace(property.GetProperty("comment").GetString()).ShouldBeFalse();
+            }
+        }
 
         var generatedSource = GenerateSource(metadata);
+
+        foreach(var editor in editors.EnumerateArray()) {
+            var url = editor.GetProperty("documentationUrl").GetString().ShouldNotBeNull();
+            Uri.TryCreate(url, UriKind.Absolute, out var uri).ShouldBeTrue();
+            uri!.Host.ShouldBe("docs.umbraco.com");
+            url.ShouldNotBe("https://docs.umbraco.com/umbraco-cms/model-your-content/property-editors/built-in-umbraco-property-editors");
+            generatedSource.ShouldContain($"<see href=\"{url}\">Documentation</see>");
+        }
 
         CountOccurrences(generatedSource, "public class Configuration :")
             .ShouldBe(editors.GetArrayLength());
         generatedSource.ShouldContain(
             "global::System.Text.Json.JsonElement? Blocks");
+        generatedSource.ShouldContain(
+            "public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstBlockEditorConfigurationDefinition");
+        generatedSource.ShouldContain("public static class SingleBlock");
+        generatedSource.ShouldContain("bool? UseLiveEditing");
+        generatedSource.ShouldContain("string? CreateModalSize");
         generatedSource.ShouldContain("public class Configuration :");
+
+        var generatedTypes = CSharpSyntaxTree.ParseText(generatedSource, cancellationToken: TestContext.Current.CancellationToken)
+            .GetRoot(TestContext.Current.CancellationToken)
+            .DescendantNodes().OfType<ClassDeclarationSyntax>();
+        var properties = generatedTypes
+            .Where(type => type.Identifier.ValueText == "Configuration")
+            .SelectMany(type => type.Members.OfType<PropertyDeclarationSyntax>())
+            .ToArray();
+        properties.Length.ShouldBe(editors.EnumerateArray().Sum(editor =>
+            editor.GetProperty("configuration").GetProperty("properties").GetArrayLength()));
+        properties.ShouldAllBe(property => property.GetLeadingTrivia().ToFullString().Contains("/// <summary>", StringComparison.Ordinal));
+        foreach(var editorName in new[] { "BlockList", "BlockGrid", "SingleBlock", "RichTextEditor" }) {
+            var editor = generatedTypes.Single(type => type.Identifier.ValueText == editorName);
+            var configuration = editor.Members.OfType<ClassDeclarationSyntax>().Single(type => type.Identifier.ValueText == "Configuration");
+            configuration.BaseList.ShouldNotBeNull().Types.Single().ToString()
+                .ShouldBe("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstBlockEditorConfigurationDefinition");
+        }
     }
 
     [Fact]
@@ -127,8 +172,8 @@ public class UmbracoEditorGeneratorTests {
                   "documentationUrl": "https://docs.umbraco.com/example",
                   "configuration": {
                     "properties": [
-                      { "name": "MaxChars", "type": "int" },
-                      { "name": "MaxChars", "type": "int" }
+                      { "name": "MaxChars", "type": "int", "comment": "Maximum length." },
+                      { "name": "MaxChars", "type": "int", "comment": "Maximum length." }
                     ]
                   }
                 }
@@ -141,6 +186,31 @@ public class UmbracoEditorGeneratorTests {
         diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF200"
             && diagnostic.GetMessage().Contains("duplicated", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(", \"comment\": \"  \"")]
+    [InlineData(", \"comment\": 1")]
+    public void GenerateEditorCatalog_MissingOrInvalidPropertyCommentReportsDiagnostic(string comment) {
+        var metadata = $$"""
+            {
+              "editors": [{
+                "id": "textBox",
+                "name": "Textbox",
+                "description": "A single-line text editor.",
+                "alias": "Umbraco.TextBox",
+                "uiAlias": "Umb.PropertyEditorUi.TextBox",
+                "returnType": "string",
+                "documentationUrl": "https://docs.umbraco.com/example",
+                "configuration": { "properties": [{ "name": "MaxChars", "type": "int"{{comment}} }] }
+              }]
+            }
+            """;
+
+        GenerateDiagnostics(metadata).ShouldContain(diagnostic =>
+            diagnostic.Id == "UCF200"
+            && diagnostic.GetMessage().Contains("'comment'", StringComparison.Ordinal));
     }
 
     private static string ReadCatalog() {

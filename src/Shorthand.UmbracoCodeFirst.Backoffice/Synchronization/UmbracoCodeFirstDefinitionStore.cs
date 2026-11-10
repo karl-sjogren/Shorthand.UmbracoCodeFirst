@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Contracts;
@@ -27,9 +28,21 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         IConfigurationEditorJsonSerializer configurationSerializer,
         IShortStringHelper shortStringHelper,
         ICodeFirstOwnershipStore ownershipStore,
-        ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore {
+        ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore, ICodeFirstBlockDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
+
+    public async Task<SynchronizationStatus> PrepareBlockDataTypeAsync(
+        CodeFirstDefinition definition,
+        CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+        if(await FindOwnedDataTypeAsync(definition.Alias) is not null) {
+            return SynchronizationStatus.Unchanged;
+        }
+
+        logger.LogDebug("Creating placeholder for block data type {DefinitionAlias}", definition.Alias);
+        return await ApplyDataTypeAsync(definition with { EditorConfiguration = null, ConfigurationJson = null });
+    }
 
     public async Task<SynchronizationStatus> ApplyAsync(
             CodeFirstDefinition definition,
@@ -161,6 +174,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
+        var configurationJson = definition.EditorConfiguration is { } editorConfiguration
+            && (editorConfiguration.BlockTypes is not null || editorConfiguration.BlockGroups is not null
+                || editorConfiguration.TypedSettings is not null)
+                ? BlockEditorConfigurationResolver.Resolve(definition, contentTypeService, ownershipStore)
+                : definition.EffectiveConfigurationJson;
         var existing = await FindOwnedDataTypeAsync(definition.Alias);
         if(existing is not null) {
             if(!IsOwned(existing)) {
@@ -168,34 +186,53 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             }
 
             _ownedDataTypes[definition.Alias] = existing;
+            var typedBlockConfiguration = definition.EditorConfiguration is { } configuration
+                && (configuration.BlockTypes is not null || configuration.BlockGroups is not null
+                    || configuration.TypedSettings is not null);
+            var oldName = existing.Name;
+            var oldParentId = existing.ParentId;
+            var oldEditorUiAlias = existing.EditorUiAlias;
+            var oldConfiguration = typedBlockConfiguration
+                ? new Dictionary<string, object>(existing.ConfigurationData)
+                : null;
+            try {
+                var changed = existing.Name != definition.Name;
+                existing.Name = definition.Name;
 
-            var changed = existing.Name != definition.Name;
-            existing.Name = definition.Name;
+                var parentId = await GetDataTypeParentIdAsync(definition.FolderPath);
+                if(existing.ParentId != parentId) {
+                    existing.ParentId = parentId;
+                    changed = true;
+                }
 
-            var parentId = await GetDataTypeParentIdAsync(definition.FolderPath);
-            if(existing.ParentId != parentId) {
-                existing.ParentId = parentId;
-                changed = true;
+                if(existing.EditorUiAlias != definition.EditorUiAlias) {
+                    logger.LogDebug(
+                        "Changing UI editor alias for data type {DefinitionAlias} from {PreviousEditorUiAlias} to {EditorUiAlias}",
+                        definition.Alias,
+                        existing.EditorUiAlias,
+                        definition.EditorUiAlias);
+                    existing.EditorUiAlias = definition.EditorUiAlias;
+                    changed = true;
+                }
+
+                if(!string.IsNullOrWhiteSpace(configurationJson)) {
+                    logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
+                }
+
+                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration);
+                return !changed
+                    ? SynchronizationStatus.Unchanged
+                    : await UpdateDataTypeAsync(existing, definition);
+            } catch {
+                if(oldConfiguration is not null) {
+                    existing.Name = oldName;
+                    existing.ParentId = oldParentId;
+                    existing.EditorUiAlias = oldEditorUiAlias;
+                    existing.ConfigurationData = oldConfiguration;
+                }
+
+                throw;
             }
-
-            if(existing.EditorUiAlias != definition.EditorUiAlias) {
-                logger.LogDebug(
-                    "Changing UI editor alias for data type {DefinitionAlias} from {PreviousEditorUiAlias} to {EditorUiAlias}",
-                    definition.Alias,
-                    existing.EditorUiAlias,
-                    definition.EditorUiAlias);
-                existing.EditorUiAlias = definition.EditorUiAlias;
-                changed = true;
-            }
-
-            if(!string.IsNullOrWhiteSpace(definition.EffectiveConfigurationJson)) {
-                logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
-            }
-
-            changed |= ApplyConfiguration(existing, definition.EffectiveConfigurationJson);
-            return !changed
-                ? SynchronizationStatus.Unchanged
-                : await UpdateDataTypeAsync(existing, definition);
         }
 
         if(definition.EditorAlias is null || !propertyEditors.TryGet(definition.EditorAlias, out var editor)) {
@@ -212,11 +249,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             },
         };
 
-        if(!string.IsNullOrWhiteSpace(definition.EffectiveConfigurationJson)) {
+        if(!string.IsNullOrWhiteSpace(configurationJson)) {
             logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
         }
 
-        ApplyConfiguration(dataType, definition.EffectiveConfigurationJson);
+        ApplyConfiguration(dataType, configurationJson);
 
         var result = await dataTypeService.CreateAsync(dataType, UmbracoConstants.Security.SuperUserKey);
         if(!result.Success) {
@@ -308,7 +345,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private async Task<SynchronizationStatus> CreateContentTypeAsync(
             ContentType contentType,
             CodeFirstDefinition definition) {
-        await contentTypeService.CreateAsync(contentType, UmbracoConstants.Security.SuperUserKey);
+        var result = await contentTypeService.CreateAsync(contentType, UmbracoConstants.Security.SuperUserKey);
+        if(!result.Success) {
+            throw new InvalidOperationException(
+                $"Could not create the document type '{definition.Alias}': {result.Result}.");
+        }
 
         ownershipStore.Set(
             definition.Alias,
@@ -319,7 +360,12 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     }
 
     private async Task<SynchronizationStatus> UpdateContentTypeAsync(IContentType contentType) {
-        await contentTypeService.UpdateAsync(contentType, UmbracoConstants.Security.SuperUserKey);
+        var result = await contentTypeService.UpdateAsync(contentType, UmbracoConstants.Security.SuperUserKey);
+        if(!result.Success) {
+            throw new InvalidOperationException(
+                $"Could not update the document type '{contentType.Alias}': {result.Result}.");
+        }
+
         return SynchronizationStatus.Updated;
     }
 
@@ -573,7 +619,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return true;
     }
 
-    private static bool ApplyConfiguration(IDataType dataType, string? configurationJson) {
+    private static bool ApplyConfiguration(
+        IDataType dataType,
+        string? configurationJson,
+        bool onlyIfChanged = false) {
         if(string.IsNullOrWhiteSpace(configurationJson)) {
             return false;
         }
@@ -583,11 +632,23 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             throw new InvalidOperationException("The Data Type configuration JSON must be a JSON object.");
         }
 
+        var changed = false;
         foreach(var item in configuration) {
+            if(onlyIfChanged
+                && dataType.ConfigurationData.TryGetValue(item.Key, out var existing)
+                && (JsonNode.DeepEquals(
+                    JsonSerializer.SerializeToNode(existing),
+                    JsonNode.Parse(item.Value.GetRawText()))
+                    || (existing is null && item.Key is "blocks" or "blockGroups"
+                        && item.Value.ValueKind == JsonValueKind.Array && item.Value.GetArrayLength() == 0))) {
+                continue;
+            }
+
             dataType.ConfigurationData[item.Key] = ConvertJsonElement(item.Value);
+            changed = true;
         }
 
-        return true;
+        return onlyIfChanged ? changed : true;
     }
 
     private static object ConvertJsonElement(JsonElement element) =>
@@ -596,7 +657,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             JsonValueKind.Array when element.EnumerateArray().All(item => item.ValueKind == JsonValueKind.String)
                 => element.EnumerateArray().Select(item => item.GetString()!).ToArray(),
             JsonValueKind.Array => element.EnumerateArray()
-                .Select(ConvertJsonElement)
+                .Select(item => ConvertJsonElement(item))
                 .ToArray(),
             JsonValueKind.String => element.GetString()!,
             JsonValueKind.True => true,

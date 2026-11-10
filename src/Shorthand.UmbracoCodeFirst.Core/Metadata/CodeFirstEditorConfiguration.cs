@@ -11,6 +11,15 @@ public sealed record CodeFirstEditorConfiguration(
     string EditorId,
     string Json,
     int SchemaVersion = 1) {
+    [JsonIgnore]
+    public IReadOnlyList<CodeFirstBlockType>? BlockTypes { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyList<CodeFirstBlockGroup>? BlockGroups { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyDictionary<string, JsonElement>? TypedSettings { get; init; }
+
     public static CodeFirstEditorConfiguration FromJson(
         string editorId,
         string json,
@@ -53,17 +62,36 @@ public sealed record CodeFirstEditorConfiguration(
             ?? throw new InvalidOperationException(
                 $"Could not create editor configuration '{configurationType.FullName}'.");
         var definition = (CodeFirstEditorConfigurationDefinition)instance;
-        var json = JsonSerializer.Serialize(
-            definition,
-            configurationType,
-            new JsonSerializerOptions {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            });
-        return FromJson(
+        var options = new JsonSerializerOptions {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        };
+        var json = JsonSerializer.Serialize(definition, configurationType, options);
+        var result = FromJson(
             definition.EditorId ?? editorId,
             json,
             definition.SchemaVersion > 0 ? definition.SchemaVersion : schemaVersion);
+        if(definition is not CodeFirstBlockEditorConfigurationDefinition block) {
+            return result;
+        }
+
+        Dictionary<string, JsonElement> typedSettings = [];
+        AddSetting("validationLimit", block.ValidationRange);
+        AddSetting("toolbar", block.ToolbarRows);
+        AddSetting("statusbar", block.StatusbarGroups);
+        AddSetting("dimensions", block.EditorDimensions);
+        AddSetting("stylesheets", block.StylesheetPaths);
+        return result with {
+            BlockTypes = block.BlockTypes,
+            BlockGroups = block.Groups,
+            TypedSettings = typedSettings.Count > 0 ? typedSettings : null,
+        };
+
+        void AddSetting<T>(string name, T? value) where T : class {
+            if(value is not null) {
+                typedSettings.Add(name, JsonSerializer.SerializeToElement(value, options));
+            }
+        }
     }
 
     private static string Canonicalize(JsonElement element) {

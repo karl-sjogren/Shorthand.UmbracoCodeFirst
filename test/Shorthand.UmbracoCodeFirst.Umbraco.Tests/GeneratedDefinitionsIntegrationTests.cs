@@ -16,6 +16,7 @@ using Umbraco.Cms.Core.Strings;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 [Trait("Category", "Integration")]
+[Collection("Umbraco integration")]
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
     [Fact]

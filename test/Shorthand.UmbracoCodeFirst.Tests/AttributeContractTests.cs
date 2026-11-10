@@ -1,5 +1,6 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Metadata;
+using Shorthand.UmbracoCodeFirst.PropertyEditors;
 
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
@@ -128,6 +129,29 @@ public class AttributeContractTests {
     }
 
     [Fact]
+    public void CodeFirstEditorConfiguration_FromType_KeepsTypedBlockMetadataOutOfJson() {
+        var configuration = CodeFirstEditorConfiguration.FromType(typeof(TestBlockConfiguration), "Umbraco.BlockList");
+
+        configuration.Json.ShouldBe("""{"useLiveEditing":true}""");
+        configuration.BlockTypes.ShouldNotBeNull().Count.ShouldBe(1);
+        CodeFirstBlockReferences.GetAlias(configuration.BlockTypes[0].Content).ShouldBe("testElement");
+        configuration.TypedSettings.ShouldNotBeNull()["validationLimit"].GetRawText().ShouldBe("""{"min":1,"max":3}""");
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesTypedRichTextSettings() {
+        var configuration = CodeFirstEditorConfiguration.FromType(typeof(TestRichTextConfiguration), "Umbraco.RichText");
+
+        configuration.Json.ShouldBe("{}");
+        var settings = configuration.TypedSettings.ShouldNotBeNull();
+        settings["toolbar"].GetRawText().ShouldBe("""[[["bold","italic"]]]""");
+        settings["statusbar"].GetRawText().ShouldBe("""[["words"]]""");
+        settings["dimensions"].GetRawText().ShouldBe("""{"height":400}""");
+        settings["stylesheets"].GetRawText().ShouldBe("""["/editor.css"]""");
+        configuration.BlockTypes.ShouldNotBeNull().ShouldBeEmpty();
+    }
+
+    [Fact]
     public void UCFTabAttribute_NameAndSortOrder_LeavesAliasNull() {
         var attribute = new UCFTabAttribute("Product details", 2);
 
@@ -147,5 +171,28 @@ public class AttributeContractTests {
 
     private sealed class TestTextConfiguration : CodeFirstEditorConfigurationDefinition {
         public int? MaxChars { get; set; } = 255;
+    }
+
+    [UCFElementType("testElement", "Test Element")]
+    private sealed class TestElement {
+        public const string ModelTypeAlias = "testElement";
+    }
+
+    private sealed class TestBlockConfiguration : UmbracoEditors.BlockList.Configuration {
+        public TestBlockConfiguration() {
+            UseLiveEditing = true;
+            BlockTypes = [new(typeof(TestElement))];
+            ValidationRange = new() { Min = 1, Max = 3 };
+        }
+    }
+
+    private sealed class TestRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
+        public TestRichTextConfiguration() {
+            BlockTypes = [];
+            ToolbarRows = [[["bold", "italic"]]];
+            StatusbarGroups = [["words"]];
+            EditorDimensions = new() { Height = 400 };
+            StylesheetPaths = ["/editor.css"];
+        }
     }
 }

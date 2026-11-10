@@ -1,10 +1,180 @@
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
+using System.Text.Json;
 
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class CodeFirstSynchronizerTests {
+    [Fact]
+    public async Task SynchronizeAsync_BlockDataType_PreparesThenResolvesElementDependency_Async() {
+        var editor = new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {
+            BlockTypes = [new CodeFirstBlockType("element")],
+        };
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                EditorConfiguration: editor),
+            new(CodeFirstDefinitionKind.DocumentType, "element", "Element", null,
+                [new("nested", "Nested", "blocks")], Settings: new(IsElement: true)),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBe(["prepare:blocks", "apply:element", "apply:blocks"]);
+        report.FailedCount.ShouldBe(0);
+        report.Items.Single(item => item.Alias == "blocks").Status.ShouldBe(SynchronizationStatus.Created);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_BlockReferenceMissing_ReportsFailureWithoutPreparing_Async() {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {
+                    BlockTypes = [new CodeFirstBlockType("missing")],
+                }),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBeEmpty();
+        report.Items.Single().Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("missing");
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_EmptyBlocks_AppliesWithoutPlaceholder_Async() {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") { BlockTypes = [] }),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBe(["apply:blocks"]);
+        report.FailedCount.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SynchronizeAsync_TypedAndRawBlocks_ReportsConflictBeforePreparing_Async(bool rawInDefinition) {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                ConfigurationJson: rawInDefinition ? """{"blocks":[]}""" : null,
+                EditorConfiguration: new CodeFirstEditorConfiguration(
+                    "Umbraco.BlockList", rawInDefinition ? "{}" : """{"blocks":[]}""") {
+                    BlockTypes = [],
+                }),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBeEmpty();
+        report.Items.Single().Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("both typed blocks and raw blocks");
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_TypedAndRawSetting_ReportsConflictBeforeApplying_Async() {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                ConfigurationJson: """{"validationLimit":{"max":2}}""",
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {
+                    TypedSettings = new Dictionary<string, JsonElement> {
+                        ["validationLimit"] = JsonSerializer.SerializeToElement(new { max = 4 }),
+                    },
+                }),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBeEmpty();
+        report.Items.Single().Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("validationLimit");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SynchronizeAsync_BlockReferenceNotUniqueElement_FailsWithoutPreparing_Async(bool duplicate) {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {
+                    BlockTypes = [new("element")],
+                }),
+            new(CodeFirstDefinitionKind.DocumentType, "element", "Element", null, [],
+                Settings: new(IsElement: duplicate)),
+            .. duplicate
+                ? new[] { new CodeFirstDefinition(CodeFirstDefinitionKind.DocumentType, "element", "Duplicate", null, [], Settings: new(IsElement: true)) }
+                : Array.Empty<CodeFirstDefinition>(),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldNotContain("prepare:blocks");
+        report.Items.Single(item => item.Alias == "blocks").Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single(item => item.Alias == "blocks").Message.ShouldNotBeNull().ShouldContain("element");
+    }
+
+    [Theory]
+    [InlineData(SynchronizationStatus.Failed)]
+    [InlineData(SynchronizationStatus.Skipped)]
+    public async Task SynchronizeAsync_BlockElementNotApplied_DoesNotApplyBlocks_Async(SynchronizationStatus status) {
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "blocks", "Blocks", "Umbraco.BlockList", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {
+                    BlockTypes = [new("element")],
+                }),
+            new(CodeFirstDefinitionKind.DocumentType, "element", "Element", null, [], Settings: new(IsElement: true)),
+        ]);
+        var store = new BlockRecordingStore { ElementStatus = status };
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        store.Calls.ShouldBe(["prepare:blocks", "apply:element"]);
+        report.Items.Single(item => item.Alias == "blocks").Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single(item => item.Alias == "blocks").Message.ShouldNotBeNull().ShouldContain(status.ToString());
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_Cancellation_PropagatesAsync() {
+        var registry = new TestRegistry([new(CodeFirstDefinitionKind.DataType, "text", "Text", "Umbraco.TextBox", [])]);
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, new CancellingStore(), new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => synchronizer.SynchronizeAsync(cancellation.Token));
+    }
+
     [Fact]
     public async Task SynchronizeAsync_DataTypesBeforeDocumentTypes_AppliesDependenciesFirst_Async() {
         // Arrange
@@ -228,6 +398,32 @@ public class CodeFirstSynchronizerTests {
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)
         : ICodeFirstDefinitionRegistry {
         public IReadOnlyList<CodeFirstDefinition> Definitions { get; } = definitions;
+    }
+
+    private sealed class BlockRecordingStore : ICodeFirstDefinitionStore, ICodeFirstBlockDefinitionStore {
+        public List<string> Calls { get; } = [];
+        public SynchronizationStatus ElementStatus { get; init; } = SynchronizationStatus.Updated;
+
+        public Task<SynchronizationStatus> PrepareBlockDataTypeAsync(
+            CodeFirstDefinition definition,
+            CancellationToken cancellationToken) {
+            Calls.Add($"prepare:{definition.Alias}");
+            return Task.FromResult(SynchronizationStatus.Created);
+        }
+
+        public Task<SynchronizationStatus> ApplyAsync(
+            CodeFirstDefinition definition,
+            CancellationToken cancellationToken) {
+            Calls.Add($"apply:{definition.Alias}");
+            return Task.FromResult(definition.Alias == "element" ? ElementStatus : SynchronizationStatus.Updated);
+        }
+    }
+
+    private sealed class CancellingStore : ICodeFirstDefinitionStore {
+        public Task<SynchronizationStatus> ApplyAsync(CodeFirstDefinition definition, CancellationToken cancellationToken) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(SynchronizationStatus.Unchanged);
+        }
     }
 
     private sealed class RecordingStore(string? failingAlias = null) : ICodeFirstDefinitionStore {

@@ -144,7 +144,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
             builder.AppendLine($"        public const string Alias = \"{EscapeString(editor.Alias)}\";");
             builder.AppendLine($"        public const string UiAlias = \"{EscapeString(editor.UiAlias)}\";");
             builder.AppendLine();
-            AppendConfiguration(builder, editor.ConfigurationProperties);
+            AppendConfiguration(builder, editor.Id, editor.ConfigurationProperties);
             builder.AppendLine(
                 $"        public static UmbracoEditor Definition {{ get; }} = new(Alias, UiAlias, \"{EscapeString(editor.Name)}\", \"{EscapeString(editor.Description)}\", \"{EscapeString(editor.ReturnType)}\", \"{EscapeString(editor.DocumentationUrl)}\");");
             builder.AppendLine("    }");
@@ -163,12 +163,22 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
 
     private static void AppendConfiguration(
         StringBuilder builder,
+        string editorId,
         IReadOnlyList<ConfigurationPropertyMetadata> properties) {
         builder.AppendLine();
         builder.AppendLine($"        {_generatedCodeAttribute}");
+        var baseType = editorId is "blockList" or "blockGrid" or "singleBlock" or "richTextEditor"
+            ? "CodeFirstBlockEditorConfigurationDefinition"
+            : "CodeFirstEditorConfigurationDefinition";
         builder.AppendLine(
-            "        public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition {");
+            $"        public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.{baseType} {{");
         foreach(var property in properties) {
+            builder.AppendLine("            /// <summary>");
+            foreach(var line in property.Comment.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')) {
+                builder.AppendLine($"            /// {EscapeXml(line)}");
+            }
+
+            builder.AppendLine("            /// </summary>");
             builder.AppendLine($"            public {property.CSharpType}? {property.Name} {{ get; set; }}");
         }
 
@@ -203,9 +213,10 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         foreach(var property in properties.EnumerateArray()) {
             var name = GetString(property, "name");
             var type = GetString(property, "type");
-            if(string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type)) {
+            var comment = GetString(property, "comment");
+            if(string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(comment)) {
                 throw new JsonException(
-                    $"Configuration properties for editor '{editorId}' require 'name' and 'type'.");
+                    $"Configuration properties for editor '{editorId}' require 'name', 'type' and 'comment'.");
             }
 
             var csharpType = type switch {
@@ -220,7 +231,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
                 _ => throw new JsonException(
                     $"Configuration property '{name}' on editor '{editorId}' uses unsupported type '{type}'."),
             };
-            result.Add(new ConfigurationPropertyMetadata(name!, csharpType));
+            result.Add(new ConfigurationPropertyMetadata(name!, csharpType, comment!));
         }
 
         var duplicate = result
@@ -273,13 +284,15 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
     }
 
     private sealed class ConfigurationPropertyMetadata {
-        public ConfigurationPropertyMetadata(string name, string cSharpType) {
+        public ConfigurationPropertyMetadata(string name, string cSharpType, string comment) {
             Name = name;
             CSharpType = cSharpType;
+            Comment = comment;
         }
 
         public string Name { get; }
         public string CSharpType { get; }
+        public string Comment { get; }
     }
 
     private sealed class MetadataResult {
