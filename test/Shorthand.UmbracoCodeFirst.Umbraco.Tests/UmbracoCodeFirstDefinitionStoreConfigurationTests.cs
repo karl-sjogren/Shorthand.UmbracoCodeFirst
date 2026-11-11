@@ -18,6 +18,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
         dataType.Name = "Existing";
         dataType.ParentId = -1;
         dataType.EditorUiAlias = "Umb.PropertyEditorUi.BlockList";
+        A.CallTo(() => dataType.EditorAlias).Returns("Umbraco.BlockList");
         dataType.ConfigurationData = new Dictionary<string, object> {
             ["shorthand.umbraco-codefirst"] = "blocks",
             ["blocks"] = new[] { "previous" },
@@ -56,6 +57,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
         A.CallTo(() => dataType.ConfigurationData).Returns(configuration);
         A.CallTo(() => dataType.Name).Returns("Coding language");
         A.CallTo(() => dataType.ParentId).Returns(-1);
+        A.CallTo(() => dataType.EditorAlias).Returns("Umbraco.DropDown.Flexible");
         A.CallTo(() => dataType.EditorUiAlias).Returns("Umb.PropertyEditorUi.Dropdown");
         var dataTypeService = A.Fake<IDataTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
