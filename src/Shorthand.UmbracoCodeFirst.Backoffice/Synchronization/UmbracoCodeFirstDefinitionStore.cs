@@ -190,6 +190,13 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 return SynchronizationStatus.Skipped;
             }
 
+            IDataEditor? replacementEditor = null;
+            if(existing.EditorAlias != definition.EditorAlias
+                && (definition.EditorAlias is null || !propertyEditors.TryGet(definition.EditorAlias, out replacementEditor))) {
+                throw new InvalidOperationException(
+                    $"The data type '{definition.Alias}' references unknown editor '{definition.EditorAlias}'.");
+            }
+
             _ownedDataTypes[definition.Alias] = existing;
             var typedBlockConfiguration = definition.EditorConfiguration is { } configuration
                 && (configuration.BlockTypes is not null || configuration.BlockGroups is not null
@@ -197,7 +204,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             var oldName = existing.Name;
             var oldParentId = existing.ParentId;
             var oldEditorUiAlias = existing.EditorUiAlias;
-            var oldConfiguration = typedBlockConfiguration
+            var oldEditor = existing.Editor;
+            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null
                 ? new Dictionary<string, object>(existing.ConfigurationData)
                 : null;
             try {
@@ -220,6 +228,16 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     changed = true;
                 }
 
+                if(replacementEditor is not null) {
+                    logger.LogDebug(
+                        "Changing editor alias for data type {DefinitionAlias} from {PreviousEditorAlias} to {EditorAlias}",
+                        definition.Alias,
+                        existing.EditorAlias,
+                        definition.EditorAlias);
+                    existing.Editor = replacementEditor;
+                    changed = true;
+                }
+
                 if(!string.IsNullOrWhiteSpace(configurationJson)) {
                     logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
                 }
@@ -233,6 +251,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     existing.Name = oldName;
                     existing.ParentId = oldParentId;
                     existing.EditorUiAlias = oldEditorUiAlias;
+                    existing.Editor = oldEditor;
                     existing.ConfigurationData = oldConfiguration;
                 }
 
@@ -691,6 +710,27 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             var desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
             if(existingProperty is not null) {
+                if(existingProperty.DataTypeKey != dataType.Key) {
+                    if(existingProperty.ValueStorageType != dataType.DatabaseType) {
+                        throw new InvalidOperationException(
+                            $"The {definition.Kind} '{definition.Alias}' property '{property.Alias}' cannot change " +
+                            $"to data type '{property.DataTypeAlias}' because its storage type would change from " +
+                            $"'{existingProperty.ValueStorageType}' to '{dataType.DatabaseType}'. Migrate existing values and change the data type manually.");
+                    }
+
+                    existingProperty.DataTypeId = dataType.Id;
+                    existingProperty.DataTypeKey = dataType.Key;
+                    existingProperty.PropertyEditorAlias = dataType.EditorAlias;
+                    existingProperty.ValueStorageType = dataType.DatabaseType;
+                    logger.LogDebug(
+                        "Changing data type of property {PropertyAlias} on {DefinitionKind} {DefinitionAlias} to {DataTypeAlias}",
+                        property.Alias,
+                        definition.Kind,
+                        definition.Alias,
+                        property.DataTypeAlias);
+                    changed = true;
+                }
+
                 if(ApplyPropertySettings(existingProperty, property)) {
                     logger.LogDebug(
                         "Updating property {PropertyAlias} on {DefinitionKind} {DefinitionAlias}",

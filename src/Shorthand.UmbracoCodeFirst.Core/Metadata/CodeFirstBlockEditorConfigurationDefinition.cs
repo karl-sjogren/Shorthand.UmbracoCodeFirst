@@ -13,7 +13,7 @@ public abstract class CodeFirstBlockEditorConfigurationDefinition : CodeFirstEdi
     public CodeFirstBlockValidationRange? ValidationRange { get; set; }
 
     [JsonIgnore]
-    public IReadOnlyList<IReadOnlyList<IReadOnlyList<string>>>? ToolbarRows { get; set; }
+    public List<List<List<string>>>? ToolbarRows { get; set; }
 
     [JsonIgnore]
     public IReadOnlyList<IReadOnlyList<string>>? StatusbarGroups { get; set; }

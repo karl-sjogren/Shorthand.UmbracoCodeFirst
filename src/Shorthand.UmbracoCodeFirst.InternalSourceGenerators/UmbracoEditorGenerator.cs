@@ -167,12 +167,18 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         IReadOnlyList<ConfigurationPropertyMetadata> properties) {
         builder.AppendLine();
         builder.AppendLine($"        {_generatedCodeAttribute}");
-        var baseType = editorId is "blockList" or "blockGrid" or "singleBlock" or "richTextEditor"
-            ? "CodeFirstBlockEditorConfigurationDefinition"
-            : "CodeFirstEditorConfigurationDefinition";
+        var baseType = editorId switch {
+            "richTextEditor" => "CodeFirstRichTextEditorConfigurationDefinition",
+            "blockList" or "blockGrid" or "singleBlock" => "CodeFirstBlockEditorConfigurationDefinition",
+            _ => "CodeFirstEditorConfigurationDefinition",
+        };
         builder.AppendLine(
             $"        public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.{baseType} {{");
         foreach(var property in properties) {
+            if(editorId == "richTextEditor" && property.Name is "Extensions" or "MaxImageSize" or "OverlaySize") {
+                continue;
+            }
+
             builder.AppendLine("            /// <summary>");
             foreach(var line in property.Comment.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')) {
                 builder.AppendLine($"            /// {EscapeXml(line)}");

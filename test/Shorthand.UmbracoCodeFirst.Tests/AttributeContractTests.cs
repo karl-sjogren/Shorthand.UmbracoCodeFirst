@@ -179,6 +179,62 @@ public class AttributeContractTests {
     }
 
     [Fact]
+    public void RichTextConfiguration_DefaultCollectionsAreMutableAndIndependent() {
+        // Arrange
+        var customized = new UmbracoEditors.RichTextEditor.Configuration();
+        var defaults = new UmbracoEditors.RichTextEditor.Configuration();
+
+        // Act
+        customized.Extensions.ShouldNotBeNull().Remove("Umb.Tiptap.Bold");
+        customized.Extensions.Add("Example.Extension");
+        customized.ToolbarRows.ShouldNotBeNull()[0][1].Remove("Umb.Tiptap.Toolbar.Bold");
+        customized.ToolbarRows[0][1].Add("Example.Toolbar");
+
+        // Assert
+        defaults.Extensions.ShouldNotBeNull().ShouldContain("Umb.Tiptap.Bold");
+        defaults.Extensions.ShouldNotContain("Example.Extension");
+        defaults.ToolbarRows.ShouldNotBeNull()[0][1].ShouldContain("Umb.Tiptap.Toolbar.Bold");
+        defaults.ToolbarRows[0][1].ShouldNotContain("Example.Toolbar");
+        var otherEditor = new UmbracoEditors.BlockList.Configuration();
+        otherEditor.ToolbarRows.ShouldBeNull();
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesCustomizedRichTextDefaults() {
+        // Arrange
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(CustomizedRichTextConfiguration), "Umbraco.RichText");
+
+        // Assert
+        using var json = System.Text.Json.JsonDocument.Parse(configuration.Json);
+        var extensions = json.RootElement.GetProperty("extensions").EnumerateArray()
+            .Select(item => item.GetString()).ToArray();
+        extensions.ShouldContain("Example.Extension");
+        extensions.ShouldNotContain("Umb.Tiptap.Bold");
+        json.RootElement.GetProperty("maxImageSize").GetInt32().ShouldBe(500);
+        json.RootElement.GetProperty("overlaySize").GetString().ShouldBe("medium");
+        var group = configuration.TypedSettings.ShouldNotBeNull()["toolbar"][0][1].EnumerateArray()
+            .Select(item => item.GetString()).ToArray();
+        group.ShouldContain("Example.Toolbar");
+        group.ShouldNotContain("Umb.Tiptap.Toolbar.Bold");
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_AllowsRawRichTextToolbar() {
+        // Arrange
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(RawRichTextConfiguration), "Umbraco.RichText");
+
+        // Assert
+        using var json = System.Text.Json.JsonDocument.Parse(configuration.Json);
+        json.RootElement.GetProperty("toolbar")[0][0][0].GetString().ShouldBe("Example.Toolbar");
+        json.RootElement.TryGetProperty("extensions", out _).ShouldBeFalse();
+        configuration.TypedSettings.ShouldBeNull();
+    }
+
+    [Fact]
     public void UCFTabAttribute_NameAndSortOrder_LeavesAliasNull() {
         // Arrange
         // Act
@@ -218,11 +274,31 @@ public class AttributeContractTests {
 
     private sealed class TestRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
         public TestRichTextConfiguration() {
+            Extensions = null;
+            MaxImageSize = null;
+            OverlaySize = null;
             BlockTypes = [];
             ToolbarRows = [[["bold", "italic"]]];
             StatusbarGroups = [["words"]];
             EditorDimensions = new() { Height = 400 };
             StylesheetPaths = ["/editor.css"];
+        }
+    }
+
+    private sealed class CustomizedRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
+        public CustomizedRichTextConfiguration() {
+            Extensions!.Remove("Umb.Tiptap.Bold");
+            Extensions.Add("Example.Extension");
+            ToolbarRows![0][1].Remove("Umb.Tiptap.Toolbar.Bold");
+            ToolbarRows[0][1].Add("Example.Toolbar");
+        }
+    }
+
+    private sealed class RawRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
+        public RawRichTextConfiguration() {
+            Extensions = null;
+            ToolbarRows = null;
+            Toolbar = System.Text.Json.JsonSerializer.SerializeToElement(new[] { new[] { new[] { "Example.Toolbar" } } });
         }
     }
 }

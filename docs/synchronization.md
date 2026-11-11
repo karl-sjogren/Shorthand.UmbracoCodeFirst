@@ -117,7 +117,7 @@ description markers are removed during synchronization.
 
 ## Data Types
 
-1. Look for an owned Data Type with the alias. If it exists, update name, editor UI alias and merge
+1. Look for an owned Data Type with the alias. If it exists, update name, editor and editor UI aliases and merge
    `ConfigurationJson` (only saved if something changed; configuration merging currently always
    counts as a change when configuration JSON is present).
 2. Otherwise resolve the editor (`EditorAlias`) from Umbraco's property editors and create the Data
@@ -126,6 +126,11 @@ description markers are removed during synchronization.
 Created or found Data Types are cached for the run so Document Types can reference them
 immediately. Property Data Type references resolve only against owned (code-first) Data Types; an
 unknown reference fails that Document Type.
+
+Changing an existing Data Type's editor does not convert stored values or change its database
+storage type. Different editors can expect incompatible value formats, so inspect existing content
+and migrate it as needed before changing the editor. An unknown replacement editor fails
+synchronization without applying the change.
 
 Typed block Data Types are staged: a new Data Type is first created with a minimal configuration,
 element types are synchronized, and then block references are resolved to persisted element keys.
@@ -149,7 +154,12 @@ For an existing **owned** Document Type, the following are reconciled:
 - Tabs and groups: created if missing; name, sort order and type (tab vs group) updated
 - Properties: created if missing; existing properties have name, description, sort order,
   mandatory, validation expression/message and label-on-top updated, and are moved to the desired
-  tab/group
+  tab/group. Their Data Type is updated when the old and new storage types match.
+
+Changing a property's Data Type does not migrate or convert its existing values. Editors can use
+different value formats even when their storage types match, so check existing content and plan any
+needed migration before changing the definition. A change to a different storage type fails
+synchronization for that definition; migrate existing values and change the Data Type manually.
 
 ### Explicit cleanup and dry-run diagnostics
 
@@ -161,7 +171,6 @@ explicit operation. Manual or unowned definitions and composition members are pr
 
 - Deleting Data Types, Document Types, properties, tabs or groups (removing something from code
   leaves it in Umbraco)
-- Changing the Data Type of an existing property
 - Touching items that are not code-first-owned
 - Removing compositions that were not previously added by code-first
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
@@ -32,6 +33,29 @@ public class GeneratedDefinitionsRegistryTests {
         definition.EditorAlias.ShouldBe("Umbraco.Plain.String");
         definition.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.CodeEditor");
         definition.EffectiveConfigurationJson.ShouldBe("{\"height\":600,\"lineNumbers\":true}");
+    }
+
+    [Fact]
+    public void AppRegistry_RichText_ConfiguresToolbarAndFormattingExtensions() {
+        // Arrange
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+
+        // Act
+        var definition = registry.Definitions.Single(definition => definition.Name == "Rich Text");
+
+        // Assert
+        definition.EditorAlias.ShouldBe("Umbraco.RichText");
+        definition.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.Tiptap");
+        var configuration = definition.EditorConfiguration.ShouldNotBeNull();
+        using var json = JsonDocument.Parse(configuration.Json);
+        var extensions = json.RootElement.GetProperty("extensions").EnumerateArray()
+            .Select(item => item.GetString()).ToArray();
+        extensions.ShouldContain("Umb.Tiptap.Bold");
+        extensions.ShouldContain("Umb.Tiptap.Italic");
+        var toolbar = configuration.TypedSettings.ShouldNotBeNull()["toolbar"];
+        toolbar[0].EnumerateArray()
+            .SelectMany(group => group.EnumerateArray().Select(item => item.GetString()))
+            .ShouldContain("Umb.Tiptap.Toolbar.Bold");
     }
 
     [Fact]

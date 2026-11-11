@@ -129,16 +129,22 @@ public sealed class ArticleSingleBlockConfiguration : UmbracoEditors.SingleBlock
 public sealed class ArticleRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
     public ArticleRichTextConfiguration() {
         BlockTypes = [new(typeof(TextBlock)) { DisplayInline = true }];
-        ToolbarRows = [[["Umb.Tiptap.Toolbar.Bold", "Umb.Tiptap.Toolbar.Italic"]]];
+        Extensions?.Add("My.Tiptap.Extension");
+        ToolbarRows?[0][1].Remove("Umb.Tiptap.Toolbar.Underline");
         StatusbarGroups = [["Umb.Tiptap.Statusbar.WordCount"]];
         EditorDimensions = new() { Height = 400 };
         StylesheetPaths = ["/editor.css"];
-        Extensions = ["Umb.Tiptap.RichTextEssentials"];
         MaxImageSize = 1000;
         OverlaySize = "medium";
     }
 }
 ```
+
+Tiptap's configuration class starts with Umbraco's default toolbar, extensions, image size, and
+overlay size. Each instance has its own mutable `Extensions` and nested `ToolbarRows` lists. Add or
+remove both the toolbar action and its extension as needed. Set either list to `null` to leave it
+unspecified, or clear it to explicitly use an empty list. When using raw `Toolbar` JSON, set
+`ToolbarRows = null` to avoid specifying the toolbar twice.
 
 Other supported options are exposed by the generated configuration classes and
 `CodeFirstBlockType`, `CodeFirstBlockArea`, and `CodeFirstBlockAreaPermission`. The deprecated

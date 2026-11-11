@@ -128,14 +128,23 @@ public class UmbracoEditorGeneratorTests {
             .SelectMany(type => type.Members.OfType<PropertyDeclarationSyntax>())
             .ToArray();
         properties.Length.ShouldBe(editors.EnumerateArray().Sum(editor =>
-            editor.GetProperty("configuration").GetProperty("properties").GetArrayLength()));
+            editor.GetProperty("configuration").GetProperty("properties").GetArrayLength()) - 3);
         properties.ShouldAllBe(property => property.GetLeadingTrivia().ToFullString().Contains("/// <summary>", StringComparison.Ordinal));
-        foreach(var editorName in new[] { "BlockList", "BlockGrid", "SingleBlock", "RichTextEditor" }) {
+        foreach(var editorName in new[] { "BlockList", "BlockGrid", "SingleBlock" }) {
             var editor = generatedTypes.Single(type => type.Identifier.ValueText == editorName);
             var configuration = editor.Members.OfType<ClassDeclarationSyntax>().Single(type => type.Identifier.ValueText == "Configuration");
             configuration.BaseList.ShouldNotBeNull().Types.Single().ToString()
                 .ShouldBe("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstBlockEditorConfigurationDefinition");
         }
+
+        var richText = generatedTypes.Single(type => type.Identifier.ValueText == "RichTextEditor");
+        var richTextConfiguration = richText.Members.OfType<ClassDeclarationSyntax>()
+            .Single(type => type.Identifier.ValueText == "Configuration");
+        richTextConfiguration.BaseList.ShouldNotBeNull().Types.Single().ToString()
+            .ShouldBe("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstRichTextEditorConfigurationDefinition");
+        richTextConfiguration.Members.OfType<PropertyDeclarationSyntax>()
+            .Select(property => property.Identifier.ValueText)
+            .ShouldNotContain(name => name == "Extensions" || name == "MaxImageSize" || name == "OverlaySize");
     }
 
     [Fact]

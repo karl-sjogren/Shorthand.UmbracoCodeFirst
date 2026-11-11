@@ -14,6 +14,8 @@ using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
+using Umbraco.Cms.Core.Models.Editors;
+using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Strings;
 
@@ -23,6 +25,187 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 [Collection("Umbraco integration")]
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
+    [Fact]
+    public async Task Store_RichTextToolbar_UpdatesExistingDataType_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definition = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Single(item => item.Alias == UmbracoBlogRichTextDataType.Alias) with {
+            Alias = "integrationRichTextToolbar",
+            Name = "Integration Rich Text Toolbar",
+        };
+        var original = definition with {
+            EditorConfiguration = CodeFirstEditorConfiguration.FromJson("Umbraco.RichText", "{}"),
+        };
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(original, token);
+        var dataType = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+        dataType.ConfigurationData["manualSetting"] = "preserved";
+        (await dataTypes.UpdateAsync(dataType, Constants.Security.SuperUserKey)).Success.ShouldBeTrue();
+
+        // Act
+        var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var result = await restartedStore.ApplyAsync(definition, token);
+        var saved = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+        var repeated = await restartedStore.ApplyAsync(definition, token);
+
+        // Assert
+        result.Status.ShouldBe(SynchronizationStatus.Updated);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        saved.Key.ShouldBe(dataType.Key);
+        saved.ConfigurationData["manualSetting"].ShouldBe("preserved");
+        dataTypes.ValidateConfigurationData(saved).ShouldBeEmpty();
+        JsonSerializer.SerializeToElement(saved.ConfigurationData["extensions"]).EnumerateArray()
+            .Select(item => item.GetString()).ShouldContain("Umb.Tiptap.Bold");
+        JsonSerializer.SerializeToElement(saved.ConfigurationData["toolbar"])[0].EnumerateArray()
+            .SelectMany(group => group.EnumerateArray().Select(item => item.GetString()))
+            .ShouldContain("Umb.Tiptap.Toolbar.Bold");
+    }
+
+    [Fact]
+    public async Task Store_CustomizedRichTextDefaults_PersistsCollectionChanges_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definition = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Single(item => item.Alias == UmbracoBlogRichTextDataType.Alias) with {
+            Alias = "integrationCustomizedRichText",
+            Name = "Integration Customized Rich Text",
+            EditorConfiguration = CodeFirstEditorConfiguration.FromType(
+                typeof(IntegrationCustomizedRichTextConfiguration), "Umbraco.RichText"),
+        };
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+
+        // Act
+        var result = await store.ApplyAsync(definition, TestContext.Current.CancellationToken);
+        var saved = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+
+        // Assert
+        result.Status.ShouldBe(SynchronizationStatus.Created);
+        dataTypes.ValidateConfigurationData(saved).ShouldBeEmpty();
+        var extensions = JsonSerializer.SerializeToElement(saved.ConfigurationData["extensions"])
+            .EnumerateArray().Select(item => item.GetString()).ToArray();
+        extensions.ShouldNotContain("Umb.Tiptap.Bold");
+        extensions.ShouldContain("Umb.Tiptap.Strike");
+        var toolbar = JsonSerializer.SerializeToElement(saved.ConfigurationData["toolbar"])[0][1]
+            .EnumerateArray().Select(item => item.GetString()).ToArray();
+        toolbar.ShouldNotContain("Umb.Tiptap.Toolbar.Bold");
+        toolbar.ShouldContain("Umb.Tiptap.Toolbar.Strike");
+    }
+
+    [Fact]
+    public async Task Store_ChangedDataTypeEditor_UpdatesTagsEditorAndPreservesValues_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var original = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            "integrationChangedTags",
+            "Integration Changed Tags",
+            UmbracoEditors.TextBox.Alias,
+            [],
+            EditorUiAlias: UmbracoEditors.Tags.UiAlias,
+            ConfigurationJson: """{"group":"integration"}""");
+        var tagsDefinition = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Single(definition => definition.Alias == UmbracoBlogTagsDataType.Alias);
+        var corrected = original with { EditorAlias = tagsDefinition.EditorAlias };
+        var document = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType,
+            "integrationChangedTagsDocument",
+            "Integration Changed Tags Document",
+            null,
+            [new("tags", "Tags", original.Alias)],
+            Settings: new(AllowAsRoot: true));
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var contentService = services.GetRequiredService<IContentService>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(original, token);
+        await store.ApplyAsync(document, token);
+        var content = contentService.Create("Tags test", -1, document.Alias);
+        const string storedValue = """["example"]""";
+        content.SetValue("tags", storedValue);
+        contentService.Save(content).Success.ShouldBeTrue();
+        var malformedContent = contentService.Create("Malformed tags test", -1, document.Alias);
+        const string malformedValue = "System.Collections.Generic.List`1[System.String]";
+        malformedContent.SetValue("tags", malformedValue);
+        contentService.Save(malformedContent).Success.ShouldBeTrue();
+
+        // Act
+        var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var result = await restartedStore.ApplyAsync(corrected, token);
+        var dataType = (await dataTypes.GetAllAsync()).Single(item => item.Name == original.Name);
+        var reopened = contentService.GetById(content.Id)!;
+        var property = reopened.Properties["tags"]!;
+        var editors = services.GetRequiredService<PropertyEditorCollection>();
+        var valueEditor = editors[property.PropertyType.PropertyEditorAlias]!.GetValueEditor();
+        var editorValue = valueEditor.ToEditor(property);
+        var savedValue = valueEditor.FromEditor(new ContentPropertyData(new[] { "example" }, dataType.ConfigurationObject), null);
+        var malformedReopened = contentService.GetById(malformedContent.Id)!;
+        var malformedEditorValue = valueEditor.ToEditor(malformedReopened.Properties["tags"]!);
+
+        // Assert
+        result.Status.ShouldBe(SynchronizationStatus.Updated);
+        dataType.EditorAlias.ShouldBe(UmbracoEditors.Tags.Alias);
+        dataType.EditorUiAlias.ShouldBe(UmbracoEditors.Tags.UiAlias);
+        dataType.ConfigurationData["group"].ShouldBe("integration");
+        dataTypes.ValidateConfigurationData(dataType).ShouldBeEmpty();
+        property.PropertyType.PropertyEditorAlias.ShouldBe(UmbracoEditors.Tags.Alias);
+        reopened.GetValue<string>("tags").ShouldBe(storedValue);
+        editorValue.ShouldBeOfType<string[]>().ShouldBe(["example"]);
+        savedValue.ShouldBe(storedValue);
+        malformedReopened.GetValue<string>("tags").ShouldBe(malformedValue);
+        malformedEditorValue.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Store_UnknownReplacementEditor_LeavesDataTypeUnchanged_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            "integrationUnknownEditor",
+            "Integration Known Editor",
+            UmbracoEditors.TextBox.Alias,
+            [],
+            EditorUiAlias: UmbracoEditors.TextBox.UiAlias);
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(definition, token);
+
+        // Act
+        var exception = await Should.ThrowAsync<InvalidOperationException>(() => store.ApplyAsync(
+            definition with { Name = "Changed name", EditorAlias = "Missing.Editor" }, token));
+        var dataType = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+
+        // Assert
+        exception.Message.ShouldContain("Missing.Editor");
+        dataType.EditorAlias.ShouldBe(UmbracoEditors.TextBox.Alias);
+        dataType.EditorUiAlias.ShouldBe(UmbracoEditors.TextBox.UiAlias);
+    }
+
     [Fact]
     public async Task AppRegistry_AllowedChildren_ArePersistedAndRestored_Async() {
         // Arrange
@@ -116,6 +299,175 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     }
 
     [Fact]
+    public async Task SynchronizeAsync_ChangedPropertyDataType_UpdatesExistingElement_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definitions = new GeneratedCodeFirstDefinitionRegistry().Definitions;
+        var editor = definitions.Single(definition => definition.Alias == UmbracoBlogCodeEditorDataType.Alias);
+        var language = definitions.Single(definition => definition.Alias == UmbracoBlogCodingLanguageDataType.Alias);
+        var element = definitions.Single(definition => definition.Alias == CodeBlock.ModelTypeAlias) with {
+            Alias = "integrationChangingEditor",
+            Name = "Integration Changing Editor",
+        };
+        var original = element with {
+            Properties = element.Properties.Select(property => property.Alias == "code"
+                ? property with { DataTypeAlias = language.Alias }
+                : property).ToArray(),
+        };
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(language, token);
+        await store.ApplyAsync(editor, token);
+        await store.ApplyAsync(original, token);
+        var originalProperty = contentTypes.Get(element.Alias)!.PropertyTypes.Single(property => property.Alias == "code");
+        var propertyKey = originalProperty.Key;
+        var languageType = (await dataTypes.GetAllAsync()).Single(dataType => dataType.Name == language.Name);
+        var editorType = (await dataTypes.GetAllAsync()).Single(dataType => dataType.Name == editor.Name);
+        var synchronizer = new CodeFirstSynchronizer(
+            new TestRegistry([language, editor, element]),
+            store,
+            new SynchronizationReportStore(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(token);
+        var updated = contentTypes.Get(element.Alias);
+        var repeated = await synchronizer.SynchronizeAsync(token);
+
+        // Assert
+        originalProperty.DataTypeKey.ShouldBe(languageType.Key);
+        languageType.DatabaseType.ShouldBe(editorType.DatabaseType);
+        report.Items.Single(item => item.Alias == element.Alias).Status.ShouldBe(SynchronizationStatus.Updated);
+        updated.ShouldNotBeNull();
+        var code = updated.PropertyTypes.Single(property => property.Alias == "code");
+        code.Key.ShouldBe(propertyKey);
+        code.DataTypeKey.ShouldBe(editorType.Key);
+        code.DataTypeId.ShouldBe(editorType.Id);
+        code.PropertyEditorAlias.ShouldBe(editorType.EditorAlias);
+        code.ValueStorageType.ShouldBe(editorType.DatabaseType);
+        updated.PropertyTypes.Single(property => property.Alias == "language").DataTypeKey.ShouldBe(languageType.Key);
+        repeated.FailedCount.ShouldBe(0);
+        contentTypes.Get(element.Alias)!.PropertyTypes.Single(property => property.Alias == "code")
+            .DataTypeKey.ShouldBe(editorType.Key);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_ChangedPropertyStorageType_FailsWithoutUpdatingElement_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var integerDefinition = new IntegrationTestDefinitionRegistry().Definitions
+            .Single(definition => definition.Alias == IntegrationIntegerDataType.Alias);
+        var integer = integerDefinition with {
+            Alias = "integrationIncompatibleInteger",
+            Name = "Integration Incompatible Integer",
+        };
+        var editor = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Single(definition => definition.Alias == UmbracoBlogCodeEditorDataType.Alias);
+        var original = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType,
+            "integrationIncompatibleProperty",
+            "Integration Incompatible Property",
+            null,
+            [new("value", "Original value", integer.Alias)],
+            Settings: new(IsElement: true));
+        var updated = original with {
+            Name = "Updated name",
+            Properties = [new("value", "Updated value", editor.Alias)],
+        };
+        var store = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(integer, token);
+        await store.ApplyAsync(editor, token);
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var integerType = (await dataTypes.GetAllAsync()).Single(dataType => dataType.Name == integer.Name);
+        integerType.DatabaseType = ValueStorageType.Integer;
+        var dataTypeUpdate = await dataTypes.UpdateAsync(integerType, Constants.Security.SuperUserKey);
+        dataTypeUpdate.Success.ShouldBeTrue();
+        store = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        await store.ApplyAsync(original, token);
+        var originalProperty = contentTypes.Get(original.Alias)!.PropertyTypes.Single();
+        var editorType = (await dataTypes.GetAllAsync())
+            .Single(dataType => dataType.Name == editor.Name);
+        originalProperty.ValueStorageType.ShouldNotBe(editorType.DatabaseType);
+        var synchronizer = new CodeFirstSynchronizer(
+            new TestRegistry([integer, editor, updated]),
+            store,
+            new SynchronizationReportStore(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(token);
+        var persisted = contentTypes.Get(original.Alias);
+
+        // Assert
+        var item = report.Items.Single(item => item.Alias == original.Alias);
+        item.Status.ShouldBe(SynchronizationStatus.Failed);
+        item.Message.ShouldNotBeNull().ShouldContain("storage type");
+        persisted.ShouldNotBeNull();
+        persisted.Name.ShouldBe(original.Name);
+        persisted.PropertyTypes.Single().ShouldSatisfyAllConditions(
+            property => property.Name.ShouldBe("Original value"),
+            property => property.DataTypeKey.ShouldBe(originalProperty.DataTypeKey),
+            property => property.Key.ShouldBe(originalProperty.Key));
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_ChangedPropertyDataType_PreservesExistingStoredValue_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definitions = new GeneratedCodeFirstDefinitionRegistry().Definitions;
+        var language = definitions.Single(definition => definition.Alias == UmbracoBlogCodingLanguageDataType.Alias);
+        var editor = definitions.Single(definition => definition.Alias == UmbracoBlogCodeEditorDataType.Alias);
+        var original = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType,
+            "integrationPropertyValue",
+            "Integration Property Value",
+            null,
+            [new("value", "Value", language.Alias)],
+            Settings: new(AllowAsRoot: true));
+        var changed = original with { Properties = [new("value", "Value", editor.Alias)] };
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var contentService = services.GetRequiredService<IContentService>();
+        var token = TestContext.Current.CancellationToken;
+        await store.ApplyAsync(language, token);
+        await store.ApplyAsync(editor, token);
+        await store.ApplyAsync(original, token);
+        var content = contentService.Create("Test content", -1, original.Alias);
+        const string value = """["csharp"]""";
+        content.SetValue("value", value);
+        contentService.Save(content).Success.ShouldBeTrue();
+
+        // Act
+        var result = await store.ApplyAsync(changed, token);
+        var persisted = contentService.GetById(content.Id);
+
+        // Assert
+        result.Status.ShouldBe(SynchronizationStatus.Updated);
+        persisted.ShouldNotBeNull();
+        persisted.GetValue<string>("value").ShouldBe(value);
+    }
+
+    [Fact]
     public async Task Store_DropdownConfiguration_CreatesAndUpdatesDataType_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
@@ -169,6 +521,14 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         public IntegrationDropdownConfiguration() {
             Items = JsonSerializer.SerializeToElement(new[] { "csharp", "javascript" });
             Multiple = false;
+        }
+    }
+
+    public sealed class IntegrationCustomizedRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
+        public IntegrationCustomizedRichTextConfiguration() {
+            Extensions?.Remove("Umb.Tiptap.Bold");
+            ToolbarRows?[0][1].Remove("Umb.Tiptap.Toolbar.Bold");
+            ToolbarRows?[0][1].Add("Umb.Tiptap.Toolbar.Strike");
         }
     }
 

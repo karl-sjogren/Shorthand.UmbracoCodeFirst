@@ -35,6 +35,8 @@
   - Start from the AppHost project: `cd src/Shorthand.UmbracoCodeFirst.AppHost` then `aspire start`.
   - Stop the AppHost resources from the same directory with `aspire stop`.
   - The local Umbraco backoffice is normally available at `https://localhost:44363/umbraco/`.
+  - Local test-site sign-in uses the unattended credentials in
+    `test/Shorthand.UmbracoCodeFirst.Umbraco.Tests/UmbracoIntegrationFixture.cs`.
   - Use the AppHost for smoke testing so SQL Server, storage, Redis, and the backoffice client
     process are started with the same configuration as the local environment.
 - Live smoke verification uses the local Aspire site at `https://localhost:44363/umbraco/`.
