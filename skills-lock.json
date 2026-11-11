@@ -1,0 +1,473 @@
+{
+  "version": 2,
+  "skills": {
+    "package-script-writer": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/package-script-writer/SKILL.md",
+      "computedHash": "b6914bea3df185f781969d153ae53cbac19811d64645214455f78680e2076196"
+    },
+    "umbraco-add-extension-reference": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-add-extension-reference/SKILL.md",
+      "computedHash": "9021e9568bb3a796a3081e54ddf457f44d574108f98ddb83812c648cfb005349"
+    },
+    "umbraco-auth-provider": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-auth-provider/SKILL.md",
+      "computedHash": "7d5589d1716c731f3759d414ddfc94d2679ac054aef008999258a57f0d0463ea"
+    },
+    "umbraco-backoffice": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-backoffice/SKILL.md",
+      "computedHash": "5bc1d34f108672b0eeafdd7059d9db90edb697625e263b7f33528032703ea539"
+    },
+    "umbraco-block-editor-custom-view": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-block-editor-custom-view/SKILL.md",
+      "computedHash": "a07cb3942d6495a38074d2bd019a390cf532b1e49c4d9c08d32bbd9c38a62ff5"
+    },
+    "umbraco-bundle": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-bundle/SKILL.md",
+      "computedHash": "da7241fa825e5cf38b3cd86f07ea4652064897c07d06f43bc04716ec5f1240e3"
+    },
+    "umbraco-chrome-navigation": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-chrome-navigation/SKILL.md",
+      "computedHash": "6a8d6194582b0488b6d44183b7eef4c8cec4e47d963352d623c341af76bfecfd"
+    },
+    "umbraco-collection": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-collection/SKILL.md",
+      "computedHash": "41f3d1eab6a704b4ebb9b792d165d084bcf7b0adf0105fc2853078a087c66b4f"
+    },
+    "umbraco-collection-action": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-collection-action/SKILL.md",
+      "computedHash": "9e050906d8cb5e4cfc31877050eb8c08ca76059bace725b8925ea19da1424f57"
+    },
+    "umbraco-collection-view": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-collection-view/SKILL.md",
+      "computedHash": "5354c3f3b32441161b552ea3612622f99c027f46546edff3f9ea12f5c7f5afdb"
+    },
+    "umbraco-conditions": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-conditions/SKILL.md",
+      "computedHash": "4ee3a316b10d48bf4ca62f836163aea08719b5d0f588443ceb112b567b5d0c8a"
+    },
+    "umbraco-context-api": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-context-api/SKILL.md",
+      "computedHash": "4180d0d25e3807ac81a2313f8595c12b31d6b95e3d638e2b6e736d30e211b5e1"
+    },
+    "umbraco-controllers": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-controllers/SKILL.md",
+      "computedHash": "e6ce5cc0d6d95f93849cd9509395321269a398d6c44468d9299dfbeb62774682"
+    },
+    "umbraco-current-user-action": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-current-user-action/SKILL.md",
+      "computedHash": "f7381cc18e4ccba4d72e1cbc377e5414cf7ce3fc0a50dbc1b1275443c083cf2c"
+    },
+    "umbraco-dashboard": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-dashboard/SKILL.md",
+      "computedHash": "c90ac7fac221d46b709cd455cc43474efb274e4cbd74ea89a9946c19e124abbf"
+    },
+    "umbraco-dynamic-root": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-dynamic-root/SKILL.md",
+      "computedHash": "2aba30bbd873440e205c02ff53d7b6b7cd3d59d41f265a57e5e9ff7ad4e83dc4"
+    },
+    "umbraco-e2e-testing": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-e2e-testing/SKILL.md",
+      "computedHash": "b6bcb6faa66d7887c6279e360dee12640eda837b84526ab6b52e8a546b34f491"
+    },
+    "umbraco-entity-actions": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-entity-actions/SKILL.md",
+      "computedHash": "c76bf0ce4a40f85ef4b280a5caa674c9056b2d16f9a50803a770ac4939c19c35"
+    },
+    "umbraco-entity-bulk-actions": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-entity-bulk-actions/SKILL.md",
+      "computedHash": "0528205f9a52cfcc060869ee38d15f49ad6d3fbf88da758c9e3d3022b949729a"
+    },
+    "umbraco-entity-create-option-action": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-entity-create-option-action/SKILL.md",
+      "computedHash": "2915f99545a9fd39b8141f51275ea25236162d28049904db757b064711ae49dd"
+    },
+    "umbraco-entry-point": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-entry-point/SKILL.md",
+      "computedHash": "60eb291b6ff64a4e50c2b11f093300765912ed1fad08ce778dfcee9eed5c053c"
+    },
+    "umbraco-example-generator": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-example-generator/SKILL.md",
+      "computedHash": "fa6c0cbf26508b08c39007884ca167da7afeac65d8555a170372355cfa08f188"
+    },
+    "umbraco-extension-registry": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-extension-registry/SKILL.md",
+      "computedHash": "2d1841399dcbdd8311397d60132a11468dbd0030b6d26b925d6b523d34ac61fc"
+    },
+    "umbraco-extension-template": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-extension-template/SKILL.md",
+      "computedHash": "1b5f788775cd408ab8bb92076c0d96cf4bed6c5e194e0bad4e88eef4d25710b0"
+    },
+    "umbraco-file-upload-preview": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-file-upload-preview/SKILL.md",
+      "computedHash": "8ed5d76a608c5cb308d4f682d5cb8d77a3371c4a06bb38d4a6fe850b1ac0208a"
+    },
+    "umbraco-global-context": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-global-context/SKILL.md",
+      "computedHash": "d17fe7a44ea69815958f551e07370e6e7e7adcd399cd12dba7417d08ada52361"
+    },
+    "umbraco-granular-user-permissions": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-granular-user-permissions/SKILL.md",
+      "computedHash": "37e7b6bf4efcf1320594529946e4e1ea3105963229d1714ddba1e91e5bae9cc3"
+    },
+    "umbraco-header-apps": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-header-apps/SKILL.md",
+      "computedHash": "b8767b96332e51956193488038dce456adc2f21b8f3c43bc44b98ca0ce24fa30"
+    },
+    "umbraco-health-check": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-health-check/SKILL.md",
+      "computedHash": "7e5239f713b174e442656894a58ab3a9e40ab012e5c5d15150b5120eeb585ced"
+    },
+    "umbraco-icons": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-icons/SKILL.md",
+      "computedHash": "cd4dc4f48ded166d02d58a433f8f6576a81270eb073f97253e7a5252df1b2ddf"
+    },
+    "umbraco-kinds": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-kinds/SKILL.md",
+      "computedHash": "39894fb65c741751ce6af4e699e557c1e36199b40c337eb51a0bbfcde6c29915"
+    },
+    "umbraco-localization": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-localization/SKILL.md",
+      "computedHash": "b73ed96d5a181d5793bdbcce1d20486be9c8e0042d91cdc9cb5f7aa2b61c72c0"
+    },
+    "umbraco-manifest-picker": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-manifest-picker/SKILL.md",
+      "computedHash": "dc0090efe9985e19655e2ebc4a209580a855b44e64ff37e8a6764c60c0656f2c"
+    },
+    "umbraco-menu": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-menu/SKILL.md",
+      "computedHash": "db4062833490e8d0d2fe909169e3afa9766023823931172cfbf73488f00fc0ca"
+    },
+    "umbraco-menu-items": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-menu-items/SKILL.md",
+      "computedHash": "b4e6fa362450761684d25727b7766204b90531be1e89c483ef3b1cc0f7e1e0c5"
+    },
+    "umbraco-mfa-login-provider": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-mfa-login-provider/SKILL.md",
+      "computedHash": "28b7a64b5c55d33604e49ff57c38bda60ed17be4613117400ad26056dae5e95e"
+    },
+    "umbraco-mocked-backoffice": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-mocked-backoffice/SKILL.md",
+      "computedHash": "7d950aa8ef4b7290d34eac6a4de5874e30b1b546691ec2150870be649d217497"
+    },
+    "umbraco-modals": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-modals/SKILL.md",
+      "computedHash": "ba4cc73c500fc75f8de26cb93db45e65fd395a362ed75a91a1b3bb42d5f540cd"
+    },
+    "umbraco-monaco-markdown-editor-action": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-monaco-markdown-editor-action/SKILL.md",
+      "computedHash": "23b740d117f38af4581d46cb7001530fd74d3ddc31b822ea29da198302b35db2"
+    },
+    "umbraco-msw-testing": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-msw-testing/SKILL.md",
+      "computedHash": "244521eaeb712998d5d018b3d87446adbe2b855c9a98888bf91915f4d64d64a7"
+    },
+    "umbraco-notifications": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-notifications/SKILL.md",
+      "computedHash": "9d6781d49c707720ff43bf43fd615c8074bc1bedbf88c0759f128bbdc9f1e9e1"
+    },
+    "umbraco-openapi-client": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-openapi-client/SKILL.md",
+      "computedHash": "b172f22ec3ab578c10bcaa59204abc385b135d21fccea04269f1734cd1df83a0"
+    },
+    "umbraco-package-view": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-package-view/SKILL.md",
+      "computedHash": "3e52723d4b4a64f8c396483ea3fc66f900b268feb07b7652b822d836599dd565"
+    },
+    "umbraco-picker-data-source": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-picker-data-source/SKILL.md",
+      "computedHash": "f44b1009c87e098925567b5406c284f38d5169bb185e7f92dea56cf026d1d809"
+    },
+    "umbraco-playwright-testhelpers": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-playwright-testhelpers/SKILL.md",
+      "computedHash": "78976e8468b31e5925e3c866b27357bfc1d18b2056d5915fca16964698d46098"
+    },
+    "umbraco-preview-app-provider": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-preview-app-provider/SKILL.md",
+      "computedHash": "5061c9eb7d0ea73b7bd88e8d79d2c2ec26ba8e417b05f5ec5142014e6b6c1999"
+    },
+    "umbraco-property-action": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-property-action/SKILL.md",
+      "computedHash": "3afdc5955051f6b60f6962234934e4262e4e8a1555c18f609bd9573e2721beef"
+    },
+    "umbraco-property-editor-schema": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-property-editor-schema/SKILL.md",
+      "computedHash": "4534266e795db6e2e744b20a608be94013175b73f159e250b8ccd537afac7953"
+    },
+    "umbraco-property-editor-ui": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-property-editor-ui/SKILL.md",
+      "computedHash": "8608ec6658bb0af4093949cb99c95c6717c95d5504e2495360141d1e8db3cb23"
+    },
+    "umbraco-property-value-preset": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-property-value-preset/SKILL.md",
+      "computedHash": "3d159f43a078640a956121baa91e1a5f736e6c65389301c471fe41a7cde57785"
+    },
+    "umbraco-quickstart": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-quickstart/SKILL.md",
+      "computedHash": "16c4134a6db86d4e7783245ce181f9d181486f9a1c03b31e87028ee4412aa613"
+    },
+    "umbraco-repository-pattern": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-repository-pattern/SKILL.md",
+      "computedHash": "33b6f431c67f72722fbca7569c140597c0da65212ddea722e4ea1e8c38c67781"
+    },
+    "umbraco-review-checks": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-review-checks/SKILL.md",
+      "computedHash": "42aa8c7429509b3828c93009d4d73ba0435f87c11d57628999c2f7ba11f593ad"
+    },
+    "umbraco-routing": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-routing/SKILL.md",
+      "computedHash": "ae335f2dbefdb0c6217943a33d28198328b3ab6d3878fb9b828c6df1b678928d"
+    },
+    "umbraco-search-provider": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-search-provider/SKILL.md",
+      "computedHash": "bf05c4364ba3c7cffd2139c8999686a24cff96c4061c00cfb7fa975fbf16d6ad"
+    },
+    "umbraco-search-result-item": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-search-result-item/SKILL.md",
+      "computedHash": "c7ba389dac67dc5651c49973525a6dd60225ca71dde638a9989ff400c620550a"
+    },
+    "umbraco-sections": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-sections/SKILL.md",
+      "computedHash": "94e9393a04c4dee70a3211c7f1674d59b980745dd8e129664cd1c085895e7afa"
+    },
+    "umbraco-skill-code-analyzer": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/umbraco-skill-code-analyzer/SKILL.md",
+      "computedHash": "6b04dee880c7d2ba2286d658b78322c9c7a41c5ecdad065d8db6097054556c98"
+    },
+    "umbraco-skill-test-runner": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/umbraco-skill-test-runner/SKILL.md",
+      "computedHash": "dd339abb321a25fdcefd6ddee6fb4ab357c25a287db8734fb964a7465b934390"
+    },
+    "umbraco-skill-validator": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/umbraco-skill-validator/SKILL.md",
+      "computedHash": "527003c48660f5e1e079a6cbaf57ce85d1440b6c1ecbe1eab0b09320f5d24bcb"
+    },
+    "umbraco-sorter": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-sorter/SKILL.md",
+      "computedHash": "265ad2f4bda49837ee7f0f3734ff417ec4105e5035bd004416e62ecf77c237e6"
+    },
+    "umbraco-state-management": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-state-management/SKILL.md",
+      "computedHash": "d62b7c313f8c2b1aae2b722aee792bfa2ce9872416358f447f4814cae07f0a6c"
+    },
+    "umbraco-test-builders": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-test-builders/SKILL.md",
+      "computedHash": "b232177c29878f3720521decef7024753d642f864acbcfbfca3ed1a78c967d3d"
+    },
+    "umbraco-testing": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-testing/SKILL.md",
+      "computedHash": "c9a1c06a602f7954cd031e51e3f9a6ea5463fcd54993d7343db604e18904fbb8"
+    },
+    "umbraco-theme": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-theme/SKILL.md",
+      "computedHash": "6ac493fe99688cebf61c6f28210ca244a633ee9f73699d70145f0e3f3a8b1d5a"
+    },
+    "umbraco-tiptap-extension": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-tiptap-extension/SKILL.md",
+      "computedHash": "cff32043b3741cdd435dcd363bd9bee05d9b7c433574b70e983785c0a652fa63"
+    },
+    "umbraco-tiptap-statusbar-extension": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-tiptap-statusbar-extension/SKILL.md",
+      "computedHash": "c411775b0edd213f054c7e20bc6fa969646872ced51b0b1b2d69523e4d9a01ad"
+    },
+    "umbraco-tiptap-toolbar-extension": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-tiptap-toolbar-extension/SKILL.md",
+      "computedHash": "88758ad7a99719c94ae7fb65472431cd7aae93ea468813365862b5ed7bfef9ce"
+    },
+    "umbraco-tree": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-tree/SKILL.md",
+      "computedHash": "e529c63f2d7880fb2333f2f40ce3222eba77a3e218d8f142a9288e9eb06a150b"
+    },
+    "umbraco-tree-item": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-tree-item/SKILL.md",
+      "computedHash": "7b3a1aa4b77b200f4d4f6c2edd74299db87e68bf0b3ac8fb95da64ba11922ff8"
+    },
+    "umbraco-ufm-component": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-ufm-component/SKILL.md",
+      "computedHash": "2cfc30fac674362b22ef7bcf09b34f1e46d326be23adf8a1a443e551bd8a2087"
+    },
+    "umbraco-umbraco-element": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-umbraco-element/SKILL.md",
+      "computedHash": "b6a767d2a1ec88c6547a0afe13180b77c5533d748cfec309772fb682a30b64dc"
+    },
+    "umbraco-unit-testing": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-testing-skills/skills/umbraco-unit-testing/SKILL.md",
+      "computedHash": "185589a4369f692a90850019963ea37b9ecf98c845dd564aab7e467db770ddd3"
+    },
+    "umbraco-user-profile-app": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-user-profile-app/SKILL.md",
+      "computedHash": "539ddded855e7be19830be5756a9c5c1f1e8c2a7265b0d9e284f26fe06d00466"
+    },
+    "umbraco-validation-checks": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-validation-checks/SKILL.md",
+      "computedHash": "50f83892c3b43cd7a8f5af3c3a3456cad0ad077dbfa151cf9643a610350a5dc8"
+    },
+    "umbraco-validation-context": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-validation-context/SKILL.md",
+      "computedHash": "8ea684585d3065475ab15b5348f77d6a61409affd5e7d3c9a6b7a291d2e46207"
+    },
+    "umbraco-version-guard": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-version-guard/SKILL.md",
+      "computedHash": "8f506540a14ee79bccc024634663ce89ef3f823ec4c428639b28a0185f28a5c9"
+    },
+    "umbraco-workspace": {
+      "source": "umbraco/Umbraco-CMS-Backoffice-Skills",
+      "sourceType": "github",
+      "skillPath": "plugins/umbraco-backoffice-skills/skills/umbraco-workspace/SKILL.md",
+      "computedHash": "93258d158ca8d6c58625faa6b1e6d8ec82513c6542653fc9b286ca97d2c749e9"
+    }
+  }
+}
