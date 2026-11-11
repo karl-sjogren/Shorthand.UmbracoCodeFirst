@@ -9,6 +9,7 @@ using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.PropertyEditors;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
@@ -22,6 +23,53 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 [Collection("Umbraco integration")]
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
+    [Fact]
+    public async Task AppRegistry_AllowedChildren_ArePersistedAndRestored_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+        var startDefinition = registry.Definitions.Single(definition => definition.Alias == StartPage.ModelTypeAlias);
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        var token = TestContext.Current.CancellationToken;
+
+        // Act
+        var initialReport = await synchronizer.SynchronizeAsync(token);
+        var firstChildren = contentTypes.Get(StartPage.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
+        var cleared = await store.ApplyAsync(startDefinition with {
+            Settings = startDefinition.Settings! with { AllowedChildAliases = [] },
+        }, token);
+        var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var restartedSynchronizer = new CodeFirstSynchronizer(
+            registry, restartedStore, new SynchronizationReportStore(), TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var restoredReport = await restartedSynchronizer.SynchronizeAsync(token);
+        var restoredChildren = contentTypes.Get(StartPage.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
+        var repeatedReport = await restartedSynchronizer.SynchronizeAsync(token);
+        var child = contentTypes.Get(BlogPost.ModelTypeAlias);
+
+        // Assert
+        startDefinition.Settings!.AllowedChildAliases.ShouldBe([BlogPost.ModelTypeAlias]);
+        initialReport.FailedCount.ShouldBe(0);
+        firstChildren.ShouldNotBeNull().Select(item => item.Alias).ShouldBe([BlogPost.ModelTypeAlias]);
+        cleared.Status.ShouldBe(SynchronizationStatus.Updated);
+        restoredReport.FailedCount.ShouldBe(0);
+        restoredReport.Items.Single(item => item.Alias == StartPage.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Updated);
+        child.ShouldNotBeNull();
+        restoredChildren.ShouldNotBeNull().Single().ShouldSatisfyAllConditions(
+            item => item.Alias.ShouldBe(BlogPost.ModelTypeAlias),
+            item => item.Key.ShouldBe(child.Key));
+        repeatedReport.Items.Single(item => item.Alias == StartPage.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Unchanged);
+    }
+
     [Fact]
     public async Task AppRegistry_CodeBlockDependencies_SynchronizeAndPersist_Async() {
         // Arrange

@@ -70,6 +70,14 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _unresolvedAllowedChild = new(
+        "UCF113",
+        "Unresolved allowed child alias",
+        "Allowed child alias expression '{0}' on '{1}' could not be resolved; use a string constant or a generated document type's ModelTypeAlias",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 #pragma warning restore RS2008
 #pragma warning restore RS2008
 
@@ -124,7 +132,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
         var dataTypeAliases = BuildDataTypeAliasMap(definitionSymbols);
         foreach (var definition in definitions) {
-            AppendDefinition(builder, definition, compilation, dataTypeAliases, context);
+            AppendDefinition(builder, definition, compilation, definitionSymbols, dataTypeAliases, context);
         }
 
         builder.Indent--;
@@ -367,6 +375,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         IndentedStringBuilder builder,
         INamedTypeSymbol definition,
         Compilation compilation,
+        ImmutableArray<INamedTypeSymbol> definitionSymbols,
         IReadOnlyDictionary<string, string> dataTypeAliases,
         SourceProductionContext context) {
         var contentTypeAttribute = FindContentTypeAttribute(definition);
@@ -459,7 +468,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
             builder.Indent--;
             builder.Append("], ");
-            builder.Append(BuildTypeSettings(contentTypeAttribute, definition));
+            builder.Append(BuildTypeSettings(contentTypeAttribute, definition, compilation, definitionSymbols, context));
             builder.Append(", null, null, null, ");
             builder.Append(BuildCompositionAliases(definition));
             builder.Append(", ");
@@ -1007,9 +1016,14 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static bool GetNamedBoolArgument(AttributeData? attribute, string name) =>
         attribute?.NamedArguments.FirstOrDefault(argument => argument.Key == name).Value.Value is true;
 
-    private static string BuildTypeSettings(AttributeData attribute, INamedTypeSymbol definition) {
+    private static string BuildTypeSettings(
+        AttributeData attribute,
+        INamedTypeSymbol definition,
+        Compilation compilation,
+        ImmutableArray<INamedTypeSymbol> definitions,
+        SourceProductionContext context) {
         var allowedTemplates = BuildStringArray(attribute, "AllowedTemplateAliases");
-        var allowedChildren = BuildStringArray(attribute, "AllowedChildAliases");
+        var allowedChildren = BuildAllowedChildren(attribute, definition, compilation, definitions, context);
         var descriptionAttribute = FindAttribute(definition, _descriptionAttributeMetadataName);
         return $$"""
             new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstTypeSettings(
@@ -1070,6 +1084,75 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
         var values = string.Join(", ", value.Values.Select(item => SymbolDisplay.FormatLiteral(item.Value?.ToString() ?? string.Empty, true)));
         return $"new global::System.String[] {{ {values} }}";
+    }
+
+    private static string BuildAllowedChildren(
+        AttributeData attribute,
+        INamedTypeSymbol definition,
+        Compilation compilation,
+        ImmutableArray<INamedTypeSymbol> definitions,
+        SourceProductionContext context) {
+        var syntax = attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
+        var argument = syntax?.ArgumentList?.Arguments.FirstOrDefault(argument =>
+            argument.NameEquals?.Name.Identifier.ValueText == "AllowedChildAliases");
+        if(argument is null) {
+            return BuildStringArray(attribute, "AllowedChildAliases");
+        }
+
+        var value = attribute.NamedArguments.FirstOrDefault(argument => argument.Key == "AllowedChildAliases").Value;
+        if(value.Kind == TypedConstantKind.Array && value.IsNull) {
+            return "global::System.Array.Empty<string>()";
+        }
+
+        if(value.Kind == TypedConstantKind.Array
+            && value.Values.All(item => item.Kind != TypedConstantKind.Error)) {
+            return BuildStringArray(attribute, "AllowedChildAliases");
+        }
+
+        var arrayExpression = argument.Expression;
+        while(arrayExpression is ParenthesizedExpressionSyntax parenthesizedArray) {
+            arrayExpression = parenthesizedArray.Expression;
+        }
+
+        var expressions = arrayExpression switch {
+            ArrayCreationExpressionSyntax { Initializer: { } initializer } => initializer.Expressions.ToArray(),
+            ImplicitArrayCreationExpressionSyntax array => array.Initializer.Expressions.ToArray(),
+            _ => null,
+        };
+        if(expressions is null) {
+            context.ReportDiagnostic(Diagnostic.Create(
+                _unresolvedAllowedChild, argument.Expression.GetLocation(), argument.Expression.ToString(), definition.Name));
+            return "global::System.Array.Empty<string>()";
+        }
+
+        var semanticModel = compilation.GetSemanticModel(argument.SyntaxTree);
+        var aliases = new List<string>();
+        foreach(var expression in expressions) {
+            var constant = semanticModel.GetConstantValue(expression);
+            if(constant.HasValue) {
+                aliases.Add(constant.Value?.ToString() ?? string.Empty);
+                continue;
+            }
+
+            var reference = expression;
+            while(reference is ParenthesizedExpressionSyntax parenthesized) {
+                reference = parenthesized.Expression;
+            }
+
+            if(reference is MemberAccessExpressionSyntax member
+                && member.Name.Identifier.ValueText == "ModelTypeAlias"
+                && semanticModel.GetSymbolInfo(member.Expression).Symbol is INamedTypeSymbol child
+                && definitions.Any(candidate => SymbolEqualityComparer.Default.Equals(candidate, child))
+                && FindDocumentTypeAttribute(child) is { } childAttribute) {
+                aliases.Add(GetAliasArgument(childAttribute, GetNameArgument(childAttribute)));
+                continue;
+            }
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                _unresolvedAllowedChild, expression.GetLocation(), expression.ToString(), definition.Name));
+        }
+
+        return $"new global::System.String[] {{ {string.Join(", ", aliases.Select(alias => SymbolDisplay.FormatLiteral(alias, true)))} }}";
     }
 
     private sealed class IndentedStringBuilder {

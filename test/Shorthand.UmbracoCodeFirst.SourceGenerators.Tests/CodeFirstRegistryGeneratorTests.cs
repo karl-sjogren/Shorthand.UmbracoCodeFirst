@@ -1207,4 +1207,144 @@ public class CodeFirstRegistryGeneratorTests {
         generatedSource.ShouldContain("\"Landing description\"");
         generatedSource.ShouldContain("true");
     }
+
+    [Fact]
+    public void GenerateRegistry_AllowedChildren_ResolvesGeneratedAliasesAndConstants() {
+        // Arrange
+        const string source = """
+            using OtherArticle = Second.Article;
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDocumentTypeAttribute : global::System.Attribute
+                {
+                    public UCFDocumentTypeAttribute(string name) { }
+                    public UCFDocumentTypeAttribute(string alias, string name) { }
+                    public string[] AllowedChildAliases { get; set; } = [];
+                }
+            }
+            namespace First
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("First article")]
+                public partial class Article;
+            }
+            namespace Second
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("customAlias", "Second article")]
+                public partial class Article;
+            }
+            namespace Example
+            {
+                public static class Constants { public const string Child = "constantChild"; }
+                public static class ExternalModel { public const string ModelTypeAlias = "externalModel"; }
+
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType(
+                    "Landing",
+                    AllowedChildAliases = (new[] {
+                        global::First.Article.ModelTypeAlias,
+                        "literalChild",
+                        OtherArticle.ModelTypeAlias,
+                        Constants.Child,
+                        ExternalModel.ModelTypeAlias,
+                        nameof(Constants)
+                    }))]
+                public partial class Landing;
+            }
+            """;
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        result.Diagnostics.ShouldBeEmpty();
+        registry.ShouldContain("""new global::System.String[] { "firstArticle", "literalChild", "customAlias", "constantChild", "externalModel", "Constants" }""");
+    }
+
+    [Theory]
+    [InlineData("new string[] { }", "new global::System.String[] {  }")]
+    [InlineData("new[] { \"literal\", Constants.Child }", "new global::System.String[] { \"literal\", \"constantChild\" }")]
+    [InlineData("null", "global::System.Array.Empty<string>()")]
+    public void GenerateRegistry_AllowedChildren_ResolvedArrays_PreserveValues(string expression, string expected) {
+        // Arrange
+        var source = $$"""
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDocumentTypeAttribute(string name) : global::System.Attribute
+                {
+                    public string[] AllowedChildAliases { get; set; }
+                }
+            }
+            namespace Example
+            {
+                public static class Constants { public const string Child = "constantChild"; }
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType(
+                    "Landing", AllowedChildAliases = {{expression}})]
+                public partial class Landing;
+            }
+            """;
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        result.Diagnostics.ShouldBeEmpty();
+        registry.ShouldContain(expected);
+    }
+
+    [Theory]
+    [InlineData("Missing.ModelTypeAlias")]
+    [InlineData("Article.MissingAlias")]
+    [InlineData("Article.ModelTypeAlias + \"suffix\"")]
+    public void GenerateRegistry_AllowedChildren_UnresolvedExpression_ReportsError(string expression) {
+        // Arrange
+        var source = $$"""
+            namespace Shorthand.UmbracoCodeFirst.Attributes
+            {
+                public sealed class UCFDocumentTypeAttribute(string name) : global::System.Attribute
+                {
+                    public string[] AllowedChildAliases { get; set; } = [];
+                }
+            }
+            namespace Example
+            {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Article")]
+                public partial class Article;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType(
+                    "Landing",
+                    AllowedChildAliases = new string[] { "valid", {{expression}} })]
+                public partial class Landing;
+            }
+            """;
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+
+        // Assert
+        var diagnostic = result.Diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe("UCF113");
+        diagnostic.Severity.ShouldBe(DiagnosticSeverity.Error);
+        diagnostic.GetMessage().ShouldContain(expression);
+        diagnostic.Location.SourceTree.ShouldNotBeNull();
+        diagnostic.Location.SourceTree.GetText(TestContext.Current.CancellationToken)
+            .ToString(diagnostic.Location.SourceSpan).ShouldBe(expression);
+    }
 }
