@@ -5,4 +5,9 @@
     <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.Core\Shorthand.UmbracoCodeFirst.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="buildTransitive\Shorthand.UmbracoCodeFirst.targets" Pack="true" PackagePath="buildTransitive\Shorthand.UmbracoCodeFirst.targets" />
+    <None Update="buildTransitive\appsettings-schema.Shorthand.UmbracoCodeFirst.json" Pack="true" PackagePath="buildTransitive\appsettings-schema.Shorthand.UmbracoCodeFirst.json" />
+  </ItemGroup>
+
 </Project>

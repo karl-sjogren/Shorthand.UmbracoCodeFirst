@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
@@ -17,11 +18,13 @@ internal sealed class SynchronizationCoordinator(
     ICoreScopeProvider scopes,
     IKeyValueService values,
     IDistributedLockingMechanismFactory lockingFactory,
+    IConfiguration configuration,
     TimeProvider timeProvider,
     ILogger<SynchronizationCoordinator> logger) : ICodeFirstSynchronizer, IDisposable {
     internal const string CoordinationKey = "shorthand.umbraco-codefirst:synchronization-coordination";
     private readonly string _instance = Guid.NewGuid().ToString("N");
     private readonly SemaphoreSlim _localLock = new(1, 1);
+    private readonly bool _coordinationEnabled = configuration.GetValue<bool>("Shorthand:UmbracoCodeFirst:EnableClusterCoordination");
     private bool _registered;
     private bool _disposed;
 
@@ -29,6 +32,14 @@ internal sealed class SynchronizationCoordinator(
         await _localLock.WaitAsync(cancellationToken);
         try {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if(scopes.Context is not null) {
+                throw new InvalidOperationException("Code-first synchronization cannot run inside an existing Umbraco scope.");
+            }
+
+            if(!_coordinationEnabled) {
+                return await synchronizer.SynchronizeAsync(cancellationToken);
+            }
+
             var fingerprint = DefinitionFingerprint.Create(registry.Definitions);
             var timeout = Stopwatch.StartNew();
             while(!TryAcquire(fingerprint)) {
@@ -86,7 +97,9 @@ internal sealed class SynchronizationCoordinator(
         var acquired = UpdateState(state => {
             if(state.Members.Any(member => member.Key != _instance && member.Value != fingerprint)) {
                 throw new InvalidOperationException(
-                    "Code-first synchronization is blocked because another instance has different definitions. Drain old instances before deploying new definitions.");
+                    "Code-first synchronization is blocked because another instance has different definitions. "
+                    + "Drain old instances before deploying new definitions. A stopped instance may have left a stale registration; "
+                    + "see the synchronization recovery documentation.");
             }
 
             if(state.Owner is not null) {

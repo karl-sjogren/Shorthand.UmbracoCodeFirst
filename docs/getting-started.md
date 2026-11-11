@@ -85,7 +85,8 @@ Open
 To disable automatic startup synchronization, set
 `Shorthand:UmbracoCodeFirst:DisableStartupSynchronization` to `true`. See
 [clustered deployment and recovery](synchronization.md#clustered-deployments-and-recovery)
-before deploying to multiple instances.
+before deploying to multiple instances; cluster coordination is opt-in. The NuGet package adds
+its settings to Umbraco's appsettings schema when the project is built.
 
 The generated published model is the partial class itself, so after startup you can use it like a
 ModelsBuilder model:

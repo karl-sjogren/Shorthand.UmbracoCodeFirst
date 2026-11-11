@@ -5,8 +5,27 @@ each definition; `UmbracoCodeFirstDefinitionStore` is the Umbraco implementation
 it automatically during Umbraco startup when the runtime reaches `Run`, including after install or
 upgrade. Set `Shorthand:UmbracoCodeFirst:DisableStartupSynchronization` to `true` to opt out.
 Remove existing explicit startup calls to avoid running the same synchronization twice. An explicit
-call through the registered `ICodeFirstSynchronizer` remains available and is coordinated. Call it
-outside any existing Umbraco scope; otherwise it fails without writing.
+call through the registered `ICodeFirstSynchronizer` remains available. Call it outside any existing
+Umbraco scope; otherwise it fails without writing.
+
+By default, synchronization is serialized only within the current process. If multiple instances
+share a database, enable cluster coordination on every instance:
+
+```json
+{
+  "Shorthand": {
+    "UmbracoCodeFirst": {
+      "EnableClusterCoordination": true
+    }
+  }
+}
+```
+
+Without cluster coordination, startup and explicit synchronization bypass the shared claim.
+**Do not run multiple instances or other writers against the same database without coordination**:
+they can synchronize concurrently or apply different definitions. Disabling coordination does not
+clear a pre-existing claim; if it is enabled later, stale claims still require the recovery
+procedure below. Restart the application after changing this setting.
 
 ## Outcomes
 
@@ -34,8 +53,8 @@ message for skipped results, for example `new SynchronizationResult(Synchronizat
 
 ## Clustered deployments and recovery
 
-The registered synchronizer coordinates through a package-specific claim in Umbraco's key/value
-store. It uses Umbraco's database-backed key/value write lock only for short claim transactions;
+When enabled, the registered synchronizer coordinates through a package-specific claim in Umbraco's
+key/value store. It uses Umbraco's database-backed key/value write lock only for short claim transactions;
 definition operations keep their normal separate scopes. Instances with identical definition
 fingerprints synchronize serially and each holds its own in-memory report. An instance with
 different definitions fails without writing while an existing participating instance remains
@@ -50,6 +69,30 @@ including paused or partitioned instances, then clear the value of the key
 in an administrative recovery process with automatic synchronization disabled. Start instances
 only after recovery is complete and the recovery process has stopped. Clearing the claim while a
 writer is alive can allow concurrent unsafe writes.
+
+For a single deployment, after stopping and verifying that all instances are stopped, one way to
+recover is to temporarily insert the following immediately after `await app.BootUmbracoAsync()` in
+the application's `Program.cs`:
+
+```csharp
+if(Environment.GetEnvironmentVariable("UCF_RECOVER") == "true") {
+    using(var scope = app.Services.GetRequiredService<Umbraco.Cms.Core.Scoping.ICoreScopeProvider>()
+        .CreateCoreScope()) {
+        scope.EagerWriteLock(Umbraco.Cms.Core.Constants.Locks.KeyValues);
+        app.Services.GetRequiredService<Umbraco.Cms.Core.Services.IKeyValueService>()
+            .SetValue("shorthand.umbraco-codefirst:synchronization-coordination", "");
+        scope.Complete();
+    }
+
+    return;
+}
+```
+
+Run this temporary recovery process once with both `UCF_RECOVER=true` and
+`Shorthand__UmbracoCodeFirst__DisableStartupSynchronization=true` in its environment, and wait for
+it to exit. Then remove the temporary code and both environment settings before starting the
+application normally. Do not leave this recovery code in the application or run it while any other
+instance could be active.
 
 This protection requires every writer to use the registered `ICodeFirstSynchronizer`. Stop
 versions predating coordination before adopting it; independently constructed synchronizers,

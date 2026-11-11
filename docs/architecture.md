@@ -59,7 +59,7 @@ Test projects live under `test/` and follow `ProjectName.Tests`; see [Developmen
    practice the generated `Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry`.
    If none is found an empty registry is used.
 3. The package's Umbraco startup notification handler awaits synchronization once the runtime
-   reaches `Run`. A database-backed coordination claim serializes participating instances; see
+   reaches `Run`. Optional database-backed coordination serializes participating instances; see
    [Synchronization](synchronization.md#clustered-deployments-and-recovery).
 4. The resulting `SynchronizationReport` is kept in memory (`ISynchronizationReportStore`) and is
    what the backoffice endpoint returns. It is not persisted, so it reflects the latest run on
