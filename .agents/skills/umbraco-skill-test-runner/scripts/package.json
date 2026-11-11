@@ -7,7 +7,7 @@
     "test": "npx tsx run-tests.ts"
   },
   "dependencies": {
-    "glob": "^11.0.0",
+    "glob": "^14.0.5",
     "tsx": "^4.19.0"
   },
   "devDependencies": {
