@@ -55,6 +55,10 @@ jobs:
     - name: Run .NET tests
       run: dotnet test --coverage --coverage-output-format cobertura --coverage-settings ./test/coverage.config --report-trx --no-build --configuration Release --no-progress
 
+    - name: Test packaged consumer startup
+      shell: pwsh
+      run: ./scripts/test-package-consumer.ps1
+
     - name: Upload test results
       uses: actions/upload-artifact@v7
       with:

@@ -18,6 +18,10 @@ public sealed record CodeFirstStatusResponse(
         IReadOnlyList<CodeFirstStatusItem> ElementTypes,
         IReadOnlyList<CodeFirstStatusItem> MediaTypes,
         IReadOnlyList<CodeFirstStatusItem> MemberTypes) {
+    public bool HasReport => CompletedAt != DateTimeOffset.MinValue;
+
+    public string? SynchronizationError { get; init; }
+
     public IReadOnlyList<CodeFirstStatusItem> Definitions =>
         DataTypes.Concat(DocumentTypes).Concat(ElementTypes).Concat(MediaTypes).Concat(MemberTypes).ToArray();
 }

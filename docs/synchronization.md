@@ -1,8 +1,12 @@
 # Synchronization
 
 `CodeFirstSynchronizer` reads the generated registry and asks `ICodeFirstDefinitionStore` to apply
-each definition; `UmbracoCodeFirstDefinitionStore` is the Umbraco implementation. It runs at every
-site startup after Umbraco has booted.
+each definition; `UmbracoCodeFirstDefinitionStore` is the Umbraco implementation. The package runs
+it automatically during Umbraco startup when the runtime reaches `Run`, including after install or
+upgrade. Set `Shorthand:UmbracoCodeFirst:DisableStartupSynchronization` to `true` to opt out.
+Remove existing explicit startup calls to avoid running the same synchronization twice. An explicit
+call through the registered `ICodeFirstSynchronizer` remains available and is coordinated. Call it
+outside any existing Umbraco scope; otherwise it fails without writing.
 
 ## Outcomes
 
@@ -18,14 +22,40 @@ Each definition yields a `SynchronizationItem` with one of:
 
 The `SynchronizationReport` aggregates the items with a completion timestamp. It is held in memory
 only (see [Architecture](architecture.md#runtime-lifecycle)).
-The backoffice also shows `Skipped` when a definition has no report item, with a message explaining
-whether synchronization has not yet run or a completed report has no result for that definition.
+Before the first report, definitions are shown as `Pending`, not counted as skipped, and no completion
+time is shown. A definition absent from a completed report is shown as `Skipped` with an explanation.
+If coordination fails, its error is shown even when there are no definitions.
 
 Custom store implementations must return `SynchronizationResult` from both
 `ICodeFirstDefinitionStore.ApplyAsync` and `ICodeFirstBlockDefinitionStore.PrepareBlockDataTypeAsync`
 (if implemented), instead of returning `SynchronizationStatus` directly. Include an explanatory
 message for skipped results, for example `new SynchronizationResult(SynchronizationStatus.Skipped,
 "The definition is managed externally.")`.
+
+## Clustered deployments and recovery
+
+The registered synchronizer coordinates through a package-specific claim in Umbraco's key/value
+store. It uses Umbraco's database-backed key/value write lock only for short claim transactions;
+definition operations keep their normal separate scopes. Instances with identical definition
+fingerprints synchronize serially and each holds its own in-memory report. An instance with
+different definitions fails without writing while an existing participating instance remains
+registered. Drain old instances before starting the new version, and restart any new instance
+whose synchronization was blocked.
+
+Graceful shutdown removes the instance registration. A crash or lost database connection can leave
+a claim or registration behind: it is deliberately not expired or taken over automatically. If
+recovery is required, **stop and verify every instance capable of synchronization is stopped**,
+including paused or partitioned instances, then clear the value of the key
+`shorthand.umbraco-codefirst:synchronization-coordination` using `IKeyValueService.SetValue(key, "")`
+in an administrative recovery process with automatic synchronization disabled. Start instances
+only after recovery is complete and the recovery process has stopped. Clearing the claim while a
+writer is alive can allow concurrent unsafe writes.
+
+This protection requires every writer to use the registered `ICodeFirstSynchronizer`. Stop
+versions predating coordination before adopting it; independently constructed synchronizers,
+other tools, and manual changes do not participate. Clustered instances must share a database and
+its distributed locking implementation. Coordination failures and timeouts are reported as
+failures, not silently bypassed.
 
 ## Ownership
 

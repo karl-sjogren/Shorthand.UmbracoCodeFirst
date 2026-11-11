@@ -45,6 +45,60 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it("shows a pending header without a completion time when no report exists", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      status: unknown;
+      render: () => string;
+    };
+    view.status = {
+      hasReport: false,
+      completedAt: "0001-01-01T00:00:00+00:00",
+      failedCount: 0,
+      dataTypes: [],
+      documentTypes: [],
+      elementTypes: [],
+      mediaTypes: [],
+      memberTypes: [],
+    };
+
+    // Act
+    const output = view.render();
+
+    // Assert
+    expect(output).toContain("codeFirst_synchronizationPending");
+    expect(output).toContain("sync-status-pending");
+    expect(output).not.toContain("codeFirst_synchronizationComplete");
+    expect(output).not.toContain("codeFirst_lastSynchronized");
+  });
+
+  it("shows an orchestration failure even when no definitions exist", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      status: unknown;
+      render: () => string;
+    };
+    view.status = {
+      hasReport: true,
+      completedAt: "2026-11-11T00:00:00Z",
+      synchronizationError: "Coordination unavailable.",
+      failedCount: 0,
+      dataTypes: [],
+      documentTypes: [],
+      elementTypes: [],
+      mediaTypes: [],
+      memberTypes: [],
+    };
+
+    // Act
+    const output = view.render();
+
+    // Assert
+    expect(output).toContain("codeFirst_synchronizationFailed");
+    expect(output).toContain("Coordination unavailable.");
+    expect(output).toContain("sync-status-error");
+  });
+
   it("renders a skipped reason without a failure indicator", () => {
     // Arrange
     const reason = "Not owned by code-first.";

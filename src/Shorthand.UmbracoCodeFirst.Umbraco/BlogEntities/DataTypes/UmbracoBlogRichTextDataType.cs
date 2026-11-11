@@ -4,7 +4,8 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 
 [UCFDataType(
     "Rich Text",
-    typeof(UmbracoEditors.RichTextEditor))]
+    typeof(UmbracoEditors.RichTextEditor),
+    typeof(UmbracoBlogRichTextConfiguration))]
 [UCFFolderPath("CodeFirst")]
 public partial class UmbracoBlogRichTextDataType;
 

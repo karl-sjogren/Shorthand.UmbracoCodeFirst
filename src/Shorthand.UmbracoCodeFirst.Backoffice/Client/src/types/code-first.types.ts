@@ -60,6 +60,8 @@ export type StatusResponse = {
   skippedCount: number;
   failedCount: number;
   completedAt: string;
+  hasReport: boolean;
+  synchronizationError?: string;
   dataTypes: StatusItem[];
   documentTypes: StatusItem[];
   elementTypes: StatusItem[];

@@ -22,6 +22,10 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
         _application?.Services
         ?? throw new InvalidOperationException("The Umbraco integration fixture is not initialized.");
 
+    public string ConnectionString =>
+        _sqlServer?.GetConnectionString()
+        ?? throw new InvalidOperationException("The Umbraco integration fixture is not initialized.");
+
     public async ValueTask InitializeAsync() {
         if(!IsEnabled) {
             return;

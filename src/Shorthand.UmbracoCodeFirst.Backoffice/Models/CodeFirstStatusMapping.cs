@@ -43,7 +43,9 @@ internal static class CodeFirstStatusMapping {
                     definition.EditorUiAlias,
                     definition.Settings?.IsElement == true,
                     definition.Properties.Count,
-                    result?.Status.ToString() ?? nameof(SynchronizationStatus.Skipped),
+                    result?.Status.ToString() ?? (report.CompletedAt == DateTimeOffset.MinValue
+                        ? "Pending"
+                        : nameof(SynchronizationStatus.Skipped)),
                     result is null
                         ? report.CompletedAt == DateTimeOffset.MinValue
                             ? "No synchronization report is available yet."
@@ -88,6 +90,8 @@ internal static class CodeFirstStatusMapping {
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType) && definition.IsElement == false).ToArray(),
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.DocumentType) && definition.IsElement).ToArray(),
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MediaType)).ToArray(),
-            definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MemberType)).ToArray());
+            definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MemberType)).ToArray()) {
+            SynchronizationError = report.Error,
+        };
     }
 }

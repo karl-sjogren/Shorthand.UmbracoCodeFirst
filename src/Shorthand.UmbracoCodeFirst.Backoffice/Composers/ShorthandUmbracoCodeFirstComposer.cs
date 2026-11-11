@@ -7,6 +7,7 @@ using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Core.Notifications;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Composers;
 
@@ -17,7 +18,9 @@ public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<ICodeFirstOwnershipStore, CodeFirstOwnershipStore>();
         builder.Services.AddSingleton<ICodeFirstDefinitionStore, UmbracoCodeFirstDefinitionStore>();
-        builder.Services.AddSingleton<ICodeFirstSynchronizer, CodeFirstSynchronizer>();
+        builder.Services.AddSingleton<CodeFirstSynchronizer>();
+        builder.Services.AddSingleton<ICodeFirstSynchronizer, SynchronizationCoordinator>();
         builder.Services.AddSingleton<ICodeFirstCleanupService, CodeFirstCleanupService>();
+        builder.AddNotificationAsyncHandler<UmbracoApplicationStartingNotification, StartupSynchronizationHandler>();
     }
 }

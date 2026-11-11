@@ -78,8 +78,14 @@ See [Compositions](compositions.md).
 
 ## 5. Run the site
 
-On startup the synchronizer creates/updates the Data Types and Document Types. Open
+On startup the package synchronizer creates/updates the Data Types and Document Types; no manual
+call from `Program.cs` is needed. Remove any previous explicit startup call to avoid running twice.
+Open
 **Settings > Advanced > Code First** in the backoffice to inspect the outcome of the last run.
+To disable automatic startup synchronization, set
+`Shorthand:UmbracoCodeFirst:DisableStartupSynchronization` to `true`. See
+[clustered deployment and recovery](synchronization.md#clustered-deployments-and-recovery)
+before deploying to multiple instances.
 
 The generated published model is the partial class itself, so after startup you can use it like a
 ModelsBuilder model:

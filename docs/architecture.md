@@ -58,11 +58,11 @@ Test projects live under `test/` and follow `ProjectName.Tests`; see [Developmen
    assemblies for the first parameterless `ICodeFirstDefinitionRegistry` implementation – in
    practice the generated `Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry`.
    If none is found an empty registry is used.
-3. In the site's `Program.cs`, after `BootUmbracoAsync()`, a scope is created and
-   `CodeFirstSynchronizer.SynchronizeAsync()` is awaited. This runs on **every** startup and is
-   idempotent.
+3. The package's Umbraco startup notification handler awaits synchronization once the runtime
+   reaches `Run`. A database-backed coordination claim serializes participating instances; see
+   [Synchronization](synchronization.md#clustered-deployments-and-recovery).
 4. The resulting `SynchronizationReport` is kept in memory (`ISynchronizationReportStore`) and is
-   what the backoffice endpoint returns. It is not persisted, so it reflects the last startup of
+   what the backoffice endpoint returns. It is not persisted, so it reflects the latest run on
    the running process.
 
 ## Ordering

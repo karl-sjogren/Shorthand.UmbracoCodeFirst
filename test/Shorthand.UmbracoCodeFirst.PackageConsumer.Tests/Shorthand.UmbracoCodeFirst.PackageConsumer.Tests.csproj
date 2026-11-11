@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsIntegrationTestProject>true</IsIntegrationTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst" Version="$(CodeFirstPackageVersion)" />
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst.SourceGenerators" Version="$(CodeFirstPackageVersion)" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst.SourceGenerators" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Umbraco.Cms" />
+  </ItemGroup>
+
+</Project>

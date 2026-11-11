@@ -16,6 +16,9 @@
 - Opt-in Umbraco integration tests:
   - PowerShell: `$env:RUN_UMBRACO_INTEGRATION_TESTS='true'`
   - `dotnet test test/Shorthand.UmbracoCodeFirst.Umbraco.Tests/Shorthand.UmbracoCodeFirst.Umbraco.Tests.csproj --configuration Release`
+- Packaged-consumer lifecycle test (requires Docker and a solution restore):
+  - `pwsh -File scripts/test-package-consumer.ps1`
+  - The fixture restores freshly packed local NuGet packages and is intentionally outside the solution.
 - Single test run (filter on a fully qualified name):
   - `dotnet test test/Shorthand.UmbracoCodeFirst.Tests/Shorthand.UmbracoCodeFirst.Tests.csproj --filter "FullyQualifiedName~Shorthand.UmbracoCodeFirst.Tests.UnitTest1.TestAsync"`
   - Discover available tests with:

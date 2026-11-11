@@ -70,12 +70,14 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             <p>${this.localize.term("codeFirst_pageDescription")}</p>
             <div class="header-meta">
               <span
-                class=${getSynchronizationCssClass(this.status.failedCount)}
+                class=${this.status.hasReport
+                  ? getSynchronizationCssClass(this.status.failedCount || (this.status.synchronizationError ? 1 : 0))
+                  : "sync-status sync-status-pending"}
               >
                 <span class="status-dot"></span>
                 ${this.getSynchronizationLabel()}
               </span>
-              ${this.status.completedAt
+              ${this.status.hasReport
                 ? html`
                     <span class="last-synchronized">
                       ${this.localize.term("codeFirst_lastSynchronized")}:
@@ -84,6 +86,9 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                   `
                 : ""}
             </div>
+            ${this.status.synchronizationError
+              ? html`<p class="status-error">${this.status.synchronizationError}</p>`
+              : ""}
           </div>
           <div class="header-action">
             <uui-button
@@ -267,8 +272,8 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
 
   private getSynchronizationLabel(): string {
     const state = getSynchronizationState(
-      this.status?.completedAt,
-      this.status?.failedCount ?? 0,
+      this.status?.hasReport ? this.status.completedAt : undefined,
+      (this.status?.failedCount ?? 0) || (this.status?.synchronizationError ? 1 : 0),
     );
     if (state === "pending") {
       return this.localize.term("codeFirst_synchronizationPending");
@@ -725,6 +730,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     .summary-metric-failure,
     .status-error {
       color: var(--uui-color-danger);
+    }
+
+    .sync-status-pending {
+      color: var(--uui-color-text);
     }
 
     .status-dot {

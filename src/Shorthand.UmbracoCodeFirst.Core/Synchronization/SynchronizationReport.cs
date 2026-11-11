@@ -3,6 +3,8 @@ namespace Shorthand.UmbracoCodeFirst.Synchronization;
 public sealed record SynchronizationReport(
         DateTimeOffset CompletedAt,
         IReadOnlyList<SynchronizationItem> Items) {
+    public string? Error { get; init; }
+
     public int CreatedCount => Items.Count(item => item.Status == SynchronizationStatus.Created);
 
     public int UpdatedCount => Items.Count(item => item.Status == SynchronizationStatus.Updated);

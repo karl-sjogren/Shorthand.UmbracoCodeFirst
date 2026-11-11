@@ -91,6 +91,7 @@ public class CodeFirstStatusMappingTests {
         result.ElementTypeCount.ShouldBe(1);
         result.MediaTypeCount.ShouldBe(1);
         result.MemberTypeCount.ShouldBe(1);
+        result.HasReport.ShouldBeTrue();
         result.SkippedCount.ShouldBe(3);
         result.Definitions.Select(item => item.Alias)
             .ShouldBe(["decimal", "productPage", "seoComposite", "imageAsset", "memberProfile"]);
@@ -145,7 +146,9 @@ public class CodeFirstStatusMappingTests {
         var result = CodeFirstStatusMapping.Map(registry, new SynchronizationReportStore());
 
         // Assert
-        result.SkippedCount.ShouldBe(1);
+        result.HasReport.ShouldBeFalse();
+        result.SkippedCount.ShouldBe(0);
+        result.Definitions.Single().Status.ShouldBe("Pending");
         result.Definitions.Single().Message.ShouldBe("No synchronization report is available yet.");
     }
 
@@ -166,6 +169,20 @@ public class CodeFirstStatusMappingTests {
         // Assert
         result.SkippedCount.ShouldBe(1);
         result.Definitions.Single().Message.ShouldBe("Managed externally.");
+    }
+
+    [Fact]
+    public void Map_OrchestrationError_ExposesErrorWithoutDefinitions() {
+        // Arrange
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, []) { Error = "Coordination unavailable." });
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(new TestRegistry([]), reports);
+
+        // Assert
+        result.HasReport.ShouldBeTrue();
+        result.SynchronizationError.ShouldBe("Coordination unavailable.");
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)

@@ -1,5 +1,3 @@
-using Shorthand.UmbracoCodeFirst.Contracts;
-
 var app = await CreateApplicationAsync(args);
 await app.RunAsync();
 
@@ -28,13 +26,6 @@ internal partial class Program {
         var app = builder.Build();
 
         await app.BootUmbracoAsync();
-
-        if(!app.Configuration.GetValue<bool>("Shorthand:UmbracoCodeFirst:DisableStartupSynchronization")) {
-            using var scope = app.Services.CreateScope();
-            await scope.ServiceProvider
-                .GetRequiredService<ICodeFirstSynchronizer>()
-                .SynchronizeAsync();
-        }
 
         app.UseUmbraco()
             .WithMiddleware(u => {
