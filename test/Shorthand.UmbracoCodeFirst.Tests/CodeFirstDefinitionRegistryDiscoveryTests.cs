@@ -5,6 +5,7 @@ namespace Shorthand.UmbracoCodeFirst.Tests;
 public class CodeFirstDefinitionRegistryDiscoveryTests {
     [Fact]
     public void Discover_PrefersGeneratedRegistryOverOtherImplementations() {
+        // Arrange
         // Act
         var registry = CodeFirstDefinitionRegistryDiscovery.Discover();
 

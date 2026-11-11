@@ -43,6 +43,12 @@ documentation](https://docs.umbraco.com/umbraco-cms/model-your-content/property-
 When an editor has confusing historical aliases, its stable catalog ID and display name preserve
 the documented distinction.
 
+For Umbraco 18.3.1, Code Editor uses the `Umbraco.Plain.String` schema with the
+`Umb.PropertyEditorUi.CodeEditor` UI. `CodeEditor.Configuration.Height` is an integer number of
+pixels; configurations using the previous string property must change, for example, `"600"` to
+`600`. References to the previous `Umbraco.CodeEditor` schema alias should use
+`Umbraco.Plain.String` instead.
+
 ## Block editors
 
 The Block List, Block Grid, Single Block and Rich Text/Tiptap configuration classes support typed

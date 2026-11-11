@@ -7,6 +7,7 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
     public void GenerateClasses_MarksRegistryAndPartialMembersButNotPartialTypes() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -50,6 +51,7 @@ public class CodeFirstRegistryGeneratorTests {
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        // Act
         var classes = driver.RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult().Results.Single().GeneratedSources
             .SelectMany(generated => generated.SyntaxTree.GetRoot(TestContext.Current.CancellationToken)
@@ -58,6 +60,7 @@ public class CodeFirstRegistryGeneratorTests {
 
         var registry = classes.Single(declaration =>
             declaration.Identifier.ValueText == "GeneratedCodeFirstDefinitionRegistry");
+        // Assert
         registry.AttributeLists.SelectMany(list => list.Attributes)
             .ShouldContain(attribute => attribute.Name.ToString().EndsWith("GeneratedCode", StringComparison.Ordinal));
 
@@ -74,6 +77,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_MediaAndMemberTypes_EmitsDistinctDefinitionKinds() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -103,6 +107,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -113,6 +118,7 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("CodeFirstDefinitionKind.MediaType");
         generatedSource.ShouldContain("\"imageAsset\"");
         generatedSource.ShouldContain("CodeFirstDefinitionKind.MemberType");
@@ -121,6 +127,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_DataTypeConfigurationType_EmitsConstantJson() {
+        // Arrange
         const string source = """"
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -162,6 +169,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -172,6 +180,7 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("\\\"maxChars\\\":512");
         generatedSource.ShouldContain(
             "new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfiguration");
@@ -179,6 +188,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_DataTypeConfigurationTypeWithoutJson_ReportsDiagnostic() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -215,13 +225,16 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken);
 
+        // Assert
         result.GetRunResult().Diagnostics.ShouldContain(diagnostic => diagnostic.Id == "UCF111");
     }
 
     [Fact]
     public void GenerateRegistry_TypedConfigurationConstants_EmitsJsonObject() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -259,6 +272,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -269,12 +283,14 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("\\\"maxChars\\\":512");
         generatedSource.ShouldContain("\\\"trim\\\":true");
     }
 
     [Fact]
     public void GenerateRegistry_NoDefinitions_DoesNotEmitEmptyRegistry() {
+        // Arrange
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             new CodeFirstRegistryGenerator().AsSourceGenerator());
         var compilation = CSharpCompilation.Create(
@@ -285,17 +301,20 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var result = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
             .Results
             .Single();
 
+        // Assert
         result.GeneratedSources.ShouldBeEmpty();
     }
 
     [Fact]
     public void GenerateRegistry_ElementType_EmitsElementMetadataAndModel() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -331,6 +350,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatorResult = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -345,6 +365,7 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         registrySource.ShouldContain("CodeFirstTypeSettings(");
         registrySource.ShouldContain("true,");
         registrySource.ShouldContain("\"Elements/SEO\"");
@@ -363,7 +384,14 @@ public class CodeFirstRegistryGeneratorTests {
     [InlineData("foo_bar-baz", "fooBarBaz")]
     [InlineData("  Multiple   words  ", "multipleWords")]
     public void ToAlias_DerivesExpectedCamelCaseAlias(string value, string expected) {
-        CodeFirstRegistryGenerator.ToAlias(value).ShouldBe(expected);
+        // Arrange
+        // The theory supplies the input and expected alias.
+
+        // Act
+        var actual = CodeFirstRegistryGenerator.ToAlias(value);
+
+        // Assert
+        actual.ShouldBe(expected);
     }
 
     [Fact]
@@ -501,6 +529,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_DerivesCamelCaseAliasesFromPascalCaseNames() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -533,6 +562,7 @@ public class CodeFirstRegistryGeneratorTests {
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -543,6 +573,7 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("\"productPage\"");
         generatedSource.ShouldContain("\"seoUrl\"");
     }
@@ -841,6 +872,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_EditorAndConfigurationTypes_EmitsAliasesAndConfiguration() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Metadata
             {
@@ -892,7 +924,9 @@ public class CodeFirstRegistryGeneratorTests {
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        // Act
         var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult();
+        // Assert
         result.Diagnostics.ShouldBeEmpty();
         var generatedSource = result.Results.Single().GeneratedSources
             .Single(generated => generated.HintName == "CodeFirstRegistry.g.cs")
@@ -1094,6 +1128,7 @@ public class CodeFirstRegistryGeneratorTests {
 
     [Fact]
     public void GenerateRegistry_ExpandedTypeSettings_EmitsArraysAndConfiguration() {
+        // Arrange
         const string source = """
             namespace Shorthand.UmbracoCodeFirst.Attributes
             {
@@ -1151,6 +1186,7 @@ public class CodeFirstRegistryGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -1161,6 +1197,7 @@ public class CodeFirstRegistryGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("\"integrationText\"");
         generatedSource.ShouldContain("\"{\\\"maxChars\\\":128}\"");
         generatedSource.ShouldContain("\"landing\"");

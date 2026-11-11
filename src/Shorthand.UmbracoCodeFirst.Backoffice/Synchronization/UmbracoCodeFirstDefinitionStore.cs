@@ -32,19 +32,19 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
 
-    public async Task<SynchronizationStatus> PrepareBlockDataTypeAsync(
+    public async Task<SynchronizationResult> PrepareBlockDataTypeAsync(
         CodeFirstDefinition definition,
         CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         if(await FindOwnedDataTypeAsync(definition.Alias) is not null) {
-            return SynchronizationStatus.Unchanged;
+            return new(SynchronizationStatus.Unchanged);
         }
 
         logger.LogDebug("Creating placeholder for block data type {DefinitionAlias}", definition.Alias);
-        return await ApplyDataTypeAsync(definition with { EditorConfiguration = null, ConfigurationJson = null });
+        return ToResult(await ApplyDataTypeAsync(definition with { EditorConfiguration = null, ConfigurationJson = null }));
     }
 
-    public async Task<SynchronizationStatus> ApplyAsync(
+    public async Task<SynchronizationResult> ApplyAsync(
             CodeFirstDefinition definition,
             CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
@@ -76,7 +76,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     status);
             }
 
-            return status;
+            return ToResult(status);
         } catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested) {
             throw;
         } catch(Exception exception) {
@@ -88,6 +88,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             throw;
         }
     }
+
+    private static SynchronizationResult ToResult(SynchronizationStatus status) =>
+        status == SynchronizationStatus.Skipped
+            ? new(status, "An existing definition is not owned by code-first and was left unchanged.")
+            : new(status);
 
     private Task<SynchronizationStatus> ApplyMediaTypeAsync(CodeFirstDefinition definition) =>
         ApplyNonDocumentTypeAsync(

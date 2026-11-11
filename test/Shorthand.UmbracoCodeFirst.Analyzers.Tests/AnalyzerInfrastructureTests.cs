@@ -3,14 +3,17 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class AnalyzerInfrastructureTests : AnalyzerTestBase {
     [Fact]
     public void AnalyzerDescriptors_HaveDocumentationLinks_ReturnFeatureBranchUris() {
+        // Arrange
         const string documentationBaseUrl = CodeFirstDiagnosticDescriptors.DocumentationBaseUrl;
 
+        // Act
         var descriptors = AllAnalyzers
             .SelectMany(static analyzer => analyzer.SupportedDiagnostics)
             .ToDictionary(
                 descriptor => descriptor.Id,
                 descriptor => descriptor.HelpLinkUri);
 
+        // Assert
         descriptors.ShouldBe(new Dictionary<string, string> {
             ["UCF100"] = $"{documentationBaseUrl}/UCF100.md",
             ["UCF101"] = $"{documentationBaseUrl}/UCF101.md",
@@ -28,7 +31,13 @@ public class AnalyzerInfrastructureTests : AnalyzerTestBase {
 
     [Fact]
     public void AnalyzerAssembly_LoadProjectAssembly_LoadsSuccessfully() {
-        typeof(AnalyzerInfrastructureTests).Assembly.GetName().Name.ShouldBe(
-            "Shorthand.UmbracoCodeFirst.Analyzers.Tests");
+        // Arrange
+        var assembly = typeof(AnalyzerInfrastructureTests).Assembly;
+
+        // Act
+        var name = assembly.GetName().Name;
+
+        // Assert
+        name.ShouldBe("Shorthand.UmbracoCodeFirst.Analyzers.Tests");
     }
 }

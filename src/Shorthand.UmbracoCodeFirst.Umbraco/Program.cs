@@ -23,6 +23,8 @@ internal partial class Program {
             .AddComposers()
             .Build();
 
+        builder.AddServiceDefaults();
+
         var app = builder.Build();
 
         await app.BootUmbracoAsync();

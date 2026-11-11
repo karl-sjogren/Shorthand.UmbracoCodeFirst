@@ -291,33 +291,24 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     const sortedDefinitions = sortDefinitions(definitions);
     return html`
       <uui-box headline=${headline}>
-        <uui-table>
-          <uui-table-head>
-            <uui-table-head-cell
-              >${this.localize.term("codeFirst_name")}</uui-table-head-cell
-            >
-            ${showProperties
-              ? html`<uui-table-head-cell
-                  >${this.localize.term("codeFirst_alias")}</uui-table-head-cell
-                >`
-              : ""}
-            ${showProperties
-              ? html`<uui-table-head-cell
-                  >${this.localize.term("codeFirst_properties")}</uui-table-head-cell
-                >`
-              : html`<uui-table-head-cell
-                  >${this.localize.term("codeFirst_editor")}</uui-table-head-cell
-                >`}
-            <uui-table-head-cell
-              >${this.localize.term("codeFirst_folder")}</uui-table-head-cell
-            >
-            <uui-table-head-cell
-              >${this.localize.term("codeFirst_status")}</uui-table-head-cell
-            >
-          </uui-table-head>
+        <table class="definition-table" aria-label=${headline}>
+          <thead>
+            <tr>
+              <th scope="col">${this.localize.term("codeFirst_name")}</th>
+              ${showProperties
+                ? html`<th scope="col">${this.localize.term("codeFirst_alias")}</th>`
+                : ""}
+              ${showProperties
+                ? html`<th scope="col">${this.localize.term("codeFirst_properties")}</th>`
+                : html`<th scope="col">${this.localize.term("codeFirst_editor")}</th>`}
+              <th scope="col">${this.localize.term("codeFirst_folder")}</th>
+              <th scope="col">${this.localize.term("codeFirst_status")}</th>
+            </tr>
+          </thead>
+          <tbody>
           ${sortedDefinitions.map(
             (definition) => html`
-              <uui-table-row
+              <tr
                 class=${this.isFailed(definition)
                   ? "definition-row failed-row"
                   : "definition-row"}
@@ -330,7 +321,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                   }
                 }}
               >
-                <uui-table-cell>
+                <td>
                   ${definition.backofficeUrl
                     ? html`<a
                         href=${definition.backofficeUrl}
@@ -338,21 +329,19 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                         >${definition.name}</a
                       >`
                     : definition.name}
-                </uui-table-cell>
+                </td>
                 ${showProperties
-                  ? html`<uui-table-cell>${definition.alias}</uui-table-cell>`
+                  ? html`<td>${definition.alias}</td>`
                   : ""}
-                <uui-table-cell>
+                <td>
                   ${showProperties
                     ? definition.propertyCount
                     : this.formatEditor(definition)}
-                </uui-table-cell>
-                <uui-table-cell>${definition.folder}</uui-table-cell>
-                <uui-table-cell>
+                </td>
+                <td>${definition.folder}</td>
+                <td>
                   <span
-                    class=${this.isFailed(definition) || definition.message
-                      ? "status-error"
-                      : ""}
+                    class=${this.isFailed(definition) ? "status-error" : ""}
                   >
                     ${this.isFailed(definition)
                       ? html`<span class="failure-indicator" aria-hidden="true"
@@ -362,24 +351,27 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                     ${definition.status}
                   </span>
                   ${definition.message
-                    ? html`<small class="error-message"
+                    ? html`<small class=${this.isFailed(definition)
+                        ? "status-message status-error"
+                        : "status-message"}
                         >${definition.message}</small
                       >`
                     : ""}
-                </uui-table-cell>
-              </uui-table-row>
+                </td>
+              </tr>
               ${this.expandedAlias === definition.alias
                 ? html`
-                    <uui-table-row class="details-row">
-                      <uui-table-cell colspan=${showProperties ? 5 : 4}>
+                    <tr class="details-row">
+                      <td colspan=${showProperties ? 5 : 4}>
                         ${this.renderProperties(definition)}
-                      </uui-table-cell>
-                    </uui-table-row>
+                      </td>
+                    </tr>
                   `
                 : ""}
             `,
           )}
-        </uui-table>
+          </tbody>
+        </table>
       </uui-box>
     `;
   }
@@ -481,7 +473,11 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
           : ""}
         <dl>
           ${definition.icon
-            ? html`<dt>${this.localize.term("codeFirst_icon")}</dt><dd>${definition.icon}</dd>`
+            ? html`<dt>${this.localize.term("codeFirst_icon")}</dt>
+                <dd class="definition-icon">
+                  <umb-icon name=${definition.icon} aria-hidden="true"></umb-icon>
+                  ${definition.icon}
+                </dd>`
             : ""}
           ${definition.allowAsRoot
             ? html`<dt>${this.localize.term("codeFirst_allowedAsRoot")}</dt><dd>Yes</dd>`
@@ -792,6 +788,38 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       cursor: pointer;
     }
 
+    .definition-table {
+      width: 100%;
+      border-spacing: 0;
+      border: var(--uui-box-border-width, 1px) solid var(--uui-color-divider-standalone);
+      border-radius: var(--uui-border-radius-3);
+      background: var(--uui-color-surface);
+    }
+
+    .definition-table > thead > tr > th,
+    .definition-table > tbody > tr > td {
+      height: var(--uui-table-cell-height, var(--uui-size-12));
+      padding: var(--uui-table-cell-padding, var(--uui-size-3) var(--uui-size-5));
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .definition-table > thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--uui-color-surface);
+    }
+
+    .definition-table > tbody > tr > td {
+      border-top: 1px solid var(--uui-color-border);
+    }
+
+    .definition-row:focus-visible {
+      outline: calc(2px * var(--uui-show-focus-outline, 1)) solid var(--uui-color-focus);
+      outline-offset: -4px;
+    }
+
     .failed-row {
       background: color-mix(
         in srgb,
@@ -808,15 +836,25 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       padding: var(--uui-size-2);
     }
 
+    .definition-icon {
+      display: flex;
+      align-items: center;
+      gap: var(--uui-size-2);
+    }
+
     uui-table {
       width: 100%;
     }
 
     uui-table small,
-    .error-message {
+    .definition-table small {
       display: block;
       color: var(--uui-color-danger);
       white-space: normal;
+    }
+
+    .definition-table small.status-message:not(.status-error) {
+      color: inherit;
     }
 
     .failure-indicator {

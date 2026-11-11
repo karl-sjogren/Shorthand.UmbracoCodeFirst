@@ -5,8 +5,8 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class RepeatedValidationAnalyzerTests : AnalyzerTestBase {
     [Fact]
     public async Task RepeatedValidationConfiguration_ReportsDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -17,6 +17,10 @@ public class RepeatedValidationAnalyzerTests : AnalyzerTestBase {
                     [[|UCFValidation("^[A-Z]+$", "Uppercase only")|]]
                     public string Sku { get; } = null!;
                 }
-                """));
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source);
     }
 }

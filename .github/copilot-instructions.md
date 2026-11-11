@@ -74,6 +74,9 @@ This repo is a small Umbraco app template built around a layered, local-developm
   - `EnforceCodeStyleInBuild` is enabled
   - `ImplicitUsings` is enabled
 - Use the repo's existing patterns for tests and infrastructure instead of inventing a parallel setup. The tests are under `test/`, and the repo intentionally wires in test helpers and coverage support via the shared props files.
+- Structure test cases into Arrange, Act, and Assert sections, each marked with `// Arrange`,
+  `// Act`, and `// Assert` comments. Keep setup, the operation under test, and checks in their
+  respective sections; use a single `// Act & Assert` comment when a statement does both.
 - Preserve the layered coverage model: fast core/generator/analyzer/backoffice tests are service
   independent; SQL-backed Umbraco tests are opt-in; browser automation is supplementary smoke
   coverage rather than the sole assertion source.

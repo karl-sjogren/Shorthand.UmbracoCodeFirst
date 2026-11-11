@@ -13,6 +13,7 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
     [Fact]
     public async Task ApplyAsync_FailedBlockUpdate_RestoresInMemoryConfiguration_Async() {
+        // Arrange
         var dataType = A.Fake<IDataType>();
         dataType.Name = "Existing";
         dataType.ParentId = -1;
@@ -35,6 +36,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
             EditorUiAlias: "Umb.PropertyEditorUi.BlockList",
             EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") { BlockTypes = [] });
 
+        // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(() => store.ApplyAsync(definition, CancellationToken.None));
 
         dataType.Name.ShouldBe("Existing");
@@ -46,6 +48,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
     [InlineData("""{"items":["csharp","javascript"],"other":[1,"two"],"nested":{"items":["a","b"]}}""")]
     [InlineData("""{"items":[]}""")]
     public async Task ApplyAsync_DropdownItems_AreValidStringLists_Async(string json) {
+        // Arrange
         var dataType = A.Fake<IDataType>();
         var configuration = new Dictionary<string, object> {
             ["shorthand.umbraco-codefirst"] = "codingLanguage",
@@ -71,9 +74,11 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
             ConfigurationJson: json,
             EditorUiAlias: "Umb.PropertyEditorUi.Dropdown");
 
+        // Act
         var status = await store.ApplyAsync(definition, CancellationToken.None);
 
-        status.ShouldBe(SynchronizationStatus.Updated);
+        // Assert
+        status.Status.ShouldBe(SynchronizationStatus.Updated);
         var items = configuration["items"].ShouldBeAssignableTo<IEnumerable<string>>();
         var validator = new ValueListUniqueValueValidator(A.Fake<IConfigurationEditorJsonSerializer>());
         validator.Validate(items, null, null, null!).ShouldBeEmpty();

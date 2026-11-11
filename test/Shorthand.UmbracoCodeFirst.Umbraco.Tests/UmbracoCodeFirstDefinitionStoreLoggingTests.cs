@@ -18,6 +18,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_UnownedDefinition_LogsWarningAndDoesNotUpdate_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         var contentType = CreateContentType();
         A.CallTo(() => contentTypeService.Get("article")).Returns(contentType);
@@ -26,9 +27,12 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
         var logger = new FakeLogger<UmbracoCodeFirstDefinitionStore>();
         var store = CreateStore(contentTypeService, ownershipStore, logger);
 
+        // Act
         var status = await store.ApplyAsync(_definition, CancellationToken.None);
 
-        status.ShouldBe(SynchronizationStatus.Skipped);
+        // Assert
+        status.Status.ShouldBe(SynchronizationStatus.Skipped);
+        status.Message.ShouldNotBeNull().ShouldContain("not owned");
         var warning = logger.Collector.GetSnapshot().Single(entry => entry.Level == LogLevel.Warning);
         warning.Message.ShouldContain("not owned");
         warning.StructuredState!.Single(item => item.Key == "DefinitionKind").Value.ShouldBe("DocumentType");
@@ -39,6 +43,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_UnchangedDefinition_LogsOutcome_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         var contentType = CreateContentType();
         A.CallTo(() => contentTypeService.Get("article")).Returns(contentType);
@@ -48,9 +53,11 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
         var logger = new FakeLogger<UmbracoCodeFirstDefinitionStore>();
         var store = CreateStore(contentTypeService, ownershipStore, logger);
 
+        // Act
         var status = await store.ApplyAsync(_definition, CancellationToken.None);
 
-        status.ShouldBe(SynchronizationStatus.Unchanged);
+        // Assert
+        status.Status.ShouldBe(SynchronizationStatus.Unchanged);
         var outcome = logger.Collector.GetSnapshot()
             .Single(entry => entry.StructuredState!.Any(item => item.Key == "Status"));
         outcome.Level.ShouldBe(LogLevel.Debug);
@@ -62,6 +69,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_ChangedOwnedDefinition_LogsUpdatedOutcome_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         var contentType = CreateContentType();
         contentType.Name = "Old name";
@@ -74,9 +82,11 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
         var logger = new FakeLogger<UmbracoCodeFirstDefinitionStore>();
         var store = CreateStore(contentTypeService, ownershipStore, logger);
 
+        // Act
         var status = await store.ApplyAsync(_definition, CancellationToken.None);
 
-        status.ShouldBe(SynchronizationStatus.Updated);
+        // Assert
+        status.Status.ShouldBe(SynchronizationStatus.Updated);
         var outcome = logger.Collector.GetSnapshot()
             .Single(entry => entry.StructuredState!.Any(item => item.Key == "Status"));
         outcome.Level.ShouldBe(LogLevel.Debug);
@@ -87,12 +97,14 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_ServiceFailure_LogsExceptionAndRethrows_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         var failure = new InvalidOperationException("lookup failed");
         A.CallTo(() => contentTypeService.Get("article")).Throws(failure);
         var logger = new FakeLogger<UmbracoCodeFirstDefinitionStore>();
         var store = CreateStore(contentTypeService, A.Fake<ICodeFirstOwnershipStore>(), logger);
 
+        // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => store.ApplyAsync(_definition, CancellationToken.None));
 
@@ -105,6 +117,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_FailedDocumentUpdate_DoesNotReportSuccess_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         var contentType = CreateContentType();
         contentType.Name = "Old name";
@@ -116,6 +129,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
             .Returns(new CodeFirstDocumentTypeOwnership(contentType.Key, "article", []));
         var store = CreateStore(contentTypeService, ownershipStore, new FakeLogger<UmbracoCodeFirstDefinitionStore>());
 
+        // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => store.ApplyAsync(_definition, CancellationToken.None));
 
@@ -126,6 +140,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_FailedDocumentCreate_DoesNotClaimOwnership_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => contentTypeService.Get("article")).Returns(null);
         A.CallTo(() => contentTypeService.CreateAsync(A<IContentType>._, A<Guid>._))
@@ -140,6 +155,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
             null!, null!, contentTypeService, null!, null!, null!, null!, null!, null!,
             null!, null!, helper, ownershipStore, new FakeLogger<UmbracoCodeFirstDefinitionStore>());
 
+        // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => store.ApplyAsync(_definition, CancellationToken.None));
 
@@ -150,6 +166,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
 
     [Fact]
     public async Task ApplyAsync_Cancelled_DoesNotLogAnError_Async() {
+        // Arrange
         var contentTypeService = A.Fake<IContentTypeService>();
         using var cancellation = new CancellationTokenSource();
         var logger = new FakeLogger<UmbracoCodeFirstDefinitionStore>();
@@ -158,6 +175,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
             .Invokes(() => cancellation.Cancel())
             .Throws(new OperationCanceledException());
 
+        // Act & Assert
         await Should.ThrowAsync<OperationCanceledException>(
             () => store.ApplyAsync(_definition, cancellation.Token));
 

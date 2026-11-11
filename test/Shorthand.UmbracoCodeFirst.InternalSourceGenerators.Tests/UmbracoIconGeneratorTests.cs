@@ -8,6 +8,7 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 public class UmbracoIconGeneratorTests {
     [Fact]
     public void GenerateIconCatalog_EmitsAttributeCompatibleConstantsFromMetadata() {
+        // Arrange
         const string metadata = """
             {
               "icons": [
@@ -17,8 +18,10 @@ public class UmbracoIconGeneratorTests {
             }
             """;
 
+        // Act
         var generatedSource = GenerateSource(metadata);
 
+        // Assert
         generatedSource.ShouldContain("public static class UmbracoIcons");
         generatedSource.ShouldContain("public const string Document = \"icon-document\";");
         generatedSource.ShouldContain(
@@ -35,10 +38,13 @@ public class UmbracoIconGeneratorTests {
 
     [Fact]
     public void GenerateIconCatalog_RealCatalogIncludesEveryV18Icon() {
+        // Arrange
         var metadata = ReadCatalog();
         using var document = JsonDocument.Parse(metadata);
+        // Act
         var icons = document.RootElement.GetProperty("icons");
 
+        // Assert
         icons.GetArrayLength().ShouldBe(678);
         icons.EnumerateArray()
             .ShouldAllBe(icon => icon.GetString()!.StartsWith("icon-", StringComparison.Ordinal));
@@ -52,6 +58,7 @@ public class UmbracoIconGeneratorTests {
 
     [Fact]
     public void GenerateIconCatalog_DuplicateIconReportsDiagnostic() {
+        // Arrange
         const string metadata = """
             {
               "icons": [
@@ -61,8 +68,10 @@ public class UmbracoIconGeneratorTests {
             }
             """;
 
+        // Act
         var diagnostics = GenerateDiagnostics(metadata);
 
+        // Assert
         diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF201"
             && diagnostic.GetMessage().Contains("duplicated", StringComparison.Ordinal));
@@ -70,6 +79,7 @@ public class UmbracoIconGeneratorTests {
 
     [Fact]
     public void GenerateIconCatalog_IdentifierCollisionReportsDiagnostic() {
+        // Arrange
         const string metadata = """
             {
               "icons": [
@@ -79,8 +89,10 @@ public class UmbracoIconGeneratorTests {
             }
             """;
 
+        // Act
         var diagnostics = GenerateDiagnostics(metadata);
 
+        // Assert
         diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF201"
             && diagnostic.GetMessage().Contains("all generate the identifier", StringComparison.Ordinal));

@@ -13,11 +13,19 @@ Each definition yields a `SynchronizationItem` with one of:
 | `Created` | Did not exist; created. |
 | `Updated` | Owned by code-first and changed; saved. |
 | `Unchanged` | Owned by code-first and already matching. |
-| `Skipped` | An item with that alias exists but is **not** owned by code-first; left untouched. |
+| `Skipped` | The store did not apply the definition. For example, an existing type is not owned by code-first and is left untouched. The reason is reported when available. |
 | `Failed` | An exception occurred; the message is recorded. Other definitions still run. |
 
 The `SynchronizationReport` aggregates the items with a completion timestamp. It is held in memory
 only (see [Architecture](architecture.md#runtime-lifecycle)).
+The backoffice also shows `Skipped` when a definition has no report item, with a message explaining
+whether synchronization has not yet run or a completed report has no result for that definition.
+
+Custom store implementations must return `SynchronizationResult` from both
+`ICodeFirstDefinitionStore.ApplyAsync` and `ICodeFirstBlockDefinitionStore.PrepareBlockDataTypeAsync`
+(if implemented), instead of returning `SynchronizationStatus` directly. Include an explanatory
+message for skipped results, for example `new SynchronizationResult(SynchronizationStatus.Skipped,
+"The definition is managed externally.")`.
 
 ## Ownership
 

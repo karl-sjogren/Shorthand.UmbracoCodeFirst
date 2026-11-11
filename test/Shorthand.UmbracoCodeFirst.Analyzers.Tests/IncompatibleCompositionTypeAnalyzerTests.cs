@@ -5,15 +5,19 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class IncompatibleCompositionTypeAnalyzerTests : AnalyzerTestBase {
     [Fact]
     public async Task ElementComposingDocumentType_ReportsDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFElementType("shared")]
                 [UCFComposite(typeof(Document))]
                 public partial class Element;
                 [UCFDocumentType("document")]
                 public partial class Document;
-                """),
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source,
             VerifyCS.Diagnostic(CodeFirstDiagnosticIds.IncompatibleCompositionType)
                 .WithSpan(3, 2, 3, 32)
                 .WithArguments("Element", "Document"));
@@ -21,15 +25,19 @@ public class IncompatibleCompositionTypeAnalyzerTests : AnalyzerTestBase {
 
     [Fact]
     public async Task DocumentComposingElementType_ReportsDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("document")]
                 [UCFComposite(typeof(Element))]
                 public partial class Document;
                 [UCFElementType("shared")]
                 public partial class Element;
-                """),
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source,
             VerifyCS.Diagnostic(CodeFirstDiagnosticIds.IncompatibleCompositionType)
                 .WithSpan(3, 2, 3, 31)
                 .WithArguments("Document", "Element"));
@@ -37,14 +45,18 @@ public class IncompatibleCompositionTypeAnalyzerTests : AnalyzerTestBase {
 
     [Fact]
     public async Task MatchingCompositionKinds_DoesNotReportDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFElementType("base")]
                 public partial class Base;
                 [UCFElementType("derived")]
                 [UCFComposite(typeof(Base))]
                 public partial class Derived;
-                """));
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source);
     }
 }

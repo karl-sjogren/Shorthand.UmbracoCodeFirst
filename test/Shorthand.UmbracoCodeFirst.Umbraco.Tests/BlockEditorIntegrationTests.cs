@@ -17,6 +17,7 @@ public class BlockEditorIntegrationTests(UmbracoIntegrationFixture fixture) : IC
 
     [Fact]
     public async Task SynchronizeAsync_AllBlockEditors_PersistKeysAndRemainStable_Async() {
+        // Arrange
         if(!fixture.IsEnabled) {
             return;
         }
@@ -39,8 +40,10 @@ public class BlockEditorIntegrationTests(UmbracoIntegrationFixture fixture) : IC
             TimeProvider.System,
             scope.ServiceProvider.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
 
+        // Act
         var first = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
 
+        // Assert
         first.Items.Where(item => item.Status == SynchronizationStatus.Failed)
             .Select(item => $"{item.Alias}: {item.Message}").ShouldBeEmpty();
         var types = scope.ServiceProvider.GetRequiredService<IContentTypeService>();

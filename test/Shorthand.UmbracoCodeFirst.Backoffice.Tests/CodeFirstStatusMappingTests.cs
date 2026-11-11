@@ -110,6 +110,8 @@ public class CodeFirstStatusMappingTests {
                 property => property.LabelOnTop.ShouldBeTrue()));
         result.Definitions.Single(item => item.Alias == "decimal").Status
             .ShouldBe(nameof(SynchronizationStatus.Skipped));
+        result.Definitions.Single(item => item.Alias == "decimal").Message
+            .ShouldBe("No synchronization result is available for this definition.");
         result.DataTypes.Single().ShouldSatisfyAllConditions(
             item => item.Alias.ShouldBe("decimal"),
             item => item.Folder.ShouldBe("/"),
@@ -130,6 +132,40 @@ public class CodeFirstStatusMappingTests {
             item => item.Alias.ShouldBe("memberProfile"),
             item => item.PropertyCount.ShouldBe(1),
             item => item.Properties.Single().Mandatory.ShouldBeTrue());
+    }
+
+    [Fact]
+    public void Map_NoReport_ExplainsMissingResult() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "article", "Article", null, []),
+        ]);
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, new SynchronizationReportStore());
+
+        // Assert
+        result.SkippedCount.ShouldBe(1);
+        result.Definitions.Single().Message.ShouldBe("No synchronization report is available yet.");
+    }
+
+    [Fact]
+    public void Map_SkippedResult_PreservesStoreMessage() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "article", "Article", null, []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.DocumentType, "article", "Article", SynchronizationStatus.Skipped, "Managed externally."),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.SkippedCount.ShouldBe(1);
+        result.Definitions.Single().Message.ShouldBe("Managed externally.");
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)

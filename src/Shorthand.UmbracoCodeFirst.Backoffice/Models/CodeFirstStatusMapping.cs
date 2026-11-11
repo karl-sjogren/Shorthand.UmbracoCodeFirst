@@ -43,8 +43,12 @@ internal static class CodeFirstStatusMapping {
                     definition.EditorUiAlias,
                     definition.Settings?.IsElement == true,
                     definition.Properties.Count,
-                    result?.Status.ToString() ?? SynchronizationStatus.Skipped.ToString(),
-                    result?.Message,
+                    result?.Status.ToString() ?? nameof(SynchronizationStatus.Skipped),
+                    result is null
+                        ? report.CompletedAt == DateTimeOffset.MinValue
+                            ? "No synchronization report is available yet."
+                            : "No synchronization result is available for this definition."
+                        : result.Message,
                     backofficeUrls?.GetValueOrDefault((definition.Kind, definition.Alias)),
                     definition.Properties
                         .OrderBy(property => property.SortOrder)

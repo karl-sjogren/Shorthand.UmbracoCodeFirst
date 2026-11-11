@@ -8,6 +8,7 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 public class UmbracoEditorGeneratorTests {
     [Fact]
     public void GenerateEditorCatalog_EmitsPublicEditorDefinitionsFromMetadata() {
+        // Arrange
         const string metadata = """
             {
               "editors": [
@@ -42,6 +43,7 @@ public class UmbracoEditorGeneratorTests {
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
+        // Act
         var generatedSource = driver
             .RunGenerators(compilation, TestContext.Current.CancellationToken)
             .GetRunResult()
@@ -52,6 +54,7 @@ public class UmbracoEditorGeneratorTests {
             .SourceText
             .ToString();
 
+        // Assert
         generatedSource.ShouldContain("public static class TextBox");
         generatedSource.ShouldContain(
             "public class Configuration : global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfigurationDefinition");
@@ -79,10 +82,13 @@ public class UmbracoEditorGeneratorTests {
 
     [Fact]
     public void GenerateEditorCatalog_RealCatalogDefinesConfigurationForEveryEditor() {
+        // Arrange
         var metadata = ReadCatalog();
         using var document = JsonDocument.Parse(metadata);
+        // Act
         var editors = document.RootElement.GetProperty("editors");
 
+        // Assert
         editors.GetArrayLength().ShouldBe(38);
         editors.EnumerateArray().ShouldAllBe(editor =>
             editor.GetProperty("configuration").GetProperty("properties").ValueKind
@@ -134,6 +140,7 @@ public class UmbracoEditorGeneratorTests {
 
     [Fact]
     public void GenerateEditorCatalog_MissingConfigurationMetadataReportsDiagnostic() {
+        // Arrange
         const string metadata = """
             {
               "editors": [
@@ -150,8 +157,10 @@ public class UmbracoEditorGeneratorTests {
             }
             """;
 
+        // Act
         var diagnostics = GenerateDiagnostics(metadata);
 
+        // Assert
         diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF200"
             && diagnostic.GetMessage().Contains("configuration.properties", StringComparison.Ordinal));
@@ -159,6 +168,7 @@ public class UmbracoEditorGeneratorTests {
 
     [Fact]
     public void GenerateEditorCatalog_DuplicateConfigurationPropertyReportsDiagnostic() {
+        // Arrange
         const string metadata = """
             {
               "editors": [
@@ -181,8 +191,10 @@ public class UmbracoEditorGeneratorTests {
             }
             """;
 
+        // Act
         var diagnostics = GenerateDiagnostics(metadata);
 
+        // Assert
         diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF200"
             && diagnostic.GetMessage().Contains("duplicated", StringComparison.Ordinal));
@@ -193,6 +205,7 @@ public class UmbracoEditorGeneratorTests {
     [InlineData(", \"comment\": \"  \"")]
     [InlineData(", \"comment\": 1")]
     public void GenerateEditorCatalog_MissingOrInvalidPropertyCommentReportsDiagnostic(string comment) {
+        // Arrange
         var metadata = $$"""
             {
               "editors": [{
@@ -208,7 +221,11 @@ public class UmbracoEditorGeneratorTests {
             }
             """;
 
-        GenerateDiagnostics(metadata).ShouldContain(diagnostic =>
+        // Act
+        var diagnostics = GenerateDiagnostics(metadata);
+
+        // Assert
+        diagnostics.ShouldContain(diagnostic =>
             diagnostic.Id == "UCF200"
             && diagnostic.GetMessage().Contains("'comment'", StringComparison.Ordinal));
     }

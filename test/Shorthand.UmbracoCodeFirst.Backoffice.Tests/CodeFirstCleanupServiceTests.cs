@@ -10,6 +10,7 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 public class CodeFirstCleanupServiceTests {
     [Fact]
     public async Task PreviewAsync_WhenNoOwnedItemsAreObsolete_ReturnsEmptyCleanupList_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -17,13 +18,16 @@ public class CodeFirstCleanupServiceTests {
         A.CallTo(() => contentTypeService.GetAll()).Returns([]);
         var service = CreateService(dataTypeService, contentTypeService, []);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBeEmpty();
     }
 
     [Fact]
     public async Task PreviewAsync_WhenOwnedDocumentTypeHasObsoleteMembers_ReturnsPropertiesAndGroups_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -47,8 +51,10 @@ public class CodeFirstCleanupServiceTests {
                 null,
                 [new("current", "Current", "text", GroupAlias: "currentGroup")])]);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("Property", "obsolete", "Obsolete", "productPage"),
             new("Group", "obsoleteGroup", "obsoleteGroup", "productPage"),
@@ -58,6 +64,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task PreviewAsync_IgnoresUnownedDocumentTypesAndReportsObsoleteDataTypes_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         var dataType = A.Fake<IDataType>();
@@ -73,8 +80,10 @@ public class CodeFirstCleanupServiceTests {
             .Returns([AsContentType(manualContentType)]);
         var service = CreateService(dataTypeService, contentTypeService, []);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("DataType", "obsoleteText", "Obsolete text"),
         ]);
@@ -82,6 +91,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task PreviewAsync_ReportsOwnedDocumentTypeMissingFromRegistry_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -94,8 +104,10 @@ public class CodeFirstCleanupServiceTests {
             .Returns([AsContentType(contentType)]);
         var service = CreateService(dataTypeService, contentTypeService, []);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("DocumentType", "obsoletePage", "Obsolete Page"),
         ]);
@@ -103,6 +115,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task ApplyAsync_WhenOwnedDocumentTypeIsObsolete_DeletesIt_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -120,8 +133,10 @@ public class CodeFirstCleanupServiceTests {
             .Returns(Umbraco.Cms.Core.Services.OperationStatus.ContentTypeOperationStatus.Success);
         var service = CreateService(dataTypeService, contentTypeService, []);
 
+        // Act
         var result = await service.ApplyAsync();
 
+        // Assert
         result.Removed.ShouldBe([
             new("DocumentType", "obsoletePage", "Obsolete Page"),
         ]);
@@ -134,6 +149,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task PreviewAsync_PreservesCompositionPropertiesAndGroups_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -159,8 +175,10 @@ public class CodeFirstCleanupServiceTests {
                 null,
                 [new("composed", "Composed", "text")])]);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("Property", "obsolete", "Obsolete", "productPage"),
             new("Group", "obsolete", "obsolete", "productPage"),
@@ -169,6 +187,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task ApplyAsync_WhenObsoletePropertyAndGroupExist_RemovesBoth_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -187,8 +206,10 @@ public class CodeFirstCleanupServiceTests {
             contentTypeService,
             [new(CodeFirstDefinitionKind.DocumentType, "productPage", "Product Page", null, [])]);
 
+        // Act
         var result = await service.ApplyAsync();
 
+        // Assert
         result.Failed.ShouldBeEmpty();
         result.Removed.ShouldBe([
             new("Property", "obsolete", "Obsolete", "productPage"),
@@ -205,6 +226,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task ApplyAsync_WhenPropertyAliasOnlyDiffersByCase_RemovesTheStaleProperty_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -228,8 +250,10 @@ public class CodeFirstCleanupServiceTests {
                 null,
                 [new("copyrightYear", "Copyright year", "integer")])]);
 
+        // Act
         var result = await service.ApplyAsync();
 
+        // Assert
         result.Removed.ShouldBe([
             new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
         ]);
@@ -242,6 +266,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task PreviewAsync_WhenPersistedTypeAliasHasDifferentCase_FindsObsoleteProperties_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -264,8 +289,10 @@ public class CodeFirstCleanupServiceTests {
                 null,
                 [new("copyrightYear", "Copyright year", "integer")])]);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
         ]);
@@ -273,6 +300,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task PreviewAsync_WhenElementTypeIsOnlyReturnedByDirectLookup_FindsObsoleteProperties_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -296,8 +324,10 @@ public class CodeFirstCleanupServiceTests {
                 null,
                 [new("copyrightYear", "Copyright year", "integer")])]);
 
+        // Act
         var result = await service.PreviewAsync();
 
+        // Assert
         result.Items.ShouldBe([
             new("Property", "CopyrightYear", "Copyright year", "compositeElement"),
         ]);
@@ -305,6 +335,7 @@ public class CodeFirstCleanupServiceTests {
 
     [Fact]
     public async Task ApplyAsync_WhenUpdateFails_ReportsEachFailure_Async() {
+        // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();
         var contentTypeService = A.Fake<IContentTypeService>();
         A.CallTo(() => dataTypeService.GetAllAsync())
@@ -325,8 +356,10 @@ public class CodeFirstCleanupServiceTests {
             contentTypeService,
             [new(CodeFirstDefinitionKind.DocumentType, "productPage", "Product Page", null, [])]);
 
+        // Act
         var result = await service.ApplyAsync();
 
+        // Assert
         result.RemovedCount.ShouldBe(0);
         result.Failed.Count.ShouldBe(2);
         result.Failed.Select(failure => failure.Message)

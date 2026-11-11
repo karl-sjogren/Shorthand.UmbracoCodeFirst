@@ -6,8 +6,8 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
     [Fact]
     public async Task RepeatedGroupAlias_ReportsDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -18,13 +18,17 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
                     [[|UCFGroup("details", "Details")|]]
                     public string Sku { get; } = null!;
                 }
-                """));
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source);
     }
 
     [Fact]
     public async Task RepeatedGroupAlias_CodeFixCreatesDerivedAttributeAsync() {
-        await VerifyFixCS.VerifyCodeFixAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -33,8 +37,9 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
                     [[|UCFGroup("details", "Details")|]]
                     public string Sku { get; } = null!;
                 }
-                """),
-            SourceWithAppended("""
+                """);
+
+        var expectedSource = SourceWithAppended("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -50,13 +55,18 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
                     public DetailsGroupAttribute() : base("details", "Details") {
                     }
                 }
-                """));
+                """);
+
+        // Act & Assert
+        await VerifyFixCS.VerifyCodeFixAsync(
+            source,
+            expectedSource);
     }
 
     [Fact]
     public async Task RepeatedTabAliasWithSortOrder_CodeFixCreatesDerivedAttributeAsync() {
-        await VerifyFixCS.VerifyCodeFixAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -65,8 +75,9 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
                     [[|UCFTab("Details", 1)|]]
                     public string Sku { get; } = null!;
                 }
-                """),
-            SourceWithAppended("""
+                """);
+
+        var expectedSource = SourceWithAppended("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDocumentType("product", "Product")]
                 public partial class Product {
@@ -82,6 +93,11 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
                     public DetailsTabAttribute() : base("Details", 1) {
                     }
                 }
-                """));
+                """);
+
+        // Act & Assert
+        await VerifyFixCS.VerifyCodeFixAsync(
+            source,
+            expectedSource);
     }
 }

@@ -4,9 +4,12 @@ using Microsoft.Extensions.Logging;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Contracts;
+using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.PropertyEditors;
 using Shorthand.UmbracoCodeFirst.Synchronization;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
@@ -20,7 +23,53 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
     [Fact]
+    public async Task AppRegistry_CodeBlockDependencies_SynchronizeAndPersist_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var synchronizer = new CodeFirstSynchronizer(
+            new GeneratedCodeFirstDefinitionRegistry(),
+            services.GetRequiredService<ICodeFirstDefinitionStore>(),
+            new SynchronizationReportStore(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.Items.Where(item => item.Status == SynchronizationStatus.Failed)
+            .Select(item => $"{item.Alias}: {item.Message}").ShouldBeEmpty();
+        report.Items.Where(item => item.Alias == UmbracoBlogCodeEditorDataType.Alias
+            || item.Alias == CodeBlock.ModelTypeAlias
+            || item.Alias == UmbracoBlogPostContentDataType.Alias)
+            .ShouldSatisfyAllConditions(
+                items => items.Count().ShouldBe(3),
+                items => items.ShouldAllBe(item => item.Status == SynchronizationStatus.Created
+                    || item.Status == SynchronizationStatus.Updated || item.Status == SynchronizationStatus.Unchanged));
+
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var dataType = (await dataTypes.GetAllAsync()).Single(item => item.Name == "Code Editor");
+        dataType.EditorAlias.ShouldBe("Umbraco.Plain.String");
+        dataType.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.CodeEditor");
+        JsonSerializer.SerializeToElement(dataType.ConfigurationData["height"]).GetInt32().ShouldBe(600);
+        dataTypes.ValidateConfigurationData(dataType).ShouldBeEmpty();
+
+        var element = services.GetRequiredService<IContentTypeService>().Get(CodeBlock.ModelTypeAlias);
+        element.ShouldNotBeNull();
+        element.PropertyTypes.Single(property => property.Alias == "code").DataTypeKey.ShouldBe(dataType.Key);
+        var blockList = (await dataTypes.GetAllAsync()).Single(item => item.Name == "Blog Post Content");
+        JsonSerializer.SerializeToElement(blockList.ConfigurationData["blocks"]).EnumerateArray()
+            .ShouldContain(block => block.GetProperty("contentElementTypeKey").GetGuid() == element.Key);
+    }
+
+    [Fact]
     public async Task Store_DropdownConfiguration_CreatesAndUpdatesDataType_Async() {
+        // Arrange
         if(!fixture.IsEnabled) {
             return;
         }
@@ -39,8 +88,10 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
                 typeof(IntegrationDropdownConfiguration),
                 UmbracoEditors.Dropdown.Alias));
 
+        // Act
         var created = await store.ApplyAsync(definition, TestContext.Current.CancellationToken);
-        created.ShouldBe(SynchronizationStatus.Created);
+        // Assert
+        created.Status.ShouldBe(SynchronizationStatus.Created);
 
         var createdDataType = (await dataTypeService.GetAllAsync())
             .Single(dataType => dataType.Name == definition.Name);
@@ -54,7 +105,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         };
         var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(scope.ServiceProvider);
         var updated = await restartedStore.ApplyAsync(updatedDefinition, TestContext.Current.CancellationToken);
-        updated.ShouldBe(SynchronizationStatus.Updated);
+        updated.Status.ShouldBe(SynchronizationStatus.Updated);
 
         var persisted = (await dataTypeService.GetAllAsync())
             .Single(dataType => dataType.Name == definition.Name);
@@ -80,8 +131,9 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
             return;
         }
 
-        // Act
         using var scope = fixture.Services.CreateScope();
+
+        // Act
         await SynchronizeTestDefinitionsAsync(scope.ServiceProvider);
         var dataTypeService = scope.ServiceProvider.GetRequiredService<IDataTypeService>();
         var dataTypeContainerService =
@@ -310,6 +362,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
 
         // Assert
         report.Items.Single().Status.ShouldBe(SynchronizationStatus.Skipped);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("not owned");
         persistedContentType.ShouldNotBeNull();
         persistedContentType!.Name.ShouldBe("Manual Content Type");
         persistedContentType.Description.ShouldBe("Owned by an editor.");

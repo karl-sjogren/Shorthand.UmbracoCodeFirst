@@ -31,12 +31,15 @@ public class AttributeContractTests {
 
     [Fact]
     public void UCFElementTypeAttribute_ExplicitSettings_PreservesValues() {
+        // Arrange
+        // Act
         var attribute = new UCFElementTypeAttribute("productElement", "Product Element") {
             Icon = "icon-custom",
             AllowInLibrary = true,
             Variations = "Culture",
         };
 
+        // Assert
         attribute.Alias.ShouldBe("productElement");
         attribute.Name.ShouldBe("Product Element");
         attribute.AllowInLibrary.ShouldBeTrue();
@@ -49,8 +52,11 @@ public class AttributeContractTests {
     [InlineData("/")]
     [InlineData("")]
     public void UCFFolderPathAttribute_PreservesConfiguredPath(string path) {
+        // Arrange
+        // Act
         var attribute = new UCFFolderPathAttribute(path);
 
+        // Assert
         attribute.Path.ShouldBe(path);
     }
 
@@ -79,6 +85,8 @@ public class AttributeContractTests {
 
     [Fact]
     public void UCFDataTypeAttribute_ExplicitAlias_PreservesAlias() {
+        // Arrange
+        // Act
         var attribute = new UCFDataTypeAttribute(
             "Code First Text",
             "Umbraco.TextBox",
@@ -86,13 +94,17 @@ public class AttributeContractTests {
             Alias = "customText",
         };
 
+        // Assert
         attribute.Alias.ShouldBe("customText");
     }
 
     [Fact]
     public void UCFDataTypeAttribute_EditorType_ReadsAliasesFromEditorType() {
+        // Arrange
+        // Act
         var attribute = new UCFDataTypeAttribute("Code First Text", typeof(TestEditor));
 
+        // Assert
         attribute.EditorAlias.ShouldBe("Umbraco.TextBox");
         attribute.EditorUiAlias.ShouldBe("Umb.PropertyEditorUi.TextBox");
         attribute.Editor.ShouldBe(typeof(TestEditor));
@@ -100,38 +112,50 @@ public class AttributeContractTests {
 
     [Fact]
     public void UCFDataTypeAttribute_EditorAndConfigurationTypes_PreserveConfigurationType() {
+        // Arrange
+        // Act
         var attribute = new UCFDataTypeAttribute(
             "Code First Text",
             typeof(TestEditor),
             typeof(TestConfiguration));
 
+        // Assert
         attribute.ConfigurationType.ShouldBe(typeof(TestConfiguration));
     }
 
     [Fact]
     public void CodeFirstEditorConfiguration_FromJson_CanonicalizesObjectProperties() {
+        // Arrange
+        // Act
         var configuration = CodeFirstEditorConfiguration.FromJson(
             "Umbraco.TextBox",
             """{"z":true,"a":{"y":2,"x":1}}""");
 
+        // Assert
         configuration.Json.ShouldBe("""{"a":{"x":1,"y":2},"z":true}""");
         configuration.SchemaVersion.ShouldBe(1);
     }
 
     [Fact]
     public void CodeFirstEditorConfiguration_FromType_SerializesTypedDefinition() {
+        // Arrange
+        // Act
         var configuration = CodeFirstEditorConfiguration.FromType(
             typeof(TestTextConfiguration),
             "Umbraco.TextBox");
 
+        // Assert
         configuration.Json.ShouldBe("""{"maxChars":255}""");
         configuration.EditorId.ShouldBe("Umbraco.TextBox");
     }
 
     [Fact]
     public void CodeFirstEditorConfiguration_FromType_KeepsTypedBlockMetadataOutOfJson() {
+        // Arrange
+        // Act
         var configuration = CodeFirstEditorConfiguration.FromType(typeof(TestBlockConfiguration), "Umbraco.BlockList");
 
+        // Assert
         configuration.Json.ShouldBe("""{"useLiveEditing":true}""");
         configuration.BlockTypes.ShouldNotBeNull().Count.ShouldBe(1);
         CodeFirstBlockReferences.GetAlias(configuration.BlockTypes[0].Content).ShouldBe("testElement");
@@ -140,8 +164,11 @@ public class AttributeContractTests {
 
     [Fact]
     public void CodeFirstEditorConfiguration_FromType_SerializesTypedRichTextSettings() {
+        // Arrange
+        // Act
         var configuration = CodeFirstEditorConfiguration.FromType(typeof(TestRichTextConfiguration), "Umbraco.RichText");
 
+        // Assert
         configuration.Json.ShouldBe("{}");
         var settings = configuration.TypedSettings.ShouldNotBeNull();
         settings["toolbar"].GetRawText().ShouldBe("""[[["bold","italic"]]]""");
@@ -153,8 +180,11 @@ public class AttributeContractTests {
 
     [Fact]
     public void UCFTabAttribute_NameAndSortOrder_LeavesAliasNull() {
+        // Arrange
+        // Act
         var attribute = new UCFTabAttribute("Product details", 2);
 
+        // Assert
         attribute.Alias.ShouldBeNull();
         attribute.Name.ShouldBe("Product details");
         attribute.SortOrder.ShouldBe(2);

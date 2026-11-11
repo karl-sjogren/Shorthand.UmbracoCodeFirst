@@ -44,22 +44,22 @@ public sealed class CodeFirstSynchronizer(
                     }
 
                     if(!CodeFirstBlockReferences.GetReferences(blockConfiguration!).Any()) {
-                        var directStatus = await SynchronizeDefinitionAsync(definition, cancellationToken);
-                        items.Add(new(definition.Kind, definition.Alias, definition.Name, directStatus));
+                        var directResult = await SynchronizeDefinitionAsync(definition, cancellationToken);
+                        items.Add(ToItem(definition, directResult));
                         continue;
                     }
 
                     var prepared = await blockStore.PrepareBlockDataTypeAsync(definition, cancellationToken);
-                    items.Add(new(definition.Kind, definition.Alias, definition.Name, prepared));
-                    if(prepared is not SynchronizationStatus.Skipped and not SynchronizationStatus.Failed) {
+                    items.Add(ToItem(definition, prepared));
+                    if(prepared.Status is not SynchronizationStatus.Skipped and not SynchronizationStatus.Failed) {
                         deferred.Add((definition, items.Count - 1));
                     }
 
                     continue;
                 }
 
-                var status = await SynchronizeDefinitionAsync(definition, cancellationToken);
-                items.Add(new(definition.Kind, definition.Alias, definition.Name, status));
+                var result = await SynchronizeDefinitionAsync(definition, cancellationToken);
+                items.Add(ToItem(definition, result));
             } catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested) {
                 throw;
             } catch(Exception exception) {
@@ -80,13 +80,18 @@ public sealed class CodeFirstSynchronizer(
                     }
                 }
 
-                var status = await SynchronizeDefinitionAsync(definition, cancellationToken);
+                var result = await SynchronizeDefinitionAsync(definition, cancellationToken);
                 if(items[index].Status == SynchronizationStatus.Created
-                    && status is SynchronizationStatus.Updated or SynchronizationStatus.Unchanged) {
-                    status = SynchronizationStatus.Created;
+                    && result.Status is SynchronizationStatus.Updated or SynchronizationStatus.Unchanged) {
+                    result = result with { Status = SynchronizationStatus.Created };
                 }
 
-                items[index] = new(definition.Kind, definition.Alias, definition.Name, status);
+                if(result.Status is SynchronizationStatus.Created or SynchronizationStatus.Updated or SynchronizationStatus.Unchanged
+                    && result.Message is null) {
+                    result = result with { Message = items[index].Message };
+                }
+
+                items[index] = ToItem(definition, result);
             } catch(OperationCanceledException) when(cancellationToken.IsCancellationRequested) {
                 throw;
             } catch(Exception exception) {
@@ -178,7 +183,13 @@ public sealed class CodeFirstSynchronizer(
         }
     }
 
-    private async Task<SynchronizationStatus> SynchronizeDefinitionAsync(
+    private static SynchronizationItem ToItem(CodeFirstDefinition definition, SynchronizationResult result) =>
+        new(definition.Kind, definition.Alias, definition.Name, result.Status,
+            result.Status == SynchronizationStatus.Skipped && string.IsNullOrWhiteSpace(result.Message)
+                ? "The definition store skipped this definition without providing a reason."
+                : result.Message);
+
+    private async Task<SynchronizationResult> SynchronizeDefinitionAsync(
             CodeFirstDefinition definition,
             CancellationToken cancellationToken) {
         return await store.ApplyAsync(definition, cancellationToken);

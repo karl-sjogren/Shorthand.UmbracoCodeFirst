@@ -5,8 +5,8 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
     [Fact]
     public async Task KnownEditorAndCompatiblePropertyType_DoesNotReportDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDataType("textEditor", "Umbraco.TextBox")]
                 public partial class TextEditor;
@@ -15,14 +15,18 @@ public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
                     [UCFProperty("title", "textEditor")]
                     public string Title { get; } = null!;
                 }
-                """),
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source,
             [("umbraco-property-editors.json", EditorMetadata)]);
     }
 
     [Fact]
     public async Task IncompatibleEditorPropertyType_ReportsDiagnosticAsync() {
-        await VerifyCS.VerifyAnalyzerAsync(
-            Source("""
+        // Arrange
+        var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDataType("textEditor", "Umbraco.TextBox")]
                 public partial class TextEditor;
@@ -31,7 +35,11 @@ public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
                     [UCFProperty("title", "textEditor")]
                     public int [|Title|] { get; }
                 }
-                """),
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(
+            source,
             [("umbraco-property-editors.json", EditorMetadata)]);
     }
 }

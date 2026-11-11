@@ -4,7 +4,7 @@ using Shorthand.UmbracoCodeFirst.Synchronization;
 namespace Shorthand.UmbracoCodeFirst.Contracts;
 
 public interface ICodeFirstBlockDefinitionStore {
-    Task<SynchronizationStatus> PrepareBlockDataTypeAsync(
+    Task<SynchronizationResult> PrepareBlockDataTypeAsync(
         CodeFirstDefinition definition,
         CancellationToken cancellationToken);
 }

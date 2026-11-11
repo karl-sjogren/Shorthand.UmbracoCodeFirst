@@ -9,9 +9,14 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
     [Fact]
     public void Ping_ReturnsPong() {
-        new ShorthandUmbracoCodeFirstBackofficeApiController()
-            .Ping()
-            .ShouldBe("Pong");
+        // Arrange
+        var controller = new ShorthandUmbracoCodeFirstBackofficeApiController();
+
+        // Act
+        var result = controller.Ping();
+
+        // Assert
+        result.ShouldBe("Pong");
     }
 
     [Fact]
@@ -61,6 +66,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
 
     [Fact]
     public async Task StatusAsync_MapsMediaAndMemberTypeUrls_Async() {
+        // Arrange
         var mediaTypeKey = Guid.NewGuid();
         var memberTypeKey = Guid.NewGuid();
         var mediaType = A.Fake<IMediaType>();
@@ -77,6 +83,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
             new(CodeFirstDefinitionKind.MemberType, "memberProfile", "Member Profile", null, []),
         ]);
 
+        // Act
         var response = await new ShorthandUmbracoCodeFirstBackofficeApiController()
             .StatusAsync(
                 registry,
@@ -86,6 +93,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 mediaTypeService,
                 memberTypeService);
 
+        // Assert
         response.MediaTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/media-type/edit/{mediaTypeKey:D}");
         response.MemberTypes.Single().BackofficeUrl.ShouldBe(
