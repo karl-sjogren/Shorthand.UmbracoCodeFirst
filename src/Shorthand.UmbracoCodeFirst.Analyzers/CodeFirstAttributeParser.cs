@@ -19,12 +19,14 @@ internal static class CodeFirstAttributeParser {
             return false;
         }
 
+        var dataTypeHasAliasProperty = attributeName == "UCFDataTypeAttribute"
+            && attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() == true;
         var hasExplicitAlias = attributeName switch {
             "UCFDocumentTypeAttribute"
                 or "UCFElementTypeAttribute"
                 or "UCFMediaTypeAttribute"
                 or "UCFMemberTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
-            "UCFDataTypeAttribute" => attribute.ConstructorArguments.Length >= 3,
+            "UCFDataTypeAttribute" => !dataTypeHasAliasProperty && attribute.ConstructorArguments.Length >= 3,
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
         };
@@ -42,9 +44,14 @@ internal static class CodeFirstAttributeParser {
             return false;
         }
 
-        var alias = hasExplicitAlias
-            ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
-            : CodeFirstAnalyzerHelpers.ToAlias(name);
+        var namedAlias = dataTypeHasAliasProperty
+            ? attribute.NamedArguments.FirstOrDefault(argument => argument.Key == "Alias").Value.Value as string
+            : null;
+        var alias = namedAlias is { Length: > 0 }
+            ? namedAlias
+            : hasExplicitAlias
+                ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
+                : CodeFirstAnalyzerHelpers.ToAlias(name);
         if(alias.Length == 0) {
             return false;
         }

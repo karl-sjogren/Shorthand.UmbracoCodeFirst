@@ -44,6 +44,9 @@ only (see [Architecture](architecture.md#runtime-lifecycle)).
 Before the first report, definitions are shown as `Pending`, not counted as skipped, and no completion
 time is shown. A definition absent from a completed report is shown as `Skipped` with an explanation.
 If coordination fails, its error is shown even when there are no definitions.
+Data types with the same code-first alias are reported as failed and are not applied, preventing
+them from overwriting one another. Give each data type a unique name or set `UCFDataType.Alias`
+explicitly. Aliases default to a camel-cased version of the data type name.
 
 Custom store implementations must return `SynchronizationResult` from both
 `ICodeFirstDefinitionStore.ApplyAsync` and `ICodeFirstBlockDefinitionStore.PrepareBlockDataTypeAsync`

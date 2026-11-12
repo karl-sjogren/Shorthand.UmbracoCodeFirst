@@ -419,6 +419,35 @@ public class CodeFirstSynchronizerTests {
     }
 
     [Fact]
+    public async Task SynchronizeAsync_DuplicateDataTypeAliases_FailsBothWithoutApplyingEither_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "C# editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "JavaScript editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "other", "Other", "Umbraco.TextBox", []),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", null, []),
+        ]);
+        var store = new RecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.AppliedAliases.ShouldBe(["other", "codeEditor"]);
+        report.FailedCount.ShouldBe(2);
+        foreach(var item in report.Items.Where(item => item.Kind == CodeFirstDefinitionKind.DataType && item.Alias == "codeEditor")) {
+            item.Status.ShouldBe(SynchronizationStatus.Failed);
+            item.Message.ShouldNotBeNull().ShouldContain("set its Alias explicitly");
+        }
+
+        report.Items.Single(item => item.Kind == CodeFirstDefinitionKind.DocumentType).Status
+            .ShouldBe(SynchronizationStatus.Created);
+    }
+
+    [Fact]
     public async Task SynchronizeAsync_CyclicCompositions_AppliesEachDefinitionOnce_Async() {
         // Arrange
         var registry = new TestRegistry([

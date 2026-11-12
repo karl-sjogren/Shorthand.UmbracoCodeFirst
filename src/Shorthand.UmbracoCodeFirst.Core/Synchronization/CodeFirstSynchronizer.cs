@@ -21,14 +21,28 @@ public sealed class CodeFirstSynchronizer(
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToHashSet(StringComparer.Ordinal);
+        var duplicateDataTypes = registry.Definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
+            .GroupBy(definition => definition.Alias, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.Ordinal);
         foreach(var definition in registry.Definitions.Where(definition =>
             definition.Kind != CodeFirstDefinitionKind.DataType && duplicates.Contains(definition.Alias))) {
             items.Add(new(definition.Kind, definition.Alias, definition.Name, SynchronizationStatus.Failed,
                 $"Multiple code-first definitions have alias '{definition.Alias}'."));
         }
 
+        foreach(var definition in registry.Definitions.Where(definition =>
+            definition.Kind == CodeFirstDefinitionKind.DataType && duplicateDataTypes.Contains(definition.Alias))) {
+            items.Add(new(definition.Kind, definition.Alias, definition.Name, SynchronizationStatus.Failed,
+                $"Multiple code-first data types have alias '{definition.Alias}'. Give each data type a unique name or set its Alias explicitly."));
+        }
+
         IEnumerable<CodeFirstDefinition> definitions = OrderDefinitions(registry.Definitions
-            .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType || !duplicates.Contains(definition.Alias))
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType
+                ? !duplicateDataTypes.Contains(definition.Alias)
+                : !duplicates.Contains(definition.Alias))
             .ToArray());
 
         foreach(var definition in definitions) {

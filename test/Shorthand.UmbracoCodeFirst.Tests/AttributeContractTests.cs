@@ -149,6 +149,17 @@ public class AttributeContractTests {
         configuration.EditorId.ShouldBe("Umbraco.TextBox");
     }
 
+    [Theory]
+    [InlineData(typeof(CSharpCodeEditorConfiguration), """{"language":"csharp"}""")]
+    [InlineData(typeof(CustomCodeEditorConfiguration), """{"language":"custom-language"}""")]
+    public void CodeFirstEditorConfiguration_FromType_SerializesCodeEditorLanguage(Type type, string expectedJson) {
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(type, UmbracoEditors.CodeEditor.Alias);
+
+        // Assert
+        configuration.Json.ShouldBe(expectedJson);
+    }
+
     [Fact]
     public void CodeFirstEditorConfiguration_FromType_KeepsTypedBlockMetadataOutOfJson() {
         // Arrange
@@ -257,6 +268,18 @@ public class AttributeContractTests {
 
     private sealed class TestTextConfiguration : CodeFirstEditorConfigurationDefinition {
         public int? MaxChars { get; set; } = 255;
+    }
+
+    private sealed class CSharpCodeEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {
+        public CSharpCodeEditorConfiguration() {
+            Language = UmbracoCodeEditorLanguages.CSharp;
+        }
+    }
+
+    private sealed class CustomCodeEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {
+        public CustomCodeEditorConfiguration() {
+            Language = "custom-language";
+        }
     }
 
     [UCFElementType("testElement", "Test Element")]

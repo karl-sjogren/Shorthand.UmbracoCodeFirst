@@ -49,6 +49,22 @@ pixels; configurations using the previous string property must change, for examp
 `600`. References to the previous `Umbraco.CodeEditor` schema alias should use
 `Umbraco.Plain.String` instead.
 
+Umbraco 18.3.1 offers these Code Editor languages: `csharp`, `css`, `html`, `javascript`,
+`json`, `markdown`, `razor`, and `typescript`. Use the constants in
+`Shorthand.UmbracoCodeFirst.PropertyEditors.UmbracoCodeEditorLanguages`:
+
+```csharp
+public sealed class CSharpEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {
+    public CSharpEditorConfiguration() {
+        Language = UmbracoCodeEditorLanguages.CSharp;
+    }
+}
+```
+
+`Language` remains a string so custom values can still be supplied. When it is unspecified,
+Umbraco's editor defaults to JavaScript. Other Monaco language IDs are not necessarily exposed
+or supported by Umbraco's Code Editor configuration.
+
 ## Block editors
 
 The Block List, Block Grid, Single Block and Rich Text/Tiptap configuration classes support typed

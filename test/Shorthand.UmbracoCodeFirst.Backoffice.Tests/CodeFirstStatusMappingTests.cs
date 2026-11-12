@@ -172,6 +172,53 @@ public class CodeFirstStatusMappingTests {
     }
 
     [Fact]
+    public void Map_DuplicateAliases_MapsEachResultWithoutCrashing() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "First", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Second", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", null, []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Second", SynchronizationStatus.Failed, "Second failed."),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", SynchronizationStatus.Created),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "First", SynchronizationStatus.Failed, "First failed."),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.DataTypeCount.ShouldBe(2);
+        result.FailedCount.ShouldBe(2);
+        result.DataTypes.Single(item => item.Name == "First").Message.ShouldBe("First failed.");
+        result.DataTypes.Single(item => item.Name == "Second").Message.ShouldBe("Second failed.");
+        result.DocumentTypes.Single().Status.ShouldBe(nameof(SynchronizationStatus.Created));
+    }
+
+    [Fact]
+    public void Map_DuplicateAliasesWithSameNameAndIncompleteReport_DoesNotReuseResult() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", SynchronizationStatus.Failed, "Conflict."),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.DataTypes.Select(item => item.Status).ShouldBe(["Failed", "Skipped"]);
+        result.DataTypes[0].Message.ShouldBe("Conflict.");
+        result.DataTypes[1].Message.ShouldBe("No synchronization result is available for this definition.");
+    }
+
+    [Fact]
     public void Map_OrchestrationError_ExposesErrorWithoutDefinitions() {
         // Arrange
         var reports = new SynchronizationReportStore();

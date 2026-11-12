@@ -35,6 +35,55 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
             source);
     }
 
+    [Theory]
+    [InlineData("UCFDataType(\"Code Editor\", typeof(Editor), typeof(Configuration))")]
+    [InlineData("UCFDataType(\"Different\", \"schema\", \"ui\", Alias = \"codeEditor\")")]
+    public async Task DuplicateDataTypeAliases_WithCurrentConstructors_ReportsDiagnosticAsync(string secondAttribute) {
+        // Arrange
+        var source = $$"""
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFDataType("Code Editor", typeof(Editor), typeof(Configuration))]
+            public partial class First;
+            [[|{{secondAttribute}}|]]
+            public partial class Second;
+            public class Editor;
+            public class Configuration;
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute {
+                    public UCFDataTypeAttribute(string name, global::System.Type editor, global::System.Type configuration) { }
+                    public UCFDataTypeAttribute(string name, string editor, string ui) { }
+                    public string? Alias { get; set; }
+                }
+            }
+            """;
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
+    public async Task DataTypeAliases_WithDistinctNamedAliases_DoNotReportDiagnosticAsync() {
+        // Arrange
+        var source = """
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            [UCFDataType("Code Editor", typeof(Editor), typeof(Configuration), Alias = "first")]
+            public partial class First;
+            [UCFDataType("Code Editor", typeof(Editor), typeof(Configuration), Alias = "second")]
+            public partial class Second;
+            public class Editor;
+            public class Configuration;
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDataTypeAttribute : global::System.Attribute {
+                    public UCFDataTypeAttribute(string name, global::System.Type editor, global::System.Type configuration) { }
+                    public string? Alias { get; set; }
+                }
+            }
+            """;
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
     [Fact]
     public async Task DuplicateDerivedPropertyAliases_ReportsDiagnosticAsync() {
         // Arrange

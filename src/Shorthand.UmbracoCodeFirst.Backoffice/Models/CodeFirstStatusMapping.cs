@@ -11,13 +11,28 @@ internal static class CodeFirstStatusMapping {
             IReadOnlyDictionary<(CodeFirstDefinitionKind Kind, string Alias),
             string>? backofficeUrls = null) {
         var report = reportStore.Current;
-        var results = report.Items.ToDictionary(item => (item.Kind, item.Alias));
+        var results = report.Items
+            .GroupBy(item => (item.Kind, item.Alias, item.Name))
+            .ToDictionary(group => group.Key, group => new Queue<SynchronizationItem>(group));
+        var uniqueResults = report.Items
+            .GroupBy(item => (item.Kind, item.Alias))
+            .Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single());
+        var uniqueDefinitions = registry.Definitions
+            .GroupBy(definition => (definition.Kind, definition.Alias))
+            .Where(group => group.Count() == 1)
+            .Select(group => group.Key)
+            .ToHashSet();
 
         IReadOnlyList<CodeFirstStatusItem> definitions = registry.Definitions
             .OrderBy(definition => definition.Kind)
             .ThenBy(definition => definition.Alias)
             .Select(definition => {
-                results.TryGetValue((definition.Kind, definition.Alias), out var result);
+                var key = (definition.Kind, definition.Alias);
+                results.TryGetValue((definition.Kind, definition.Alias, definition.Name), out var matchingResults);
+                var result = matchingResults is { Count: > 0 }
+                    ? matchingResults.Dequeue()
+                    : uniqueDefinitions.Contains(key) ? uniqueResults.GetValueOrDefault(key) : null;
                 return new CodeFirstStatusItem(
                     definition.Kind.ToString(),
                     definition.Alias,
