@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
-using System.Text.Json;
 
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
