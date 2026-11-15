@@ -1,0 +1,10 @@
+<Project>
+  <!-- Keep packaged restore assets separate from normal solution builds. -->
+  <PropertyGroup Condition="'$(CodeFirstPackageVersion)' != ''">
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\packaged\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\packaged\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="..\..\Directory.Build.props" />
+</Project>

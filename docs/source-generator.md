@@ -88,16 +88,21 @@ A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 re
 
 | Id | Severity | Meaning |
 | -- | -------- | ------- |
-| UCF001 | Error | A `UCFProperty` has a CLR type that cannot be generated as a published-model property (pointer, function pointer or `void`). |
-| UCF116 | Error | A model declaration conflicts with the generated `PropertyAliases` class. |
-| UCF117 | Error | A UCF attribute references a property alias generated in the same compilation. |
-| UCF118 | Error | A media or member model's container prevents generation of its property aliases. |
-| UCF120 | Error | A template directive or filename is invalid. |
-| UCF121 | Error | Multiple marked views have the same template alias (case-insensitive). |
-| UCF122 | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
-| UCF123 | Error | A property does not specify exactly one data type alias or valid data type key. |
+| [UCF001](analyzers/generator-diagnostics.md#ucf001) | Error | A published-model property has an unsupported CLR type. |
+| [UCF111](analyzers/generator-diagnostics.md#ucf111) | Error | A Data Type configuration has no usable settings or JSON. |
+| [UCF112](analyzers/generator-diagnostics.md#ucf112) | Error | A constant configuration setting has an unsupported type. |
+| [UCF113](analyzers/generator-diagnostics.md#ucf113) | Error | An allowed-child alias expression cannot be resolved. |
+| [UCF114](analyzers/generator-diagnostics.md#ucf114) | Error | A collection configuration or its target is invalid. |
+| [UCF116](analyzers/generator-diagnostics.md#ucf116) | Error | A model declaration conflicts with the generated `PropertyAliases` class. |
+| [UCF117](analyzers/generator-diagnostics.md#ucf117) | Error | A UCF attribute references a property alias generated in the same compilation. |
+| [UCF118](analyzers/generator-diagnostics.md#ucf118) | Error | A media or member model's container prevents generation of its property aliases. |
+| [UCF120](analyzers/generator-diagnostics.md#ucf120) | Error | A template directive or filename is invalid. |
+| [UCF121](analyzers/generator-diagnostics.md#ucf121) | Error | Multiple marked views have the same template alias (case-insensitive). |
+| [UCF122](analyzers/generator-diagnostics.md#ucf122) | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
+| [UCF123](analyzers/generator-diagnostics.md#ucf123) | Error | A property does not specify exactly one data type alias or valid data type key. |
 
 Other rules include those reported by the [analyzers](analyzers/README.md).
+The internal catalog generators also report [UCF200 and UCF201](analyzers/generator-diagnostics.md#internal-catalog-diagnostics).
 
 ## Supported property types
 

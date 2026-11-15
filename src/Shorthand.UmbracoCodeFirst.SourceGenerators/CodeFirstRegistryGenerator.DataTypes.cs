@@ -143,14 +143,13 @@ public sealed partial class CodeFirstRegistryGenerator {
 
     private static string GetConfigurationJsonLiteral(
         AttributeData attribute,
-        INamedTypeSymbol definition,
         SourceProductionContext context) {
         if(GetConfigurationType(attribute) is { } typedConfigurationType) {
             var typedJson = BuildConfigurationJson(
                 typedConfigurationType,
-                attribute,
-                definition,
-                context);
+                context,
+                reportUnsupported: IsConfigurationDefinition(typedConfigurationType),
+                out _);
             if(typedJson is not null) {
                 return SymbolDisplay.FormatLiteral(typedJson, true);
             }
@@ -185,7 +184,6 @@ public sealed partial class CodeFirstRegistryGenerator {
 
     private static string BuildEditorConfiguration(
         AttributeData attribute,
-        INamedTypeSymbol definition,
         SourceProductionContext context) {
         if(GetConfigurationType(attribute) is not { } configurationType) {
             return "null";
@@ -205,13 +203,16 @@ public sealed partial class CodeFirstRegistryGenerator {
             return $"global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstEditorConfiguration.FromType(typeof({configurationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}), {SymbolDisplay.FormatLiteral(runtimeEditorId, true)}, {runtimeSchemaVersion})";
         }
 
-        var json = BuildConfigurationJson(configurationType, attribute, definition, context);
+        var json = BuildConfigurationJson(configurationType, context, reportUnsupported: true, out var unsupported);
         if(json is null) {
-            context.ReportDiagnostic(Diagnostic.Create(
-                _invalidConfigurationType,
-                attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
-                configurationType.ToDisplayString(),
-                GetNameArgument(attribute)));
+            if(!unsupported) {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    _invalidConfigurationType,
+                    attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+                    configurationType.ToDisplayString(),
+                    GetNameArgument(attribute)));
+            }
+
             return "null";
         }
 
@@ -242,9 +243,10 @@ public sealed partial class CodeFirstRegistryGenerator {
 
     private static string? BuildConfigurationJson(
         INamedTypeSymbol configurationType,
-        AttributeData attribute,
-        INamedTypeSymbol definition,
-        SourceProductionContext context) {
+        SourceProductionContext context,
+        bool reportUnsupported,
+        out bool unsupported) {
+        unsupported = false;
         var jsonField = configurationType.GetMembers("Json")
             .OfType<IFieldSymbol>()
             .FirstOrDefault(field => field.IsStatic && field.HasConstantValue);
@@ -269,12 +271,16 @@ public sealed partial class CodeFirstRegistryGenerator {
         foreach(var field in fields) {
             var value = FormatConfigurationValue(field, out var supported);
             if(!supported) {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    _unsupportedConfigurationSetting,
-                    field.Locations.FirstOrDefault(),
-                    field.Name,
-                    configurationType.ToDisplayString(),
-                    field.Type.ToDisplayString()));
+                unsupported = true;
+                if(reportUnsupported) {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        _unsupportedConfigurationSetting,
+                        field.Locations.FirstOrDefault(),
+                        field.Name,
+                        configurationType.ToDisplayString(),
+                        field.Type.ToDisplayString()));
+                }
+
                 return null;
             }
 

@@ -6,6 +6,24 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
 public class UmbracoIconGeneratorTests {
+    [Theory]
+    [InlineData("{}", "icons")]
+    [InlineData("{\"icons\":[\"\"]}", "non-empty string")]
+    [InlineData("{\"icons\":[42]}", "non-empty string")]
+    [InlineData("{", "invalid JSON")]
+    public void GenerateIconCatalog_InvalidMetadataReportsSpecificError(string metadata, string message) {
+        // Arrange
+
+        // Act
+        var diagnostics = GenerateDiagnostics(metadata);
+
+        // Assert
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe("UCF201");
+        diagnostic.Severity.ShouldBe(DiagnosticSeverity.Error);
+        diagnostic.GetMessage().ShouldContain(message);
+    }
+
     [Fact]
     public void GenerateIconCatalog_EmitsAttributeCompatibleConstantsFromMetadata() {
         // Arrange

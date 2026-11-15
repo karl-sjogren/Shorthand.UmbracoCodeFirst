@@ -6,6 +6,23 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests;
 
 public class UmbracoEditorGeneratorTests {
+    [Theory]
+    [InlineData("{}", "editors")]
+    [InlineData("{\"editors\":[{\"id\":\"textBox\"}]}", "required fields")]
+    [InlineData("{", "invalid JSON")]
+    public void GenerateEditorCatalog_InvalidMetadataReportsSpecificError(string metadata, string message) {
+        // Arrange
+
+        // Act
+        var diagnostics = GenerateDiagnostics(metadata);
+
+        // Assert
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe("UCF200");
+        diagnostic.Severity.ShouldBe(DiagnosticSeverity.Error);
+        diagnostic.GetMessage().ShouldContain(message);
+    }
+
     [Fact]
     public void GenerateEditorCatalog_EmitsPublicEditorDefinitionsFromMetadata() {
         // Arrange

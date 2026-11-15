@@ -218,13 +218,13 @@ public sealed partial class CodeFirstRegistryGenerator {
             SymbolDisplay.FormatLiteral(GetDataTypeEditorArgument(dataTypeAttribute), true));
         builder.Append(
             ", global::System.Array.Empty<global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstPropertyDefinition>(), null, null, ");
-        builder.Append(GetConfigurationJsonLiteral(dataTypeAttribute, definition, context));
+        builder.Append(GetConfigurationJsonLiteral(dataTypeAttribute, context));
         builder.Append(", ");
         builder.Append(GetDataTypeEditorUiArgument(dataTypeAttribute));
         builder.Append(", null, ");
         builder.Append(BuildFolderPath(definition));
         builder.Append(", ");
-        builder.Append(BuildEditorConfiguration(dataTypeAttribute, definition, context));
+        builder.Append(BuildEditorConfiguration(dataTypeAttribute, context));
         builder.AppendLine("),");
     }
 

@@ -17,6 +17,7 @@
     <Project Path="test/Shorthand.UmbracoCodeFirst.Analyzers.Tests/Shorthand.UmbracoCodeFirst.Analyzers.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.AppHost.Tests/Shorthand.UmbracoCodeFirst.AppHost.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.Backoffice.Tests/Shorthand.UmbracoCodeFirst.Backoffice.Tests.csproj" />
+    <Project Path="test/Shorthand.UmbracoCodeFirst.DiagnosticsConsumer.Tests/Shorthand.UmbracoCodeFirst.DiagnosticsConsumer.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests/Shorthand.UmbracoCodeFirst.InternalSourceGenerators.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests/Shorthand.UmbracoCodeFirst.SourceGenerators.Tests.csproj" />
     <Project Path="test/Shorthand.UmbracoCodeFirst.Tests/Shorthand.UmbracoCodeFirst.Tests.csproj" />

@@ -20,12 +20,12 @@ its own page with an example.
 | [UCF115](UCF115.md) | Invalid collection configuration type | Error |
 | [UCF119](UCF119.md) | Default template must be allowed | Error |
 
-The source generator additionally reports `UCF001` (unsupported published model property type) as
-an error; see [Source generator](../source-generator.md#generator-diagnostics).
+The [source generator](../source-generator.md#generator-diagnostics) reports additional errors;
+see [generator diagnostic examples](generator-diagnostics.md). That page also documents the
+repository-internal editor and icon catalog diagnostics.
 
 Notes:
 
-- Diagnostic help links currently point at the `feature/initial-implementation` branch and should
-  be switched to `main` when merged.
+- Diagnostic help links currently point at the `develop` branch.
 - UCF102 provides a code fix that creates a reusable derived layout attribute in the current file.
 - Alias validity follows Umbraco: letters, combining marks, digits, whitespace, `.` and `-`.
