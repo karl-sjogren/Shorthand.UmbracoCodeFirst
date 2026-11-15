@@ -25,7 +25,8 @@ public sealed record CodeFirstPropertyDefinition(
     [param: StringSyntax(StringSyntaxAttribute.Regex)]
     string? ValidationExpression = null,
     string? ValidationMessage = null,
-    bool LabelOnTop = false) {
+    bool LabelOnTop = false,
+    string? DataTypeKey = null) {
     public string? EffectiveGroupAlias => GroupAlias is null
         ? TabAlias
         : TabAlias is null ? GroupAlias : $"{TabAlias}/{GroupAlias}";

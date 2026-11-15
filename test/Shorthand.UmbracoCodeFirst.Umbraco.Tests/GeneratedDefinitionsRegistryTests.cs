@@ -3,11 +3,30 @@ using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public class GeneratedDefinitionsRegistryTests {
+    [Fact]
+    public void AppRegistry_ImageBlock_ReferencesBuiltInMediaPicker() {
+        // Arrange
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+
+        // Act
+        var image = registry.Definitions.Single(definition => definition.Alias == ImageBlock.ModelTypeAlias)
+            .Properties.Single(property => property.Alias == ImageBlock.PropertyAliases.Image);
+        var picker = registry.Definitions.Single(definition => definition.Alias == UmbracoBlogMediaPickerDataType.Alias);
+
+        // Assert
+        image.DataTypeAlias.ShouldBeEmpty();
+        image.DataTypeKey.ShouldBe(global::Umbraco.Cms.Core.Constants.DataTypes.Guids.MediaPicker3SingleImage);
+        using var json = JsonDocument.Parse(picker.EffectiveConfigurationJson.ShouldNotBeNull());
+        json.RootElement.GetProperty("multiple").GetBoolean().ShouldBeTrue();
+        json.RootElement.GetProperty("validationLimit").GetProperty("max").GetInt32().ShouldBe(3);
+    }
+
     [Fact]
     public void AppRegistry_BlogIndex_ConfiguresBlogPostCollection() {
         // Arrange

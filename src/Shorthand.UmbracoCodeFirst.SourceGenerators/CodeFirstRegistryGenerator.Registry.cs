@@ -24,6 +24,14 @@ public sealed partial class CodeFirstRegistryGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _invalidPropertyDataType = new(
+        "UCF123",
+        "Invalid property data type reference",
+        "Property '{0}' must specify exactly one data type alias or a valid non-empty GUID data type key",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 #pragma warning restore RS2008
 
     private static void EmitRegistry(
@@ -110,6 +118,17 @@ public sealed partial class CodeFirstRegistryGenerator {
 
                 var propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
                 var (propertyName, propertyAlias) = GetPropertyMetadata(propertyAttribute, propertySyntax);
+                var dataTypeAlias = GetDataTypeArgument(propertyAttribute, dataTypeAliases, propertySyntax);
+                var dataTypeKey = GetNamedStringArgument(propertyAttribute, "DataTypeKey");
+                var hasDataTypeKey = propertyAttribute.NamedArguments.Any(static argument => argument.Key == "DataTypeKey");
+                if((!hasDataTypeKey && string.IsNullOrWhiteSpace(dataTypeAlias))
+                    || (hasDataTypeKey && (!string.IsNullOrWhiteSpace(dataTypeAlias)
+                        || !Guid.TryParse(dataTypeKey, out var key) || key == Guid.Empty))) {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        _invalidPropertyDataType,
+                        propertySyntax?.GetLocation() ?? property.Locations.FirstOrDefault(),
+                        property.Name));
+                }
 
                 var descriptionAttribute = FindAttribute(property, _descriptionAttributeMetadataName);
                 var groupAttribute = FindLayoutAttribute(property, _groupAttributeMetadataName);
@@ -127,7 +146,7 @@ public sealed partial class CodeFirstRegistryGenerator {
                 builder.Append(", ");
                 builder.Append(
                     SymbolDisplay.FormatLiteral(
-                        GetDataTypeArgument(propertyAttribute, dataTypeAliases, propertySyntax),
+                        dataTypeAlias,
                         true));
                 builder.Append(", ");
                 builder.Append(GetConstructorStringLiteral(descriptionAttribute));
@@ -165,6 +184,8 @@ public sealed partial class CodeFirstRegistryGenerator {
                     : SymbolDisplay.FormatLiteral(validationMetadata.Message, true));
                 builder.Append(", ");
                 builder.Append(GetNamedBoolArgument(propertyAttribute, "LabelOnTop").ToString().ToLowerInvariant());
+                builder.Append(", ");
+                builder.Append(GetNamedStringLiteral(propertyAttribute, "DataTypeKey"));
                 builder.AppendLine("),");
             }
 

@@ -6,6 +6,24 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstStatusMappingTests {
     [Fact]
+    public void Map_PropertyWithDataTypeKey_ExposesReference() {
+        // Arrange
+        const string key = "ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3";
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null,
+                [new("image", "Image", "", DataTypeKey: key)]),
+        ]);
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, new SynchronizationReportStore());
+
+        // Assert
+        var property = result.Definitions.Single().Properties.Single();
+        property.DataTypeAlias.ShouldBeEmpty();
+        property.DataTypeKey.ShouldBe(key);
+    }
+
+    [Fact]
     public void Map_TemplateAndDocumentWithSameAlias_ReportsSeparateOutcomes() {
         // Arrange
         var registry = new TestRegistry([

@@ -27,6 +27,79 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
     [Fact]
+    public async Task Store_MediaPicker_PersistsSettingsAndReferencesBuiltInWithoutChangingIt_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        var builtInKey = Guid.Parse(Constants.DataTypes.Guids.MediaPicker3SingleImage);
+        var builtIn = (await dataTypes.GetAllAsync()).Single(item => item.Key == builtInKey);
+        var originalConfiguration = JsonSerializer.Serialize(builtIn.ConfigurationData);
+        var picker = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Single(item => item.Alias == UmbracoBlogMediaPickerDataType.Alias) with {
+            Alias = "integrationMediaPicker",
+            Name = "Integration Media Picker",
+        };
+        var document = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType, "integrationMediaPickerPage", "Media Picker Page", null,
+            [new("image", "Image", "", DataTypeKey: builtInKey.ToString())]);
+
+        // Act
+        var pickerResult = await store.ApplyAsync(picker, token);
+        var documentResult = await store.ApplyAsync(document, token);
+        var repeated = await store.ApplyAsync(document, token);
+        var savedPicker = (await dataTypes.GetAllAsync()).Single(item => item.Name == picker.Name);
+        var savedBuiltIn = (await dataTypes.GetAllAsync()).Single(item => item.Key == builtInKey);
+        var savedDocument = contentTypes.Get(document.Alias).ShouldNotBeNull();
+
+        // Assert
+        pickerResult.Status.ShouldBe(SynchronizationStatus.Created);
+        documentResult.Status.ShouldBe(SynchronizationStatus.Created);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        savedDocument.PropertyTypes.Single(property => property.Alias == "image").DataTypeKey.ShouldBe(builtInKey);
+        JsonSerializer.Serialize(savedBuiltIn.ConfigurationData).ShouldBe(originalConfiguration);
+        dataTypes.ValidateConfigurationData(savedPicker).ShouldBeEmpty();
+        savedPicker.ConfigurationData["filter"].ShouldBe(Constants.MediaTypes.Guids.Image);
+        savedPicker.ConfigurationData["multiple"].ShouldBe(true);
+        JsonSerializer.SerializeToElement(savedPicker.ConfigurationData["validationLimit"]).GetProperty("max").GetInt32().ShouldBe(3);
+        JsonSerializer.SerializeToElement(savedPicker.ConfigurationData["crops"])[0].GetProperty("alias").GetString().ShouldBe("thumbnail");
+
+        // Arrange
+        var otherKey = Guid.Parse(Constants.DataTypes.Guids.MediaPicker3MultipleImages);
+        var changed = document with {
+            Properties = [new("image", "Image", "", DataTypeKey: otherKey.ToString())],
+        };
+
+        // Act
+        var changedResult = await store.ApplyAsync(changed, token);
+        var changedDocument = contentTypes.Get(document.Alias).ShouldNotBeNull();
+
+        // Assert
+        changedResult.Status.ShouldBe(SynchronizationStatus.Updated);
+        changedDocument.PropertyTypes.Single(property => property.Alias == "image").DataTypeKey.ShouldBe(otherKey);
+
+        // Arrange
+        var missingKey = Guid.NewGuid().ToString();
+        var missing = document with {
+            Alias = "integrationMissingMediaPickerPage",
+            Properties = [new("image", "Image", "", DataTypeKey: missingKey)],
+        };
+
+        // Act
+        var exception = await Should.ThrowAsync<InvalidOperationException>(() => store.ApplyAsync(missing, token));
+
+        // Assert
+        exception.Message.ShouldContain(missingKey);
+    }
+
+    [Fact]
     public async Task Store_NestedGroups_ScopesAliasesAndMovesPropertiesWithoutLosingManualStructure_Async() {
         // Arrange
         if(!fixture.IsEnabled) {

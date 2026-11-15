@@ -88,6 +88,11 @@ public sealed partial class CodeFirstRegistryGenerator {
         AttributeData attribute,
         IReadOnlyDictionary<string, string> dataTypeAliases,
         AttributeSyntax? syntax = null) {
+        syntax ??= attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
+        if(syntax?.ArgumentList?.Arguments.Count(static argument => argument.NameColon is null && argument.NameEquals is null) == 1) {
+            return string.Empty;
+        }
+
         var argumentIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
         if (attribute.ConstructorArguments.Length > argumentIndex) {
             var value = attribute.ConstructorArguments[argumentIndex].Value?.ToString();
@@ -96,7 +101,6 @@ public sealed partial class CodeFirstRegistryGenerator {
             }
         }
 
-        syntax ??= attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
         if (syntax?.ArgumentList?.Arguments
                 .Where(static argument => argument.NameColon is null && argument.NameEquals is null)
                 .LastOrDefault()?.Expression is MemberAccessExpressionSyntax memberAccess

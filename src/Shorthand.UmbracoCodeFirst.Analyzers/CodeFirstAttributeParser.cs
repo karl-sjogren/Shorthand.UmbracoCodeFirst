@@ -44,7 +44,7 @@ internal static class CodeFirstAttributeParser {
             return false;
         }
 
-        var namedAlias = dataTypeHasAliasProperty
+        var namedAlias = dataTypeHasAliasProperty || attributeName == "UCFPropertyAttribute"
             ? attribute.NamedArguments.FirstOrDefault(argument => argument.Key == "Alias").Value.Value as string
             : null;
         var alias = namedAlias is { Length: > 0 }
@@ -167,9 +167,18 @@ internal static class CodeFirstAttributeParser {
             return false;
         }
 
-        var editorIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
-        if(attribute.ConstructorArguments.Length <= editorIndex
-            || attribute.ConstructorArguments[editorIndex].Value is not string editorAlias) {
+        var currentConstructor = attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() == true;
+        var editorIndex = currentConstructor || attribute.ConstructorArguments.Length == 2 ? 1 : 2;
+        if(attribute.ConstructorArguments.Length <= editorIndex) {
+            return false;
+        }
+
+        var editorArgument = attribute.ConstructorArguments[editorIndex];
+        var editorAlias = editorArgument.Value as string
+            ?? (editorArgument.Value as INamedTypeSymbol)?.GetMembers("Alias")
+                .OfType<IFieldSymbol>()
+                .FirstOrDefault(static field => field.IsConst)?.ConstantValue as string;
+        if(editorAlias is not { Length: > 0 }) {
             return false;
         }
 
@@ -178,7 +187,7 @@ internal static class CodeFirstAttributeParser {
             return false;
         }
 
-        occurrence = new DataTypeOccurrence(alias, editorAlias, symbol);
+        occurrence = new DataTypeOccurrence(alias, editorAlias, symbol, attribute);
         return true;
     }
 
@@ -192,24 +201,28 @@ internal static class CodeFirstAttributeParser {
         }
 
         var dataTypeIndex = attribute.ConstructorArguments.Length == 2 ? 1 : 2;
-        if(attribute.ConstructorArguments.Length <= dataTypeIndex
-            || attribute.ConstructorArguments[dataTypeIndex].Value is not string dataTypeAlias) {
-            return false;
-        }
-
-        occurrence = new EditorPropertyOccurrence(property, dataTypeAlias);
+        var dataTypeAlias = attribute.ConstructorArguments.Length > dataTypeIndex
+            ? attribute.ConstructorArguments[dataTypeIndex].Value as string ?? string.Empty
+            : string.Empty;
+        var key = attribute.NamedArguments.FirstOrDefault(static argument => argument.Key == "DataTypeKey").Value.Value as string;
+        occurrence = new EditorPropertyOccurrence(property, dataTypeAlias, key, attribute);
         return true;
     }
 
     public static string GetDefinitionAlias(AttributeData attribute) {
-        var hasExplicitAlias = attribute.ConstructorArguments.Length >= 3;
+        var currentConstructor = attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() == true;
+        var namedAlias = currentConstructor
+            ? attribute.NamedArguments.FirstOrDefault(static argument => argument.Key == "Alias").Value.Value as string
+            : null;
+        var hasExplicitAlias = !currentConstructor && attribute.ConstructorArguments.Length >= 3;
         var nameIndex = hasExplicitAlias ? 1 : 0;
         if(attribute.ConstructorArguments.Length <= nameIndex
             || attribute.ConstructorArguments[nameIndex].Value is not string name) {
             return string.Empty;
         }
 
-        return hasExplicitAlias
+        return namedAlias is { Length: > 0 } ? namedAlias
+            : hasExplicitAlias
             ? attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty
             : CodeFirstAnalyzerHelpers.ToAlias(name);
     }

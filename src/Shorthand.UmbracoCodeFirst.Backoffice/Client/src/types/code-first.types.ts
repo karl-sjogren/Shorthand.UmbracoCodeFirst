@@ -8,6 +8,7 @@ export type StatusProperty = {
   alias: string;
   name: string;
   dataTypeAlias: string;
+  dataTypeKey?: string | null;
   description?: string;
   groupAlias?: string;
   groupName?: string;

@@ -188,6 +188,17 @@ public class AttributeContractTests {
         configuration.EditorId.ShouldBe("Umbraco.TextBox");
     }
 
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesMediaPickerSettings() {
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(TestMediaPickerConfiguration), UmbracoEditors.MediaPicker.Alias);
+
+        // Assert
+        configuration.Json.ShouldBe(
+            """{"crops":[{"alias":"thumb","height":200,"width":300}],"enableLocalFocalPoint":true,"filter":"cc07b313-0843-4aa8-bbda-871c8da728c8,4c52d8ab-54e6-40cd-999c-7a5f24903e4d","ignoreUserStartNodes":false,"multiple":true,"startNodeId":"11111111-2222-3333-4444-555555555555","validationLimit":{"max":1,"min":0}}""");
+    }
+
     [Theory]
     [InlineData(typeof(CSharpCodeEditorConfiguration), """{"language":"csharp"}""")]
     [InlineData(typeof(CustomCodeEditorConfiguration), """{"language":"custom-language"}""")]
@@ -307,6 +318,21 @@ public class AttributeContractTests {
 
     private sealed class TestTextConfiguration : CodeFirstEditorConfigurationDefinition {
         public int? MaxChars { get; set; } = 255;
+    }
+
+    private sealed class TestMediaPickerConfiguration : UmbracoEditors.MediaPicker.Configuration {
+        public TestMediaPickerConfiguration() {
+            AcceptedMediaTypeKeys = [
+                Guid.Parse("cc07b313-0843-4aa8-bbda-871c8da728c8"),
+                Guid.Parse("4c52d8ab-54e6-40cd-999c-7a5f24903e4d"),
+            ];
+            Multiple = true;
+            ValidationLimit = new(0, 1);
+            StartNodeId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+            EnableLocalFocalPoint = true;
+            IgnoreUserStartNodes = false;
+            Crops = [new("thumb", 300, 200)];
+        }
     }
 
     private sealed class CSharpCodeEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {

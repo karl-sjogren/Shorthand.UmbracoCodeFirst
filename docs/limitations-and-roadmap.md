@@ -30,7 +30,6 @@ collection layouts and the workspace icon, name and content-first settings are n
 - Full catalog-driven typed, per-editor Data Type settings; reusable configuration types and raw
   `ConfigurationJson` compatibility are available, while editor-specific schema validation remains
   in progress
-- Referencing Umbraco built-in or manually created Data Types from `UCFProperty`
 - Changing the Data Type of an existing property
 - Automatic deletion/migration (removed definitions, properties, tabs, groups remain until the
   explicit cleanup action is applied)

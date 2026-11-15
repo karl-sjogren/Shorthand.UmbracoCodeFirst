@@ -95,6 +95,7 @@ A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 re
 | UCF120 | Error | A template directive or filename is invalid. |
 | UCF121 | Error | Multiple marked views have the same template alias (case-insensitive). |
 | UCF122 | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
+| UCF123 | Error | A property does not specify exactly one data type alias or valid data type key. |
 
 Other rules include those reported by the [analyzers](analyzers/README.md).
 

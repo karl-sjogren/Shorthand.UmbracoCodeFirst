@@ -34,9 +34,9 @@ values in a constructor, and passes the derived type through `UCFDataType.Config
 keeps editor options discoverable while allowing the catalog to remain the single source of truth.
 
 Compatibility diagnostics are conservative. Scalar and string collection editors are checked
-directly; nullable values are accepted; picker/block/media return types are treated as compatible
-when the catalog cannot safely resolve the consuming Umbraco type. Configuration-dependent editors
-should use a broad documented return descriptor rather than causing false positives.
+directly; nullable values are accepted. Media Picker checks the supported media shapes and, when
+statically known, selection multiplicity. Other Umbraco return types are treated as compatible when
+the catalog cannot safely resolve the consuming type.
 
 The catalog currently follows the [Umbraco built-in property editor
 documentation](https://docs.umbraco.com/umbraco-cms/model-your-content/property-editors/built-in-umbraco-property-editors).
@@ -64,6 +64,42 @@ public sealed class CSharpEditorConfiguration : UmbracoEditors.CodeEditor.Config
 `Language` remains a string so custom values can still be supplied. When it is unspecified,
 Umbraco's editor defaults to JavaScript. Other Monaco language IDs are not necessarily exposed
 or supported by Umbraco's Code Editor configuration.
+
+## Media Picker
+
+Media Picker supports typed configuration without referencing Umbraco configuration classes:
+
+```csharp
+using Shorthand.UmbracoCodeFirst.Metadata;
+using Shorthand.UmbracoCodeFirst.PropertyEditors;
+
+public sealed class ImagePickerConfiguration : UmbracoEditors.MediaPicker.Configuration {
+    public ImagePickerConfiguration() {
+        AcceptedMediaTypeKeys = [global::Umbraco.Cms.Core.Constants.MediaTypes.Guids.ImageGuid];
+        Multiple = true;
+        ValidationLimit = new(Min: 0, Max: 3);
+        StartNodeId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        EnableLocalFocalPoint = true;
+        Crops = [new("thumbnail", 400, 300)];
+        IgnoreUserStartNodes = false;
+    }
+}
+```
+
+Use the configuration type in `UCFDataType`, or reference an existing picker by `DataTypeKey` as
+shown in [attributes](attributes.md#ucfproperty--property). `AcceptedMediaTypeKeys` contains media
+type keys; it serializes to Umbraco's comma-separated `filter` value. `StartNodeId` is the media node
+key. Enabling `IgnoreUserStartNodes` overrides
+the user's normal media start-node restrictions for this picker; use it deliberately.
+
+Single selection returns `MediaWithCrops`; multiple selection returns
+`IEnumerable<MediaWithCrops>`. Umbraco also documents corresponding `IPublishedContent` shapes.
+Even with a maximum of one, multiple selection returns a collection. UCF109 accepts either shape
+when multiplicity cannot be established statically, including externally managed built-in pickers.
+
+This replaces the former Media Picker `MinNumber`, `MaxNumber`, raw JSON `Crops` and `StartNode`
+members. Use `ValidationLimit`, typed `Crops` and `StartNodeId` instead. Raw
+`UCFDataType.ConfigurationJson` remains available.
 
 ## Block editors
 

@@ -47,15 +47,18 @@ internal sealed class CompositionOccurrence(
     public bool TargetIsElement { get; } = targetIsElement;
 }
 
-internal sealed class DataTypeOccurrence(string alias, string editorAlias, ISymbol symbol) {
+internal sealed class DataTypeOccurrence(string alias, string editorAlias, ISymbol symbol, AttributeData attribute) {
     public string Alias { get; } = alias;
     public string EditorAlias { get; } = editorAlias;
     public ISymbol Symbol { get; } = symbol;
+    public AttributeData Attribute { get; } = attribute;
 }
 
-internal sealed class EditorPropertyOccurrence(IPropertySymbol property, string dataTypeAlias) {
+internal sealed class EditorPropertyOccurrence(IPropertySymbol property, string dataTypeAlias, string? dataTypeKey, AttributeData attribute) {
     public IPropertySymbol Property { get; } = property;
     public string DataTypeAlias { get; } = dataTypeAlias;
+    public string? DataTypeKey { get; } = dataTypeKey;
+    public AttributeData Attribute { get; } = attribute;
 }
 
 internal enum AliasScope {

@@ -267,14 +267,23 @@ Declares a Document Type property. Must be on a `partial` property of a class th
 | -------- | ---- | ----------- |
 | `name` | ctor | Display name. |
 | `alias` | ctor (optional) | Property alias. |
-| `dataTypeAlias` | ctor | Alias of a code-first Data Type (use `MyDataType.Alias`). |
+| `dataTypeAlias` | ctor (optional) | Alias of a code-first Data Type (use `MyDataType.Alias`). |
+| `DataTypeKey` | named (optional) | GUID string identifying an existing Umbraco Data Type. |
+| `Alias` | named (optional) | Explicit property alias, useful with `DataTypeKey`. |
 | `SortOrder` | named | Property sort order. |
 | `Mandatory` | named | Whether a value is required. |
 | `LabelOnTop` | named | Show the label above the editor. |
 
-The referenced Data Type must be a code-first Data Type (see
-[Synchronization](synchronization.md#data-types)); referencing an Umbraco built-in Data Type is not
-currently supported.
+Supply exactly one code-first alias or existing Data Type key. For example:
+
+```csharp
+[UCFProperty("Image", DataTypeKey = global::Umbraco.Cms.Core.Constants.DataTypes.Guids.MediaPicker3SingleImage)]
+public partial MediaWithCrops? Image { get; }
+```
+
+The key can reference a built-in or manually created Data Type. Code First does not own, configure,
+or delete it. A missing key fails synchronization; changing the externally managed configuration
+can change the property's runtime value shape.
 
 ## `UCFDescription` – class or property
 

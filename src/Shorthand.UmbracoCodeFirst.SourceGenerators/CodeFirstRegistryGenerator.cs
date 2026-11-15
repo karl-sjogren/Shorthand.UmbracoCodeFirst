@@ -135,7 +135,9 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
             name = GetSyntaxStringArgument(syntax, explicitAlias ? 1 : 0);
         }
 
-        var alias = GetAliasArgument(attribute, name);
+        var alias = GetNamedStringArgument(attribute, "Alias") is { Length: > 0 } namedAlias
+            ? namedAlias
+            : GetAliasArgument(attribute, name);
         if (alias.Length == 0) {
             alias = explicitAlias
                 ? GetSyntaxStringArgument(syntax, 0)

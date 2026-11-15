@@ -432,7 +432,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                     : ""}
                 </uui-table-cell>
                 <uui-table-cell>${property.alias}</uui-table-cell>
-                <uui-table-cell>${property.dataTypeAlias}</uui-table-cell>
+                <uui-table-cell>${property.dataTypeAlias || property.dataTypeKey}</uui-table-cell>
                 <uui-table-cell>
                   ${property.tabName ?? property.tabAlias ?? ""}
                   ${property.groupName ?? property.groupAlias

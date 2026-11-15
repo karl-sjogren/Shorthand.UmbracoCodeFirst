@@ -13,4 +13,5 @@ public sealed record CodeFirstStatusProperty(
     bool Mandatory,
     string? ValidationExpression,
     string? ValidationMessage,
-    bool LabelOnTop);
+    bool LabelOnTop,
+    string? DataTypeKey = null);

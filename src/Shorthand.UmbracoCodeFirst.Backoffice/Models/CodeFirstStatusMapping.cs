@@ -85,7 +85,8 @@ internal static class CodeFirstStatusMapping {
                             property.Mandatory,
                             property.ValidationExpression,
                             property.ValidationMessage,
-                            property.LabelOnTop))
+                            property.LabelOnTop,
+                            property.DataTypeKey))
                         .ToArray());
             })
             .ToArray();

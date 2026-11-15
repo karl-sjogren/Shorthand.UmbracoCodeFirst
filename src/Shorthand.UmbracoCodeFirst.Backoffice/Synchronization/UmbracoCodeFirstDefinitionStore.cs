@@ -772,10 +772,23 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         var changed = ApplyPropertyGroups(contentType, definition);
 
         foreach(var property in definition.Properties) {
-            var dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
+            IDataType? dataType;
+            if(property.DataTypeKey is not null) {
+                if(!string.IsNullOrWhiteSpace(property.DataTypeAlias)
+                    || !Guid.TryParse(property.DataTypeKey, out var key)
+                    || key == Guid.Empty) {
+                    throw new InvalidOperationException(
+                        $"The {definition.Kind} '{definition.Alias}' property '{property.Alias}' must specify either a data type alias or a valid data type key.");
+                }
+
+                dataType = (await dataTypeService.GetAllAsync()).FirstOrDefault(candidate => candidate.Key == key);
+            } else {
+                dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
+            }
+
             if(dataType is null) {
                 throw new InvalidOperationException(
-                    $"The document type '{definition.Alias}' references unknown data type '{property.DataTypeAlias}'.");
+                    $"The {definition.Kind} '{definition.Alias}' property '{property.Alias}' references unknown data type '{property.DataTypeKey ?? property.DataTypeAlias}'.");
             }
 
             var existingProperty = contentType.PropertyTypes.FirstOrDefault(candidate => candidate.Alias == property.Alias);

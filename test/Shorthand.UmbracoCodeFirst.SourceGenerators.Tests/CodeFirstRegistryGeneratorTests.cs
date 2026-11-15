@@ -6,6 +6,47 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_DataTypeKey_EmitsKeyAndRejectsInvalidReferences() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDocumentAttribute(string name) : global::System.Attribute;
+                public sealed class UCFPropertyAttribute(string name) : global::System.Attribute {
+                    public UCFPropertyAttribute(string name, string dataTypeAlias) : this(name) { }
+                    public string DataTypeKey { get; set; }
+                    public string Alias { get; set; }
+                }
+            }
+            namespace Example {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocument("Page")]
+                public partial class Page {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Image", Alias = "hero", DataTypeKey = "ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3")]
+                    public string Image { get; }
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Invalid", DataTypeKey = "not-a-guid")]
+                    public string Invalid { get; }
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Both", "owned", DataTypeKey = "ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3")]
+                    public string Both { get; }
+                }
+            }
+            """;
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(item => item.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        registry.ShouldContain("\"hero\", \"Image\", \"\"");
+        registry.ShouldContain("\"ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3\"");
+        result.Diagnostics.Count(diagnostic => diagnostic.Id == "UCF123").ShouldBe(2);
+    }
+
+    [Fact]
     public void GenerateRegistry_CollectionConfiguration_EmitsKindAndReportsInvalidTarget() {
         // Arrange
         const string source = """
