@@ -482,6 +482,18 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         // Assert
         report.Items.Where(item => item.Status == SynchronizationStatus.Failed)
             .Select(item => $"{item.Alias}: {item.Message}").ShouldBeEmpty();
+        var templates = services.GetRequiredService<ITemplateService>();
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        foreach(var (documentAlias, templateAlias) in new[] {
+            ("landingPage", UmbracoTemplates.LandingPage),
+            ("productPage", UmbracoTemplates.ProductPage),
+        }) {
+            var template = (await templates.GetAsync(templateAlias)).ShouldNotBeNull();
+            var document = contentTypes.Get(documentAlias).ShouldNotBeNull();
+            document.DefaultTemplate.ShouldNotBeNull().Key.ShouldBe(template.Key);
+            document.AllowedTemplates.ShouldNotBeNull().Select(item => item.Key).ShouldContain(template.Key);
+        }
+
         report.Items.Where(item => item.Alias == UmbracoBlogCodeEditorDataType.Alias
             || item.Alias == CodeBlock.ModelTypeAlias
             || item.Alias == UmbracoBlogPostContentDataType.Alias)
