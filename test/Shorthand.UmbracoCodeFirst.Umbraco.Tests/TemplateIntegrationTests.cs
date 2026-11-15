@@ -14,6 +14,7 @@ using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.IO;
 using Umbraco.Cms.Core.Services;
+using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
@@ -24,7 +25,7 @@ public class TemplateIntegrationTests(UmbracoIntegrationFixture fixture) : IClas
     public async Task Templates_RegisterBeforeDocuments_PreserveViewsAndSkipUnowned_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -125,7 +126,7 @@ public class TemplateIntegrationTests(UmbracoIntegrationFixture fixture) : IClas
     public async Task Templates_MissingView_FailsWithoutCreatingTemplate_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();

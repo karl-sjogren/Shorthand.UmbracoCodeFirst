@@ -10,6 +10,7 @@ using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Services;
+using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
@@ -22,7 +23,7 @@ public class CollectionIntegrationTests(UmbracoIntegrationFixture fixture) : ICl
     public async Task Store_ManagesCollectionWithoutReplacingManualAssociation_Async(CodeFirstDefinitionKind kind) {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -143,7 +144,7 @@ public class CollectionIntegrationTests(UmbracoIntegrationFixture fixture) : ICl
     public async Task Store_PersistsTypedCollectionAliasesAsync(CodeFirstDefinitionKind kind, string expectedAlias) {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();

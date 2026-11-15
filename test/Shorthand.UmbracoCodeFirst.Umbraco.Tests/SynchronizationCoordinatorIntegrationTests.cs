@@ -7,6 +7,7 @@ using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.DistributedLocking;
 using Umbraco.Cms.Core.Scoping;
 using Umbraco.Cms.Core.Services;
+using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
@@ -18,7 +19,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Package_WithoutExplicitStartupCall_SynchronizesDuringBoot_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         // Act
@@ -55,7 +56,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Package_GracefulShutdown_ReleasesMembershipForDifferentDefinitions_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         var values = fixture.Services.GetRequiredService<IKeyValueService>();
@@ -95,7 +96,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Package_ClusterCoordinationByDefault_SynchronizesWithoutChangingStaleClaim_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         const string staleState = """{"Version":1,"Members":{"stopped":"old"},"Owner":"stopped"}""";
@@ -140,7 +141,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Coordinators_SerializeMatchingDefinitions_AndRejectDifferentDefinitions_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -188,7 +189,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Coordinator_ClusterCoordinationDisabled_SerializesLocalCalls_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -222,7 +223,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Coordinator_InsideAmbientScope_FailsWithoutWriting_Async(bool coordinationEnabled) {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         var scopes = fixture.Services.GetRequiredService<ICoreScopeProvider>();
@@ -244,7 +245,7 @@ public class SynchronizationCoordinatorIntegrationTests(UmbracoIntegrationFixtur
     public async Task Coordinator_StaleClaim_IsNotTakenOverUntilExplicitRecovery_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         var values = fixture.Services.GetRequiredService<IKeyValueService>();

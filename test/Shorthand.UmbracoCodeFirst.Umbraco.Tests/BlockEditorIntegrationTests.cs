@@ -6,6 +6,7 @@ using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.Services;
+using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
@@ -19,7 +20,7 @@ public class BlockEditorIntegrationTests(UmbracoIntegrationFixture fixture) : IC
     public async Task SynchronizeAsync_AllBlockEditors_PersistKeysAndRemainStable_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();

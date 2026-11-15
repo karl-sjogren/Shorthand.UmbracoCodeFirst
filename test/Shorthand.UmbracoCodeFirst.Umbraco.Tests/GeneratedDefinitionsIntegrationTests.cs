@@ -18,6 +18,7 @@ using Umbraco.Cms.Core.Models.Editors;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Strings;
+using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
@@ -29,7 +30,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_NestedGroups_ScopesAliasesAndMovesPropertiesWithoutLosingManualStructure_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -153,7 +154,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_RichTextToolbar_UpdatesExistingDataType_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -197,7 +198,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_CustomizedRichTextDefaults_PersistsCollectionChanges_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -233,7 +234,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_ChangedDataTypeEditor_UpdatesTagsEditorAndPreservesValues_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -302,7 +303,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_UnknownReplacementEditor_LeavesDataTypeUnchanged_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -334,7 +335,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task AppRegistry_AllowedChildren_ArePersistedAndRestored_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -381,7 +382,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task BlogIndex_Collection_SortsPostsByPublishDateDescending_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -424,7 +425,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_DateDataType_UsesDateStorageWithoutChangingExistingStorage_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -464,7 +465,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task AppRegistry_CodeBlockDependencies_SynchronizeAndPersist_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -521,7 +522,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_ChangedPropertyDataType_UpdatesExistingElement_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -582,7 +583,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_ChangedPropertyStorageType_FailsWithoutUpdatingElement_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -649,7 +650,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_ChangedPropertyDataType_PreservesExistingStoredValue_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -690,7 +691,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task Store_DropdownConfiguration_CreatesAndUpdatesDataType_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -755,7 +756,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task UmbracoHost_WithSqlServerContainer_PersistsGeneratedDefinitions_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -859,7 +860,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_TestCompositions_AreCreatedAndRemainIdempotent_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -907,7 +908,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_UpdatesOwnedTypeAndPropertyMetadata_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -954,7 +955,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_PreservesUnownedContentTypeWithConflictingAlias_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
@@ -999,7 +1000,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
     public async Task SynchronizeAsync_PreservesManualPropertiesAndGroupsOnOwnedType_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
-            return;
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
         }
 
         using var scope = fixture.Services.CreateScope();
