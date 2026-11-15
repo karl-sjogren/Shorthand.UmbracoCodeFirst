@@ -10,6 +10,8 @@ public abstract class AnalyzerTestBase {
             public sealed class UCFDocumentAttribute : global::System.Attribute {
                 public UCFDocumentAttribute(string name) { }
                 public UCFDocumentAttribute(string alias, string name) { }
+                public string? DefaultTemplateAlias { get; set; }
+                public string[] AllowedTemplateAliases { get; set; } = [];
             }
             public sealed class UCFMediaAttribute : global::System.Attribute {
                 public UCFMediaAttribute(string name) { }
@@ -82,6 +84,7 @@ public abstract class AnalyzerTestBase {
         new IncompatibleEditorTypeAnalyzer(),
         new IncompatibleCompositionTypeAnalyzer(),
         new InvalidCollectionConfigurationTypeAnalyzer(),
+        new DefaultTemplateNotAllowedAnalyzer(),
     ];
 
     protected static string Source(string source) {

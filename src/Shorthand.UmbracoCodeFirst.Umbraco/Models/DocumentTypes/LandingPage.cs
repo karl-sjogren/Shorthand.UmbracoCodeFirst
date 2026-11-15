@@ -6,7 +6,9 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 [UCFDocument(
     "Landing Page",
     Icon = UmbracoIcons.Home,
-    AllowAsRoot = true)]
+    AllowAsRoot = true,
+    AllowedTemplateAliases = new[] { "landingPage" },
+    DefaultTemplateAlias = "landingPage")]
 [UCFDescription("A page used as a site landing page.")]
 public partial class LandingPage {
     [UCFProperty(

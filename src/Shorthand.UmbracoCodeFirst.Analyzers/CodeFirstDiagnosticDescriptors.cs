@@ -123,5 +123,14 @@ internal static class CodeFirstDiagnosticDescriptors {
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: DocumentationBaseUrl + "/UCF115.md");
+
+    public static readonly DiagnosticDescriptor DefaultTemplateNotAllowed = new(
+        CodeFirstDiagnosticIds.DefaultTemplateNotAllowed,
+        "Default template must be allowed",
+        "Default template '{0}' must be included in AllowedTemplateAliases",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: DocumentationBaseUrl + "/UCF119.md");
 #pragma warning restore RS2008
 }

@@ -29,8 +29,8 @@ Declares a Document Type. Media and Member Types use `UCFMedia` and `UCFMember`.
 | `alias` | ctor (optional) | Umbraco alias. |
 | `Icon` | named | Icon alias, e.g. `icon-document`. |
 | `AllowAsRoot` | named | Allowed at content root. |
-| `DefaultTemplateAlias` | named | Metadata only – *not yet synchronized*. |
-| `AllowedTemplateAliases` | named | Metadata only – *not yet synchronized*. |
+| `DefaultTemplateAlias` | named | Default template alias; must be included in `AllowedTemplateAliases` ([UCF119](analyzers/UCF119.md)). |
+| `AllowedTemplateAliases` | named | Aliases of templates allowed for this document type. |
 | `AllowedChildAliases` | named | Metadata only – *not yet synchronized*. |
 | `Variations` | named | Metadata only – *not yet synchronized*. |
 
