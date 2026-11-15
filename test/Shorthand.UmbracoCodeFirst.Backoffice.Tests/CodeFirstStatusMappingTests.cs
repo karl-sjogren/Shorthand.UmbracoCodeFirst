@@ -122,6 +122,7 @@ public class CodeFirstStatusMappingTests {
         result.Definitions.Single(item => item.Alias == "productPage").ShouldSatisfyAllConditions(
             item => item.Status.ShouldBe(nameof(SynchronizationStatus.Created)),
             item => item.PropertyCount.ShouldBe(1),
+            item => item.Groups.Single().Alias.ShouldBe("commerce/pricing"),
             item => item.BackofficeUrl.ShouldBe(
                 "/umbraco/section/settings/workspace/document-type/edit/product-key"),
             item => item.Properties.Single().ShouldSatisfyAllConditions(

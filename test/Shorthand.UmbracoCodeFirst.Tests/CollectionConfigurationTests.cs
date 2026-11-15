@@ -5,6 +5,26 @@ using Shorthand.UmbracoCodeFirst.Metadata;
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class CollectionConfigurationTests {
+    [Fact]
+    public void FromType_CustomListView_UsesConfiguredAlias() {
+        // Act
+        var settings = CodeFirstCollectionConfiguration.FromType(typeof(CustomListView), CodeFirstDefinitionKind.DocumentType);
+        using var json = JsonDocument.Parse(settings.Json);
+
+        // Assert
+        settings.Error.ShouldBeNull();
+        json.RootElement.GetProperty("layouts")[0].GetProperty("collectionView").GetString().ShouldBe("Example.CollectionView");
+    }
+
+    [Fact]
+    public void FromType_EmptyCustomListView_ReportsError() {
+        // Act
+        var settings = CodeFirstCollectionConfiguration.FromType(typeof(EmptyListView), CodeFirstDefinitionKind.DocumentType);
+
+        // Assert
+        settings.Error.ShouldNotBeNull().ShouldContain("alias cannot be empty");
+    }
+
     [Theory]
     [InlineData(CodeFirstDefinitionKind.DocumentType, "Document")]
     [InlineData(CodeFirstDefinitionKind.MediaType, "Media")]
@@ -109,6 +129,18 @@ public class CollectionConfigurationTests {
 
         // Assert
         result.Error.ShouldNotBeNull().ShouldContain("Select a direct property marked with UCFProperty");
+    }
+
+    private sealed class CustomListView : CodeFirstCollectionConfiguration {
+        public CustomListView() {
+            ListViewAlias = "Example.CollectionView";
+        }
+    }
+
+    private sealed class EmptyListView : CodeFirstCollectionConfiguration {
+        public EmptyListView() {
+            ListViewAlias = " ";
+        }
     }
 
     private sealed class CustomCollection : CodeFirstCollectionConfiguration {

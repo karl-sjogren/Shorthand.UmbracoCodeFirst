@@ -39,7 +39,7 @@ public abstract class AnalyzerTestBase {
                 public UCFGroupAttribute(string name) { }
                 public UCFGroupAttribute(string alias, string name) { }
             }
-            public sealed class UCFTabAttribute : global::System.Attribute {
+            public class UCFTabAttribute : global::System.Attribute {
                 public UCFTabAttribute(string name) { }
                 public UCFTabAttribute(string name, int sortOrder) { }
                 public UCFTabAttribute(string alias, string name) { }

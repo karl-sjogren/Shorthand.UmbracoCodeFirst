@@ -26,6 +26,130 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
     [Fact]
+    public async Task Store_NestedGroups_ScopesAliasesAndMovesPropertiesWithoutLosingManualStructure_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        await SynchronizeTestDefinitionsAsync(services);
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var contentTypes = services.GetRequiredService<IContentTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        var initial = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType, "integrationNestedLayouts", "Nested layouts", null, [
+                new("first", "First", IntegrationTextDataType.Alias, GroupAlias: "details", GroupName: "Details"),
+                new("second", "Second", IntegrationTextDataType.Alias, GroupAlias: "details", GroupName: "Details"),
+                new("root", "Root", IntegrationTextDataType.Alias, GroupAlias: "details", GroupName: "Details"),
+            ]);
+        (await store.ApplyAsync(initial, token)).Status.ShouldBe(SynchronizationStatus.Created);
+        var original = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+        original.AddPropertyGroup("manualTab", "Manual tab");
+        original.PropertyGroups.Single(group => group.Alias == "manualTab").Type = PropertyGroupType.Tab;
+        original.AddPropertyGroup("manualTab/manualGroup", "Manual group");
+        original.AddPropertyGroup("manualEmpty", "ManualEmpty");
+        original.AddPropertyGroup("manualReserved", "Manual reserved");
+        original.PropertyGroups.Single(group => group.Alias == "manualReserved").Type = PropertyGroupType.Group;
+        var dataType = (await services.GetRequiredService<IDataTypeService>().GetAllAsync())
+            .Single(item => item.Name == "Integration Text");
+        original.AddPropertyType(
+            new PropertyType(services.GetRequiredService<IShortStringHelper>(), dataType, "manualText") {
+                Name = "Manual text",
+            },
+            "manualReserved");
+        (await contentTypes.UpdateAsync(original, Constants.Security.SuperUserKey)).Success.ShouldBeTrue();
+        var updated = initial with {
+            Properties = [
+                initial.Properties[0] with { TabAlias = "content", TabName = "Content", TabSortOrder = 1, GroupSortOrder = 2 },
+                initial.Properties[1] with { TabAlias = "settings", TabName = "Settings" },
+                initial.Properties[2],
+                new("fourth", "Fourth", IntegrationTextDataType.Alias,
+                    GroupAlias: "same", GroupName: "Same", TabAlias: "same", TabName: "Same"),
+            ],
+        };
+
+        // Act
+        var first = await store.ApplyAsync(updated, token);
+        var persisted = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+        var repeated = await store.ApplyAsync(updated, token);
+
+        // Assert
+        first.Status.ShouldBe(SynchronizationStatus.Updated);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        persisted.PropertyGroups.Single(group => group.Alias == "content").Type.ShouldBe(PropertyGroupType.Tab);
+        persisted.PropertyGroups.Single(group => group.Alias == "content").SortOrder.ShouldBe(1);
+        var contentGroup = persisted.PropertyGroups.Single(group => group.Alias == "content/details");
+        contentGroup.Type.ShouldBe(PropertyGroupType.Group);
+        contentGroup.SortOrder.ShouldBe(2);
+        contentGroup.PropertyTypes.ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["first"]);
+        persisted.PropertyGroups.Single(group => group.Alias == "settings/details").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["second"]);
+        persisted.PropertyGroups.Single(group => group.Alias == "details").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["root"]);
+        persisted.PropertyGroups.Single(group => group.Alias == "same").Type.ShouldBe(PropertyGroupType.Tab);
+        persisted.PropertyGroups.Single(group => group.Alias == "same/same").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["fourth"]);
+        persisted.PropertyGroups.Select(group => group.Alias).ShouldContain("manualTab");
+        persisted.PropertyGroups.Select(group => group.Alias).ShouldContain("manualTab/manualGroup");
+        persisted.PropertyGroups.Select(group => group.Alias).ShouldContain("manualEmpty");
+
+        // Arrange
+        var conflicting = updated with {
+            Properties = [
+                updated.Properties[0],
+                updated.Properties[1] with { TabAlias = "content", TabName = "Content", TabSortOrder = 1, GroupName = "Other" },
+                updated.Properties[2],
+            ],
+        };
+
+        // Act
+        var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
+            await store.ApplyAsync(conflicting, token));
+        var afterConflict = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+
+        // Assert
+        exception.Message.ShouldContain("content/details");
+        afterConflict.PropertyGroups.Single(group => group.Alias == "settings/details").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["second"]);
+
+        // Arrange
+        var manualConflict = updated with {
+            Properties = [
+                .. updated.Properties,
+                new("blocked", "Blocked", IntegrationTextDataType.Alias,
+                    TabAlias: "manualReserved", TabName: "Manual reserved"),
+            ],
+        };
+
+        // Act
+        var manualException = await Should.ThrowAsync<InvalidOperationException>(async () =>
+            await store.ApplyAsync(manualConflict, token));
+        var afterManualConflict = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+
+        // Assert
+        manualException.Message.ShouldContain("manualReserved");
+        var manualGroup = afterManualConflict.PropertyGroups.Single(group => group.Alias == "manualReserved");
+        manualGroup.Type.ShouldBe(PropertyGroupType.Group);
+        manualGroup.PropertyTypes.ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["manualText"]);
+
+        // Act
+        var movedBack = await store.ApplyAsync(initial, token);
+        var restored = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+        var nestedAgain = await store.ApplyAsync(updated, token);
+        var final = contentTypes.Get(initial.Alias).ShouldNotBeNull();
+
+        // Assert
+        movedBack.Status.ShouldBe(SynchronizationStatus.Updated);
+        restored.PropertyGroups.Single(group => group.Alias == "details").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).Order().ShouldBe(["first", "root", "second"]);
+        nestedAgain.Status.ShouldBe(SynchronizationStatus.Updated);
+        final.PropertyGroups.Single(group => group.Alias == "content/details").PropertyTypes
+            .ShouldNotBeNull().Select(property => property.Alias).ShouldBe(["first"]);
+    }
+
+    [Fact]
     public async Task Store_RichTextToolbar_UpdatesExistingDataType_Async() {
         // Arrange
         if(!fixture.IsEnabled) {
@@ -216,7 +340,7 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         using var scope = fixture.Services.CreateScope();
         var services = scope.ServiceProvider;
         var registry = new GeneratedCodeFirstDefinitionRegistry();
-        var startDefinition = registry.Definitions.Single(definition => definition.Alias == StartPage.ModelTypeAlias);
+        var indexDefinition = registry.Definitions.Single(definition => definition.Alias == BlogIndex.ModelTypeAlias);
         var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
         var synchronizer = new CodeFirstSynchronizer(
             registry, store, new SynchronizationReportStore(), TimeProvider.System,
@@ -226,31 +350,114 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
 
         // Act
         var initialReport = await synchronizer.SynchronizeAsync(token);
-        var firstChildren = contentTypes.Get(StartPage.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
-        var cleared = await store.ApplyAsync(startDefinition with {
-            Settings = startDefinition.Settings! with { AllowedChildAliases = [] },
+        var firstChildren = contentTypes.Get(BlogIndex.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
+        var cleared = await store.ApplyAsync(indexDefinition with {
+            Settings = indexDefinition.Settings! with { AllowedChildAliases = [] },
         }, token);
         var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
         var restartedSynchronizer = new CodeFirstSynchronizer(
             registry, restartedStore, new SynchronizationReportStore(), TimeProvider.System,
             services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
         var restoredReport = await restartedSynchronizer.SynchronizeAsync(token);
-        var restoredChildren = contentTypes.Get(StartPage.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
+        var restoredChildren = contentTypes.Get(BlogIndex.ModelTypeAlias)?.AllowedContentTypes?.ToArray();
         var repeatedReport = await restartedSynchronizer.SynchronizeAsync(token);
         var child = contentTypes.Get(BlogPost.ModelTypeAlias);
 
         // Assert
-        startDefinition.Settings!.AllowedChildAliases.ShouldBe([BlogPost.ModelTypeAlias]);
+        indexDefinition.Settings!.AllowedChildAliases.ShouldBe([BlogPost.ModelTypeAlias]);
         initialReport.FailedCount.ShouldBe(0);
         firstChildren.ShouldNotBeNull().Select(item => item.Alias).ShouldBe([BlogPost.ModelTypeAlias]);
         cleared.Status.ShouldBe(SynchronizationStatus.Updated);
         restoredReport.FailedCount.ShouldBe(0);
-        restoredReport.Items.Single(item => item.Alias == StartPage.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Updated);
+        restoredReport.Items.Single(item => item.Alias == BlogIndex.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Updated);
         child.ShouldNotBeNull();
         restoredChildren.ShouldNotBeNull().Single().ShouldSatisfyAllConditions(
             item => item.Alias.ShouldBe(BlogPost.ModelTypeAlias),
             item => item.Key.ShouldBe(child.Key));
-        repeatedReport.Items.Single(item => item.Alias == StartPage.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Unchanged);
+        repeatedReport.Items.Single(item => item.Alias == BlogIndex.ModelTypeAlias).Status.ShouldBe(SynchronizationStatus.Unchanged);
+    }
+
+    [Fact]
+    public async Task BlogIndex_Collection_SortsPostsByPublishDateDescending_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, services.GetRequiredService<ICodeFirstDefinitionStore>(),
+            new SynchronizationReportStore(), TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+        report.FailedCount.ShouldBe(0);
+        var contentService = services.GetRequiredService<IContentService>();
+        var index = contentService.Create("Blog", -1, BlogIndex.ModelTypeAlias);
+        contentService.Save(index).Success.ShouldBeTrue();
+        var older = contentService.Create("Older", index.Id, BlogPost.ModelTypeAlias);
+        older.SetValue(BlogPost.PropertyAliases.MainHeading, "Older title");
+        older.SetValue(BlogPost.PropertyAliases.PublishDate, new DateTime(2024, 1, 1));
+        contentService.Save(older).Success.ShouldBeTrue();
+        var newer = contentService.Create("Newer", index.Id, BlogPost.ModelTypeAlias);
+        newer.SetValue(BlogPost.PropertyAliases.MainHeading, "Newer title");
+        newer.SetValue(BlogPost.PropertyAliases.PublishDate, new DateTime(2025, 1, 1));
+        contentService.Save(newer).Success.ShouldBeTrue();
+        var user = await services.GetRequiredService<IUserService>().GetAsync(Constants.Security.SuperUserKey)
+            ?? throw new InvalidOperationException("The integration user was not found.");
+
+        // Act
+        var result = await services.GetRequiredService<IContentListViewService>().GetListViewItemsByKeyAsync(
+            user, index.Key, null, BlogPost.PropertyAliases.PublishDate, null, Direction.Descending, null, 0, 10);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        contentService.GetById(older.Id)!.GetValue(BlogPost.PropertyAliases.PublishDate).ShouldBe(new DateTime(2024, 1, 1));
+        contentService.GetById(newer.Id)!.GetValue(BlogPost.PropertyAliases.PublishDate).ShouldBe(new DateTime(2025, 1, 1));
+        result.Result.ShouldNotBeNull().ListViewConfiguration.IncludeProperties
+            .Single(column => column.Alias == BlogPost.PropertyAliases.PublishDate).IsSystem.ShouldBeFalse();
+        result.Result.ShouldNotBeNull().Items.Items.Select(item => item.Name).ShouldBe(["Newer", "Older"]);
+    }
+
+    [Fact]
+    public async Task Store_DateDataType_UsesDateStorageWithoutChangingExistingStorage_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            return;
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            "integrationDateStorage",
+            "Integration Date Storage",
+            UmbracoEditors.DateTime.Alias,
+            [],
+            EditorUiAlias: UmbracoEditors.DateTime.UiAlias);
+        var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
+        var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var token = TestContext.Current.CancellationToken;
+
+        // Act
+        await store.ApplyAsync(definition, token);
+        var created = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+
+        // Assert
+        created.DatabaseType.ShouldBe(ValueStorageType.Date);
+
+        // Arrange
+        created.DatabaseType = ValueStorageType.Ntext;
+        (await dataTypes.UpdateAsync(created, Constants.Security.SuperUserKey)).Success.ShouldBeTrue();
+        var restartedStore = ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+
+        // Act
+        await restartedStore.ApplyAsync(definition, token);
+        var existing = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+
+        // Assert
+        existing.DatabaseType.ShouldBe(ValueStorageType.Ntext);
     }
 
     [Fact]

@@ -1,11 +1,46 @@
 using System.Text.Json;
 using Shorthand.UmbracoCodeFirst.Generated;
 using Shorthand.UmbracoCodeFirst.Metadata;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
+using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public class GeneratedDefinitionsRegistryTests {
+    [Fact]
+    public void AppRegistry_BlogIndex_ConfiguresBlogPostCollection() {
+        // Arrange
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+
+        // Act
+        var start = registry.Definitions.Single(definition => definition.Alias == StartPage.ModelTypeAlias);
+        var index = registry.Definitions.Single(definition => definition.Alias == BlogIndex.ModelTypeAlias);
+        var post = registry.Definitions.Single(definition => definition.Alias == BlogPost.ModelTypeAlias);
+        var collection = index.Settings!.Collection.ShouldNotBeNull();
+        using var json = JsonDocument.Parse(collection.Json);
+
+        // Assert
+        start.Settings!.AllowedChildAliases.ShouldBe([BlogIndex.ModelTypeAlias]);
+        start.Settings.Collection.ShouldBeNull();
+        index.Settings.AllowedChildAliases.ShouldBe([BlogPost.ModelTypeAlias]);
+        collection.Error.ShouldBeNull();
+        collection.List.ShouldBeTrue();
+        collection.Grid.ShouldBeFalse();
+        post.Properties.Single(property => property.Alias == BlogPost.PropertyAliases.PublishDate)
+            .DataTypeAlias.ShouldBe(UmbracoBlogPublishDateDataType.Alias);
+        var columns = json.RootElement.GetProperty("includeProperties");
+        columns.GetArrayLength().ShouldBe(2);
+        columns[0].GetProperty("alias").GetString().ShouldBe(BlogPost.PropertyAliases.MainHeading);
+        columns[0].GetProperty("header").GetString().ShouldBe("Title");
+        columns[1].GetProperty("alias").GetString().ShouldBe(BlogPost.PropertyAliases.PublishDate);
+        columns[1].GetProperty("header").GetString().ShouldBe("Publish date");
+        json.RootElement.GetProperty("orderBy").GetString().ShouldBe(BlogPost.PropertyAliases.PublishDate);
+        json.RootElement.GetProperty("orderDirection").GetString().ShouldBe("desc");
+        json.RootElement.GetProperty("layouts")[0].GetProperty("collectionView").GetString()
+            .ShouldBe("Shorthand.UmbracoCodeFirst.CollectionView.BlogIndex");
+    }
+
     [Fact]
     public void AppRegistry_ConfiguredInteger_ContainsEditorAliasesAndSettings() {
         // Arrange

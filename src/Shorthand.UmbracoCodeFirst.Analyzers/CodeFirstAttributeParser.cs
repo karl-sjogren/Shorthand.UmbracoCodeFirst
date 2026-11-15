@@ -92,7 +92,9 @@ internal static class CodeFirstAttributeParser {
             : arguments[0].Value?.ToString() ?? string.Empty;
         var sortOrder = arguments.LastOrDefault(static argument => argument.Value is int).Value is int value
             ? value
-            : 0;
+            : attribute.NamedArguments.FirstOrDefault(static argument => argument.Key == "SortOrder").Value.Value is int namedValue
+                ? namedValue
+                : 0;
 
         occurrence = new AliasOccurrence(
             alias,

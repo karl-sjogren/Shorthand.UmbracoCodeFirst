@@ -9,6 +9,8 @@ public abstract class CodeFirstCollectionConfiguration {
 
     public bool Grid { get; set; } = true;
 
+    public string? ListViewAlias { get; set; }
+
     public int PageSize { get; set; } = 10;
 
     public string OrderBy { get; set; } = CodeFirstCollectionSystemFields.SortOrder;
@@ -48,6 +50,10 @@ public abstract class CodeFirstCollectionConfiguration {
             throw new ArgumentException("A collection must have at least one layout enabled.", nameof(type));
         }
 
+        if(configuration.ListViewAlias is not null && string.IsNullOrWhiteSpace(configuration.ListViewAlias)) {
+            throw new ArgumentException("A custom list view alias cannot be empty.", nameof(type));
+        }
+
         if(configuration.PageSize <= 0 || string.IsNullOrWhiteSpace(configuration.OrderBy)
             || configuration.OrderDirection is not ("asc" or "desc")) {
             throw new ArgumentException("A collection requires a positive page size, an order field, and an order direction of 'asc' or 'desc'.", nameof(type));
@@ -64,7 +70,7 @@ public abstract class CodeFirstCollectionConfiguration {
         var entity = kind == CodeFirstDefinitionKind.DocumentType ? "Document" : "Media";
         var layouts = new List<object>();
         if(configuration.List) {
-            layouts.Add(new { name = "Table", icon = "icon-list", collectionView = $"Umb.CollectionView.{entity}.Table" });
+            layouts.Add(new { name = "Table", icon = "icon-list", collectionView = configuration.ListViewAlias ?? $"Umb.CollectionView.{entity}.Table" });
         }
 
         if(configuration.Grid) {

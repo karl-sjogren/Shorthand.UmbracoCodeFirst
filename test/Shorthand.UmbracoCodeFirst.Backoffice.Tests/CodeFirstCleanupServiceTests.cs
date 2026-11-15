@@ -9,6 +9,29 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstCleanupServiceTests {
     [Fact]
+    public async Task PreviewAsync_PreservesTabWithNestedGroup_Async() {
+        // Arrange
+        var dataTypes = A.Fake<IDataTypeService>();
+        var contentTypes = A.Fake<IContentTypeService>();
+        A.CallTo(() => dataTypes.GetAllAsync()).Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+        var contentType = CreateContentType("page", "Page", "shorthand.umbraco-codefirst:page");
+        contentType.AddPropertyGroup("manualTab", "Manual tab");
+        contentType.PropertyGroups.Single(group => group.Alias == "manualTab").Type = PropertyGroupType.Tab;
+        contentType.AddPropertyGroup("manualTab/manualGroup", "Manual group");
+        A.CallTo(() => contentTypes.GetAll()).Returns([AsContentType(contentType)]);
+        var service = CreateService(dataTypes, contentTypes, [
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+
+        // Act
+        var preview = await service.PreviewAsync();
+
+        // Assert
+        preview.Items.ShouldNotContain(item => item.Alias == "manualTab");
+        preview.Items.ShouldContain(item => item.Alias == "manualTab/manualGroup");
+    }
+
+    [Fact]
     public async Task PreviewAsync_PreservesConfiguredCollectionDataType_Async() {
         // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();

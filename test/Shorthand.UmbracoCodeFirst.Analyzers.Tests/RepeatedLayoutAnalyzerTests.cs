@@ -5,6 +5,47 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
     [Fact]
+    public async Task GroupAliasesInDifferentTabs_AreNotRepeatedLayoutsAsync() {
+        // Arrange
+        var source = Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocument("Page")]
+                public partial class Page {
+                    [UCFTab("First")]
+                    [UCFGroup("details", "Details")]
+                    public string First { get; } = null!;
+                    [UCFTab("Second")]
+                    [UCFGroup("details", "Details")]
+                    public string Second { get; } = null!;
+                }
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
+    public async Task GroupAliasesInMatchingDerivedAndDirectTab_AreRepeatedLayoutsAsync() {
+        // Arrange
+        var source = Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                public sealed class ContentTabAttribute() : UCFTabAttribute("content", "Content");
+                [UCFDocument("Page")]
+                public partial class Page {
+                    [ContentTab]
+                    [UCFGroup("details", "Details")]
+                    public string First { get; } = null!;
+                    [UCFTab("content", "Content")]
+                    [[|UCFGroup("details", "Details")|]]
+                    public string Second { get; } = null!;
+                }
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
     public async Task RepeatedGroupAlias_ReportsDiagnosticAsync() {
         // Arrange
         var source = Source("""

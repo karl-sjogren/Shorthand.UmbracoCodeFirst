@@ -22,7 +22,11 @@ public sealed record CodeFirstPropertyDefinition(
     bool Mandatory = false,
     string? ValidationExpression = null,
     string? ValidationMessage = null,
-    bool LabelOnTop = false);
+    bool LabelOnTop = false) {
+    public string? EffectiveGroupAlias => GroupAlias is null
+        ? TabAlias
+        : TabAlias is null ? GroupAlias : $"{TabAlias}/{GroupAlias}";
+}
 
 public sealed record CodeFirstGroupDefinition(
     string Alias,
@@ -57,17 +61,31 @@ public sealed record CodeFirstDefinition(
     public string? EffectiveConfigurationJson =>
         EditorConfiguration?.Json ?? ConfigurationJson;
 
-    public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups =>
-        Groups ?? Properties
-            .Where(property => property.GroupAlias is not null)
-            .GroupBy(property => property.GroupAlias!, StringComparer.Ordinal)
-            .Select(group => new CodeFirstGroupDefinition(
-                group.Key,
-                group.First().GroupName ?? group.Key,
-                group.First().GroupSortOrder))
-            .OrderBy(group => group.SortOrder)
-            .ThenBy(group => group.Alias, StringComparer.Ordinal)
-            .ToArray();
+    public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups {
+        get {
+            var groups = Properties
+                .Where(property => property.GroupAlias is not null)
+                .GroupBy(property => property.EffectiveGroupAlias!, StringComparer.Ordinal)
+                .Select(group => new CodeFirstGroupDefinition(
+                    group.Key,
+                    group.First().GroupName ?? group.Key,
+                    group.First().GroupSortOrder));
+
+            if(Groups is not null) {
+                var explicitAliases = Groups.Select(group => group.Alias).ToHashSet(StringComparer.Ordinal);
+                return Groups.Concat(groups
+                    .Where(group => group.Alias.Contains('/', StringComparison.Ordinal) && !explicitAliases.Contains(group.Alias))
+                    .OrderBy(group => group.SortOrder)
+                    .ThenBy(group => group.Alias, StringComparer.Ordinal))
+                    .ToArray();
+            }
+
+            return groups
+                .OrderBy(group => group.SortOrder)
+                .ThenBy(group => group.Alias, StringComparer.Ordinal)
+                .ToArray();
+        }
+    }
 
     public IReadOnlyList<CodeFirstGroupDefinition> EffectiveTabs =>
         Properties

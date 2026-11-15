@@ -282,6 +282,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         ApplyConfiguration(dataType, configurationJson);
+        if(editor.Alias == UmbracoConstants.PropertyEditors.Aliases.DateTime) {
+            // Preserve existing storage choices for other editors; date sorting requires date storage.
+            dataType.DatabaseType = ValueTypes.ToStorageType(editor.GetValueEditor().ValueType);
+        }
 
         var result = await dataTypeService.CreateAsync(dataType, UmbracoConstants.Security.SuperUserKey);
         if(!result.Success) {
@@ -773,7 +777,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             var existingProperty = contentType.PropertyTypes.FirstOrDefault(candidate => candidate.Alias == property.Alias);
 
-            var desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
+            var desiredGroupAlias = property.EffectiveGroupAlias;
             if(existingProperty is not null) {
                 if(existingProperty.DataTypeKey != dataType.Key) {
                     if(existingProperty.ValueStorageType != dataType.DatabaseType) {
@@ -869,44 +873,51 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private static bool ApplyPropertyGroups(
             IContentTypeComposition contentType,
             CodeFirstDefinition definition) {
+        ValidatePropertyGroups(definition);
         var changed = false;
-
-        var desiredAliases = definition.EffectiveTabs
-            .Concat(definition.EffectiveGroups)
-            .Select(group => group.Alias)
+        var ownedPropertyAliases = definition.Properties.Select(property => property.Alias)
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach(var existingGroup in contentType.PropertyGroups.ToArray()) {
-            if(desiredAliases.Contains(existingGroup.Alias)
-                || existingGroup.PropertyTypes?.Any() == true
-                || string.IsNullOrWhiteSpace(existingGroup.Name)
-                || !string.Equals(
-                    existingGroup.Alias,
-                    ToLegacyAlias(existingGroup.Name),
-                    StringComparison.Ordinal)) {
-                continue;
-            }
-
-            contentType.RemovePropertyGroup(existingGroup.Alias);
-            changed = true;
-        }
-
         foreach(var tab in definition.EffectiveTabs) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab);
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab, ownedPropertyAliases);
         }
 
         foreach(var group in definition.EffectiveGroups) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group);
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group, ownedPropertyAliases);
         }
 
         return changed;
+    }
+
+    private static void ValidatePropertyGroups(CodeFirstDefinition definition) {
+        foreach(var group in definition.Properties
+                    .Where(property => property.GroupAlias is not null)
+                    .GroupBy(property => property.EffectiveGroupAlias!, StringComparer.Ordinal)) {
+            if(group.Select(property => (property.GroupName ?? property.GroupAlias, property.GroupSortOrder))
+                .Distinct().Skip(1).Any()) {
+                throw new InvalidOperationException(
+                    $"The {definition.Kind} '{definition.Alias}' has conflicting declarations for group '{group.Key}'.");
+            }
+        }
+
+        foreach(var tab in definition.Properties
+                    .Where(property => property.TabAlias is not null)
+                    .GroupBy(property => property.TabAlias!, StringComparer.Ordinal)) {
+            if(tab.Select(property => (property.TabName ?? property.TabAlias, property.TabSortOrder))
+                .Distinct().Skip(1).Any()
+                || definition.EffectiveGroups.Any(group => group.Alias == tab.Key)) {
+                throw new InvalidOperationException(
+                    $"The {definition.Kind} '{definition.Alias}' has conflicting declarations for tab '{tab.Key}'.");
+            }
+        }
     }
 
     private static bool ApplyPropertyGroup(
             IContentTypeComposition contentType,
             string definitionAlias,
             CodeFirstGroupDefinition definition,
-            PropertyGroupType type) {
+            PropertyGroupType type,
+            IReadOnlySet<string> ownedPropertyAliases) {
         var changed = false;
 
         var existingGroup = contentType.PropertyGroups.FirstOrDefault(candidate => candidate.Alias == definition.Alias);
@@ -915,10 +926,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             existingGroup = contentType.PropertyGroups
                 .FirstOrDefault(candidate =>
                     candidate.Type == type
-                    && (string.Equals(candidate.Alias, legacyAlias, StringComparison.Ordinal)
+                    && candidate.GetParentAlias() == GetParentAlias(definition.Alias)
+                    && (string.Equals(candidate.GetLocalAlias(), legacyAlias, StringComparison.Ordinal)
                         || (string.Equals(candidate.Name, definition.Name, StringComparison.OrdinalIgnoreCase)
                             && string.Equals(
-                                candidate.Alias,
+                                candidate.GetLocalAlias(),
                                 definition.Name,
                                 StringComparison.OrdinalIgnoreCase))));
 
@@ -941,6 +953,13 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             changed = true;
         }
 
+        if(existingGroup.Type != type
+            && (existingGroup.PropertyTypes?.Any(property => !ownedPropertyAliases.Contains(property.Alias)) == true
+                || contentType.PropertyGroups.Any(candidate => candidate.GetParentAlias() == existingGroup.Alias))) {
+            throw new InvalidOperationException(
+                $"The document type '{definitionAlias}' cannot change the type of group '{definition.Alias}' because it contains manual properties or nested groups.");
+        }
+
         if(existingGroup.Name != definition.Name) {
             existingGroup.Name = definition.Name;
             changed = true;
@@ -957,6 +976,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         return changed;
+    }
+
+    private static string? GetParentAlias(string alias) {
+        var index = alias.LastIndexOf('/');
+        return index < 0 ? null : alias[..index];
     }
 
     private static string ToLegacyAlias(string value) {

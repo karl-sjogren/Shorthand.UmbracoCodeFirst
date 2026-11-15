@@ -4,6 +4,69 @@ namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
     [Fact]
+    public async Task SameGroupAliasInDifferentTabs_DoesNotReportDiagnosticAsync() {
+        // Arrange
+        var source = Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocument("Page")]
+                public partial class Page {
+                    [UCFTab("First")]
+                    [UCFGroup("details", "First details")]
+                    public string First { get; } = null!;
+                    [UCFTab("Second")]
+                    [UCFGroup("details", "Second details")]
+                    public string Second { get; } = null!;
+                    [UCFGroup("details", "Root details")]
+                    public string Root { get; } = null!;
+                }
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
+    public async Task ConflictingGroupMetadataInSameTab_ReportsDiagnosticAsync() {
+        // Arrange
+        var source = Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                [UCFDocument("Page")]
+                public partial class Page {
+                    [UCFTab("Content")]
+                    [UCFGroup("details", "Details")]
+                    public string First { get; } = null!;
+                    [UCFTab("Content")]
+                    [[|UCFGroup("details", "Other details")|]]
+                    public string Second { get; } = null!;
+                }
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
+    public async Task DerivedAndDirectTabAliases_ScopeConflictsTogetherAsync() {
+        // Arrange
+        var source = Source("""
+                using Shorthand.UmbracoCodeFirst.Attributes;
+                public sealed class ContentTabAttribute() : UCFTabAttribute("content", "Content");
+                [UCFDocument("Page")]
+                public partial class Page {
+                    [ContentTab]
+                    [UCFGroup("details", "Details")]
+                    public string First { get; } = null!;
+                    [UCFTab("content", "Content")]
+                    [[|UCFGroup("details", "Other details")|]]
+                    public string Second { get; } = null!;
+                }
+                """);
+
+        // Act & Assert
+        await VerifyCS.VerifyAnalyzerAsync(source);
+    }
+
+    [Fact]
     public async Task DuplicateDefinitionAliases_ReportsDiagnosticAsync() {
         // Arrange
         var source = Source("""

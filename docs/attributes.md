@@ -101,6 +101,8 @@ public sealed class MediaCollection : CodeFirstCollectionConfiguration<ImageAsse
 The same configuration may be reused across types; Umbraco's matching document or media layout
 aliases are selected automatically. Defaults enable both layouts, display 10 items per page, sort
 by `sortOrder` descending, and include Sort, Last edited and Created by columns.
+`ListViewAlias` optionally selects a registered custom collection view instead of the built-in
+table view. The view must be available for the relevant document or media collection.
 `OrderDirection` is `asc` or `desc`; the order field must be `name` or a displayed column.
 At least one layout and one column must be configured.
 
@@ -245,8 +247,19 @@ Place a property on a tab and/or group.
 `SortOrder` is also a named argument. Both attributes are inheritable and unsealed so they can be
 subclassed (the generator resolves the base-constructor arguments of derived attributes).
 
-If a property has both a tab and a group, the **group is the assignment target** in Umbraco (a
-property type belongs to a single property group); the tab is still created.
+If a property has both attributes, the group is placed inside the tab:
+
+```csharp
+[UCFTab("Content")]
+[UCFGroup("Details")]
+[UCFProperty("Heading", "text")]
+public partial string Heading { get; }
+```
+
+Group aliases are scoped to their parent tab. The same group alias on another tab, or on a
+property without a tab, identifies a separate group. Declarations for the same group within
+one parent must agree on its name and sort order. Synchronization reports a conflict rather
+than changing the type of an existing group containing manual properties or nested groups.
 
 ## `UCFValidation` – property
 
