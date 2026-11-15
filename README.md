@@ -8,7 +8,7 @@ Code-first definitions for Umbraco Document Types, Media Types, Member Types, an
 > a lot further refinement to become a robust and production-ready library. But it's kinda cool.
 
 Instead of configuring every definition manually in the Umbraco backoffice, declare partial C#
-classes and properties with `UCFDocumentType`, `UCFMediaType`, `UCFMemberType`, `UCFDataType`,
+classes and properties with `UCFDocument`, `UCFMedia`, `UCFMember`, `UCFDataType`,
 `UCFProperty`, tabs, groups, validation attributes, and compositions. A Roslyn source generator
 creates the definition registry and typed published-model members. When the Umbraco application
 starts, the synchronizer creates or updates the matching definitions.
@@ -33,7 +33,7 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
     typeof(UmbracoEditors.TextBox))]
 public partial class ArticleTitleDataType;
 
-[UCFDocumentType("article", "Article", AllowAsRoot = true)]
+[UCFDocument("article", "Article", AllowAsRoot = true)]
 public partial class Article {
     [UCFProperty(
         "title",

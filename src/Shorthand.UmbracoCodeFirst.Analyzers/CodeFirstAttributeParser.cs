@@ -10,10 +10,10 @@ internal static class CodeFirstAttributeParser {
         occurrence = null!;
         var attributeName = attribute.AttributeClass?.Name ?? string.Empty;
         if(attributeName is not (
-            "UCFDocumentTypeAttribute"
+            "UCFDocumentAttribute"
             or "UCFElementTypeAttribute"
-            or "UCFMediaTypeAttribute"
-            or "UCFMemberTypeAttribute"
+            or "UCFMediaAttribute"
+            or "UCFMemberAttribute"
             or "UCFDataTypeAttribute"
             or "UCFPropertyAttribute")) {
             return false;
@@ -22,19 +22,19 @@ internal static class CodeFirstAttributeParser {
         var dataTypeHasAliasProperty = attributeName == "UCFDataTypeAttribute"
             && attribute.AttributeClass?.GetMembers("Alias").OfType<IPropertySymbol>().Any() == true;
         var hasExplicitAlias = attributeName switch {
-            "UCFDocumentTypeAttribute"
+            "UCFDocumentAttribute"
                 or "UCFElementTypeAttribute"
-                or "UCFMediaTypeAttribute"
-                or "UCFMemberTypeAttribute" => attribute.ConstructorArguments.Length >= 2,
+                or "UCFMediaAttribute"
+                or "UCFMemberAttribute" => attribute.ConstructorArguments.Length >= 2,
             "UCFDataTypeAttribute" => !dataTypeHasAliasProperty && attribute.ConstructorArguments.Length >= 3,
             "UCFPropertyAttribute" => attribute.ConstructorArguments.Length >= 3,
             _ => false,
         };
         var nameIndex = attributeName switch {
-            "UCFDocumentTypeAttribute"
+            "UCFDocumentAttribute"
                 or "UCFElementTypeAttribute"
-                or "UCFMediaTypeAttribute"
-                or "UCFMemberTypeAttribute"
+                or "UCFMediaAttribute"
+                or "UCFMemberAttribute"
                 or "UCFPropertyAttribute" when hasExplicitAlias => 1,
             "UCFDataTypeAttribute" when hasExplicitAlias => 1,
             _ => 0,

@@ -16,13 +16,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         typeof(CodeFirstRegistryGenerator).Assembly.GetName().Version?.ToString()
         ?? throw new InvalidOperationException("The source generator assembly has no version.");
 
-    private const string _documentTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentTypeAttribute";
+    private const string _documentTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentAttribute";
 
     private const string _elementTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFElementTypeAttribute";
 
-    private const string _mediaTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMediaTypeAttribute";
+    private const string _mediaTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMediaAttribute";
 
-    private const string _memberTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMemberTypeAttribute";
+    private const string _memberTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFMemberAttribute";
 
     private const string _dataTypeAttributeMetadataName = "Shorthand.UmbracoCodeFirst.Attributes.UCFDataTypeAttribute";
 

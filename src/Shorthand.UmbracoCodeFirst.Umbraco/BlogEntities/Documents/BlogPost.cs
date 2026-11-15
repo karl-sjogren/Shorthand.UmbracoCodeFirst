@@ -4,7 +4,7 @@ using Umbraco.Cms.Core.Models.Blocks;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
-[UCFDocumentType(
+[UCFDocument(
     "Blog Post",
     Icon = UmbracoIcons.Star,
     AllowAsRoot = false)]

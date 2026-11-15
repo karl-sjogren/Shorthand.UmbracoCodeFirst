@@ -7,10 +7,10 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 public class PropertyAliasGeneratorTests {
     private const string _attributes = """
         namespace Shorthand.UmbracoCodeFirst.Attributes {
-            public class UCFDocumentTypeAttribute(string name) : global::System.Attribute;
+            public class UCFDocumentAttribute(string name) : global::System.Attribute;
             public class UCFElementTypeAttribute(string name) : global::System.Attribute;
-            public class UCFMediaTypeAttribute(string name) : global::System.Attribute;
-            public class UCFMemberTypeAttribute(string name) : global::System.Attribute;
+            public class UCFMediaAttribute(string name) : global::System.Attribute;
+            public class UCFMemberAttribute(string name) : global::System.Attribute;
             public class UCFPropertyAttribute : global::System.Attribute {
                 public UCFPropertyAttribute(string name, string dataType) { }
                 public UCFPropertyAttribute(string alias, string name, string dataType) { }
@@ -24,7 +24,7 @@ public class PropertyAliasGeneratorTests {
         var source = _attributes + """
             namespace Example {
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("Article")]
+                [UCFDocument("Article")]
                 public partial class Article {
                     [UCFProperty("SEO URL", "text")] public partial string Address { get; }
                     [UCFProperty("customAlias", "Display name", "text")] public partial string @class { get; }
@@ -33,11 +33,11 @@ public class PropertyAliasGeneratorTests {
                 public partial class Block {
                     [UCFProperty("Block title", "text")] public partial string Title { get; }
                 }
-                [UCFMediaType("Image")]
+                [UCFMedia("Image")]
                 public partial class Image {
                     [UCFProperty("Image caption", "text")] public string Caption { get; set; }
                 }
-                [UCFMemberType("Profile")]
+                [UCFMember("Profile")]
                 public partial class Profile {
                     [UCFProperty("userBio", "Biography", "text")] public string Bio { get; set; }
                 }
@@ -68,18 +68,18 @@ public class PropertyAliasGeneratorTests {
     public void GeneratedConstants_CompileInAttributeAndAnotherAssembly() {
         // Arrange
         var source = "using Shorthand.UmbracoCodeFirst.Attributes;\n" + _attributes + """
-            [UCFMediaType("Image")]
+            [UCFMedia("Image")]
             public partial class Image {
                 [UCFProperty("captionAlias", "Caption", "text")]
                 public string Caption { get; set; }
             }
-            [UCFMediaType("Internal image")]
+            [UCFMedia("Internal image")]
             internal partial class InternalImage {
                 [UCFProperty("Alt text", "text")]
                 public string AltText { get; set; }
             }
             public partial class Container<T> {
-                [UCFMediaType("Nested image")]
+                [UCFMedia("Nested image")]
                 public partial class Nested<U> {
                     [UCFProperty("Nested caption", "text")]
                     public string Caption { get; set; }
@@ -108,7 +108,7 @@ public class PropertyAliasGeneratorTests {
             public class OtherConsumer;
             """).WithAssemblyName("OtherAssembly").AddReferences(MetadataReference.CreateFromImage(assembly.ToArray()));
         var codeFirstConsumer = Compilation("""
-            [Shorthand.UmbracoCodeFirst.Attributes.UCFMediaType(Image.PropertyAliases.Caption)]
+            [Shorthand.UmbracoCodeFirst.Attributes.UCFMedia(Image.PropertyAliases.Caption)]
             public partial class OtherMedia;
             """).WithAssemblyName("CodeFirstConsumer").AddReferences(MetadataReference.CreateFromImage(assembly.ToArray()));
         var consumerResult = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator())
@@ -127,19 +127,19 @@ public class PropertyAliasGeneratorTests {
         var source = _attributes + """
             namespace Example {
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFMediaType("Image")]
+                [UCFMedia("Image")]
                 public partial class Image {
                     public static class PropertyAliases { }
                     [UCFProperty("Caption", "text")] public string Caption { get; set; }
                 }
-                [UCFMediaType(Other.PropertyAliases.Title)]
+                [UCFMedia(Other.PropertyAliases.Title)]
                 public partial class Consumer;
-                [UCFMediaType("Other")]
+                [UCFMedia("Other")]
                 public partial class Other {
                     [UCFProperty("Title", "text")] public string Title { get; set; }
                 }
                 public class NonPartial {
-                    [UCFMediaType("Nested")]
+                    [UCFMedia("Nested")]
                     public partial class Nested {
                         [UCFProperty("Caption", "text")] public string Caption { get; set; }
                     }
@@ -166,11 +166,11 @@ public class PropertyAliasGeneratorTests {
                 public static class External {
                     public static class PropertyAliases { public const string Title = "externalTitle"; }
                 }
-                [UCFMediaType(External.PropertyAliases.Title)]
+                [UCFMedia(External.PropertyAliases.Title)]
                 public partial class Base {
                     [UCFProperty("Title", "text")] public string Title { get; set; }
                 }
-                [UCFMediaType("Derived")]
+                [UCFMedia("Derived")]
                 public partial class Derived : Base {
                     [UCFProperty("Caption", "text")] public string Caption { get; set; }
                 }

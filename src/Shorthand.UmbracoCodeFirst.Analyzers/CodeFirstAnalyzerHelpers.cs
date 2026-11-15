@@ -10,10 +10,10 @@ internal static class CodeFirstAnalyzerHelpers {
 
     public static bool HasDocumentTypeAttribute(AttributeData attribute) =>
         attribute.AttributeClass?.Name is
-            "UCFDocumentTypeAttribute"
+            "UCFDocumentAttribute"
             or "UCFElementTypeAttribute"
-            or "UCFMediaTypeAttribute"
-            or "UCFMemberTypeAttribute"
+            or "UCFMediaAttribute"
+            or "UCFMemberAttribute"
             || attribute.AttributeClass?.BaseType?.Name == "UCFTypeAttribute";
 
     public static string GetScopeName(AliasOccurrence occurrence) =>

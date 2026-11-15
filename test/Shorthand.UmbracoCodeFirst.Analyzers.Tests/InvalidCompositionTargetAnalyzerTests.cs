@@ -8,7 +8,7 @@ public class InvalidCompositionTargetAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 [[|UCFComposite(typeof(NotADocumentType))|]]
                 public partial class Product;
                 public partial class NotADocumentType;

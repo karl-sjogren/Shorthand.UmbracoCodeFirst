@@ -10,7 +10,7 @@
 1. Aliases should be unique across all UCF attributes. A codefix could be provided to rename the alias to a unique name, e.g. by appending a numeric suffix.
 2. Aliases should not contain any chars in this regex: [^\p{L}\p{M}\p{Nd}\s.-]+ A codefix could be provided to remove the invalid chars and create a proper alias.
 3. Using UCFProperty with a type that is not supported by the code-first contract. A codefix could be provided to change the property type to a supported type.
-4. Using UCFProperty in a class that isn't a UCFDocumentType. A codefix could be provided to add the UCFDocumentType attribute to the class.
+4. Using UCFProperty in a class that isn't a UCFDocument. A codefix could be provided to add the UCFDocument attribute to the class.
 
 ## Implemented analyzers
 
@@ -25,7 +25,7 @@ Detailed documentation for each diagnostic is available under `docs/analyzers`.
 
 ### UCF106 - Invalid content composition target
 
-Reports `UCFComposite` declarations that reference a class without `UCFDocumentTypeAttribute`.
+Reports `UCFComposite` declarations that reference a class without `UCFDocumentAttribute`.
 
 ### UCF107 - Invalid content composition graph
 

@@ -7,9 +7,17 @@ public abstract class AnalyzerTestBase {
     protected const string AttributeDefinitions = """
         namespace Shorthand.UmbracoCodeFirst.Attributes
         {
-            public sealed class UCFDocumentTypeAttribute : global::System.Attribute {
-                public UCFDocumentTypeAttribute(string name) { }
-                public UCFDocumentTypeAttribute(string alias, string name) { }
+            public sealed class UCFDocumentAttribute : global::System.Attribute {
+                public UCFDocumentAttribute(string name) { }
+                public UCFDocumentAttribute(string alias, string name) { }
+            }
+            public sealed class UCFMediaAttribute : global::System.Attribute {
+                public UCFMediaAttribute(string name) { }
+                public UCFMediaAttribute(string alias, string name) { }
+            }
+            public sealed class UCFMemberAttribute : global::System.Attribute {
+                public UCFMemberAttribute(string name) { }
+                public UCFMemberAttribute(string alias, string name) { }
             }
             public sealed class UCFElementTypeAttribute : global::System.Attribute {
                 public UCFElementTypeAttribute(string name) { }

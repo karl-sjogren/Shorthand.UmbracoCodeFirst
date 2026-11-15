@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- `UCFDataType`, `UCFDocumentType`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
+- `UCFDataType`, `UCFDocument`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
   `UCFValidation`, `UCFComposite`, with derivable tab/group/validation attributes
 - Registry, published-model and Data Type `Alias` generation
 - Data Type creation/update including editor UI alias and raw JSON configuration

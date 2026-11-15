@@ -1,7 +1,7 @@
 # Source generator
 
 `CodeFirstRegistryGenerator` (project `Shorthand.UmbracoCodeFirst.SourceGenerators`) is an
-incremental generator. It runs over `partial` classes carrying `UCFDocumentType` or `UCFDataType` and
+incremental generator. It runs over `partial` classes carrying `UCFDocument` or `UCFDataType` and
 emits three kinds of source. Output is deterministic (definitions are ordered by fully qualified
 name).
 
@@ -23,7 +23,7 @@ Each definition carries:
 
 ### Published models – `<Type>.PublishedModel.g.cs`
 
-For every `UCFDocumentType` class a partial implementation is emitted in the class's own namespace:
+For every `UCFDocument` class a partial implementation is emitted in the class's own namespace:
 
 - `[PublishedModel("alias")]` and `: PublishedContentModel`
 - `ModelTypeAlias`, `ModelItemType` (`Content`, or `Element` for `UCFElementType`),
@@ -73,8 +73,8 @@ Because letters inside a word are lower-cased, supply explicit aliases when you 
 
 ## Composition resolution
 
-`typeof(Target)` arguments of `UCFComposite` are resolved to the target's `UCFDocumentType` alias.
-A target without `UCFDocumentType` falls back to a derived alias; analyzer UCF106 reports it.
+`typeof(Target)` arguments of `UCFComposite` are resolved to the target's `UCFDocument` alias.
+A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 reports it.
 
 ## Generator diagnostics
 

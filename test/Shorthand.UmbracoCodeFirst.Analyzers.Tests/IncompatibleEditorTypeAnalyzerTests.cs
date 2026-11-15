@@ -10,7 +10,7 @@ public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDataType("textEditor", "Umbraco.TextBox")]
                 public partial class TextEditor;
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 public partial class Article {
                     [UCFProperty("title", "textEditor")]
                     public string Title { get; } = null!;
@@ -30,7 +30,7 @@ public class IncompatibleEditorTypeAnalyzerTests : AnalyzerTestBase {
                 using Shorthand.UmbracoCodeFirst.Attributes;
                 [UCFDataType("textEditor", "Umbraco.TextBox")]
                 public partial class TextEditor;
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 public partial class Article {
                     [UCFProperty("title", "textEditor")]
                     public int [|Title|] { get; }

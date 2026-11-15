@@ -9,7 +9,7 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [UCFProperty("name", "Name", "text")]
                     [UCFGroup("details", "Details")]
@@ -30,7 +30,7 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [UCFGroup("details", "Details")]
                     public string Name { get; } = null!;
@@ -41,7 +41,7 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
 
         var expectedSource = SourceWithAppended("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [DetailsGroupAttribute]
                     public string Name { get; } = null!;
@@ -68,7 +68,7 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [UCFTab("Details", 1)]
                     public string Name { get; } = null!;
@@ -79,7 +79,7 @@ public class RepeatedLayoutAnalyzerTests : AnalyzerTestBase {
 
         var expectedSource = SourceWithAppended("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [DetailsTabAttribute]
                     public string Name { get; } = null!;

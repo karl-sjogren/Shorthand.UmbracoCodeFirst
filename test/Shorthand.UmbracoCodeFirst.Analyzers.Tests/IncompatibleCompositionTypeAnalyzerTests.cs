@@ -11,7 +11,7 @@ public class IncompatibleCompositionTypeAnalyzerTests : AnalyzerTestBase {
                 [UCFElementType("shared")]
                 [UCFComposite(typeof(Document))]
                 public partial class Element;
-                [UCFDocumentType("document")]
+                [UCFDocument("document")]
                 public partial class Document;
                 """);
 
@@ -28,7 +28,7 @@ public class IncompatibleCompositionTypeAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("document")]
+                [UCFDocument("document")]
                 [UCFComposite(typeof(Element))]
                 public partial class Document;
                 [UCFElementType("shared")]

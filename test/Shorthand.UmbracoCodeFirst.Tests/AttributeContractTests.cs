@@ -5,10 +5,22 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class AttributeContractTests {
+    [Theory]
+    [InlineData(typeof(UCFDocumentAttribute), "Document")]
+    [InlineData(typeof(UCFMediaAttribute), "Media")]
+    [InlineData(typeof(UCFMemberAttribute), "Member")]
+    public void RenamedAttributes_DoNotExposeOldNames(Type attributeType, string kind) {
+        // Act
+        var oldAttribute = attributeType.Assembly.GetType($"Shorthand.UmbracoCodeFirst.Attributes.UCF{kind}TypeAttribute");
+
+        // Assert
+        oldAttribute.ShouldBeNull();
+    }
+
     [Fact]
-    public void UCFDocumentTypeAttribute_ExplicitSettings_PreservesValues() {
+    public void UCFDocumentAttribute_ExplicitSettings_PreservesValues() {
         // Arrange
-        var attribute = new UCFDocumentTypeAttribute("productPage", "Product Page") {
+        var attribute = new UCFDocumentAttribute("productPage", "Product Page") {
             Icon = UmbracoIcons.Barcode,
             AllowAsRoot = true,
             DefaultTemplateAlias = "productTemplate",

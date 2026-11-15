@@ -3,7 +3,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
-[UCFDocumentType(
+[UCFDocument(
     "SEO Composite2",
     Icon = UmbracoIcons.Search)]
 [UCFFolderPath("Compositions")]

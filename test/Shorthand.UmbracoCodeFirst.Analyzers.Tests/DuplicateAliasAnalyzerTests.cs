@@ -8,7 +8,7 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product;
                 [[|UCFDataType("product", "Product editor", "text")|]]
                 public partial class ProductEditor;
@@ -24,7 +24,7 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("Product Page")]
+                [UCFDocument("Product Page")]
                 public partial class Product;
                 [[|UCFDataType("Product Page", "text")|]]
                 public partial class ProductEditor;
@@ -89,7 +89,7 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("Article")]
+                [UCFDocument("Article")]
                 public partial class Article {
                     [UCFProperty("Product Page", "text")]
                     public string First { get; } = null!;
@@ -108,12 +108,12 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("base", "Base")]
+                [UCFDocument("base", "Base")]
                 public partial class Base {
                     [UCFProperty("title", "Title", "text")]
                     public string Title { get; } = null!;
                 }
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 [UCFComposite(typeof(Base))]
                 public partial class Article {
                     [UCFProperty("summary", "Summary", "text")]
@@ -131,15 +131,15 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("seo", "SEO")]
+                [UCFDocument("seo", "SEO")]
                 public partial class Seo {
                     [UCFProperty("description", "Description", "text")]
                     public string Description { get; } = null!;
                 }
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 [UCFComposite(typeof(Seo))]
                 public partial class Article;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 [UCFComposite(typeof(Seo))]
                 public partial class Product;
                 """);
@@ -154,12 +154,12 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("seo", "SEO")]
+                [UCFDocument("seo", "SEO")]
                 public partial class Seo {
                     [UCFProperty("description", "Description", "text")]
                     public string Description { get; } = null!;
                 }
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 [UCFComposite(typeof(Seo))]
                 public partial class Article {
                     [[|UCFProperty("description", "Other description", "text")|]]
@@ -177,7 +177,7 @@ public class DuplicateAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("article", "Article")]
+                [UCFDocument("article", "Article")]
                 public partial class Article {
                     [UCFProperty("title", "Title", "text")]
                     public string Title { get; } = null!;

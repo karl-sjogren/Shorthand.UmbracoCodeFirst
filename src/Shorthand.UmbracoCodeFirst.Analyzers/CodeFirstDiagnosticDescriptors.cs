@@ -59,7 +59,7 @@ internal static class CodeFirstDiagnosticDescriptors {
     public static readonly DiagnosticDescriptor PropertyOutsideDocumentType = new(
         CodeFirstDiagnosticIds.PropertyOutsideDocumentType,
         "Code-first property requires a content type",
-        "Property '{0}' uses UCFProperty but its containing class is not a UCFDocumentType",
+        "Property '{0}' uses UCFProperty but its containing class is not a UCFDocument",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -68,7 +68,7 @@ internal static class CodeFirstDiagnosticDescriptors {
     public static readonly DiagnosticDescriptor InvalidCompositionTarget = new(
         CodeFirstDiagnosticIds.InvalidCompositionTarget,
         "Invalid content composition target",
-        "Composition target '{0}' must have UCFDocumentTypeAttribute",
+        "Composition target '{0}' must have UCFDocumentAttribute",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,

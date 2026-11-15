@@ -19,9 +19,9 @@ synchronization.
 
 Not inherited; one per class.
 
-## `UCFDocumentType` – class
+## `UCFDocument` – class
 
-Declares a Document Type. Media and Member Types use `UCFMediaType` and `UCFMemberType`.
+Declares a Document Type. Media and Member Types use `UCFMedia` and `UCFMember`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
@@ -45,11 +45,11 @@ Attach a collection to a code-first Document or Media Type using a concrete
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Metadata;
 
-[UCFDocumentType("Articles")]
+[UCFDocument("Articles")]
 [UCFCollection(typeof(ArticleCollection))]
 public partial class Articles;
 
-[UCFDocumentType("Article")]
+[UCFDocument("Article")]
 public partial class Article {
     [UCFProperty("articleSummary", "Summary", "text")]
     public partial string Summary { get; }
@@ -80,11 +80,11 @@ property rename makes stale constant references fail to compile. Use the declari
 composed property if the composition is not CLR inheritance.
 
 ```csharp
-[UCFMediaType("Media folders")]
+[UCFMedia("Media folders")]
 [UCFCollection(typeof(MediaCollection))]
 public partial class MediaFolders;
 
-[UCFMediaType("Image assets")]
+[UCFMedia("Image assets")]
 public partial class ImageAsset {
     [UCFProperty("Caption", "text")]
     public string? Caption { get; set; }
@@ -213,7 +213,7 @@ defaults to `1`. Unsupported typed fields report `UCF112`.
 ## `UCFProperty` – property
 
 Declares a Document Type property. Must be on a `partial` property of a class that has
-`UCFDocumentType`.
+`UCFDocument`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |

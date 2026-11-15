@@ -4,7 +4,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
-[UCFDocumentType(
+[UCFDocument(
     "Start Page",
     Icon = UmbracoIcons.Star,
     AllowAsRoot = true,

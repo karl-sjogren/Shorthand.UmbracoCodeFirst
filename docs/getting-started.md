@@ -34,7 +34,7 @@ class, so properties can reference it as `CodeFirstDecimalDataType.Alias`. Use t
 ## 2. Declare a Document Type
 
 ```csharp
-[UCFDocumentType("article", "Article", Icon = "icon-document", AllowAsRoot = true)]
+[UCFDocument("article", "Article", Icon = "icon-document", AllowAsRoot = true)]
 [UCFDescription("An article managed by the code-first sample model.")]
 public partial class Article {
     [UCFProperty("title", "Title", CodeFirstTextDataType.Alias,
@@ -69,7 +69,7 @@ public partial decimal Price { get; }
 ## 4. Compose Document Types
 
 ```csharp
-[UCFDocumentType("productPage", "Product Page")]
+[UCFDocument("productPage", "Product Page")]
 [UCFComposite(typeof(Article))]
 public partial class ProductPage { /* ... */ }
 ```
