@@ -1,8 +1,8 @@
 # Source generator
 
 `CodeFirstRegistryGenerator` (project `Shorthand.UmbracoCodeFirst.SourceGenerators`) is an
-incremental generator. It runs over `partial` classes carrying `UCFDocument` or `UCFDataType` and
-emits three kinds of source. Output is deterministic (definitions are ordered by fully qualified
+incremental generator. It runs over `partial` code-first classes and marked root-level Razor views and
+emits registry, model and alias sources. Output is deterministic (definitions are ordered by fully qualified
 name).
 
 ## Generated output
@@ -14,6 +14,7 @@ name).
 Each definition carries:
 
 - Kind (`DataType` / `DocumentType`), alias, name
+- Templates: filename-derived alias, display name and a content hash for cluster coordination
 - Data Types: editor alias, editor UI alias, configuration JSON
 - Document Types: `CodeFirstTypeSettings`, the property list (`CodeFirstPropertyDefinition` with
   alias, name, Data Type alias, description, group/tab alias+name+sort, sort order, mandatory,
@@ -56,6 +57,13 @@ A `public const string Alias` on each Data Type class, so `UCFProperty` can refe
 `MyDataType.Alias`. The generator resolves these references itself (including when the constant has
 not been bound yet), so ordering of files does not matter.
 
+### Template aliases – `UmbracoTemplates.g.cs`
+
+Marked root-level views generate `Shorthand.UmbracoCodeFirst.UmbracoTemplates` constants.
+The identifier is the filename alias with its first character capitalized, and the value retains
+the exact filename case. These constants can be used in document template settings in the same
+project; see [UCFTemplate](attributes.md#ucftemplate--razor-view).
+
 ## Alias derivation
 
 When no alias is supplied, separators and PascalCase word boundaries are detected. The first word
@@ -84,6 +92,9 @@ A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 re
 | UCF116 | Error | A model declaration conflicts with the generated `PropertyAliases` class. |
 | UCF117 | Error | A UCF attribute references a property alias generated in the same compilation. |
 | UCF118 | Error | A media or member model's container prevents generation of its property aliases. |
+| UCF120 | Error | A template directive or filename is invalid. |
+| UCF121 | Error | Multiple marked views have the same template alias (case-insensitive). |
+| UCF122 | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
 
 Other rules include those reported by the [analyzers](analyzers/README.md).
 

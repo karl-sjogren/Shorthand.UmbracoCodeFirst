@@ -16,7 +16,7 @@ public sealed class CodeFirstSynchronizer(
         List<(CodeFirstDefinition Definition, int Index)> deferred = [];
 
         var duplicates = registry.Definitions
-            .Where(definition => definition.Kind != CodeFirstDefinitionKind.DataType)
+            .Where(definition => definition.Kind is not CodeFirstDefinitionKind.DataType and not CodeFirstDefinitionKind.Template)
             .GroupBy(definition => definition.Alias, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
@@ -27,8 +27,15 @@ public sealed class CodeFirstSynchronizer(
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToHashSet(StringComparer.Ordinal);
+        var duplicateTemplates = registry.Definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.Template)
+            .GroupBy(definition => definition.Alias, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach(var definition in registry.Definitions.Where(definition =>
-            definition.Kind != CodeFirstDefinitionKind.DataType && duplicates.Contains(definition.Alias))) {
+            definition.Kind is not CodeFirstDefinitionKind.DataType and not CodeFirstDefinitionKind.Template
+            && duplicates.Contains(definition.Alias))) {
             items.Add(new(definition.Kind, definition.Alias, definition.Name, SynchronizationStatus.Failed,
                 $"Multiple code-first definitions have alias '{definition.Alias}'."));
         }
@@ -39,9 +46,17 @@ public sealed class CodeFirstSynchronizer(
                 $"Multiple code-first data types have alias '{definition.Alias}'. Give each data type a unique name or set its Alias explicitly."));
         }
 
+        foreach(var definition in registry.Definitions.Where(definition =>
+            definition.Kind == CodeFirstDefinitionKind.Template && duplicateTemplates.Contains(definition.Alias))) {
+            items.Add(new(definition.Kind, definition.Alias, definition.Name, SynchronizationStatus.Failed,
+                $"Multiple code-first templates have alias '{definition.Alias}'."));
+        }
+
         IEnumerable<CodeFirstDefinition> definitions = OrderDefinitions(registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType
                 ? !duplicateDataTypes.Contains(definition.Alias)
+                : definition.Kind == CodeFirstDefinitionKind.Template
+                    ? !duplicateTemplates.Contains(definition.Alias)
                 : !duplicates.Contains(definition.Alias))
             .ToArray());
 
@@ -153,12 +168,16 @@ public sealed class CodeFirstSynchronizer(
 
     private static IReadOnlyList<CodeFirstDefinition> OrderDefinitions(IReadOnlyList<CodeFirstDefinition> definitions) {
         var ordered = definitions
-            .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.Template)
             .OrderBy(definition => definition.Alias, StringComparer.Ordinal)
             .ToList();
+        ordered.AddRange(definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
+            .OrderBy(definition => definition.Alias, StringComparer.Ordinal)
+            .ToArray());
 
         var documentTypes = definitions
-            .Where(definition => definition.Kind != CodeFirstDefinitionKind.DataType)
+            .Where(definition => definition.Kind is not CodeFirstDefinitionKind.DataType and not CodeFirstDefinitionKind.Template)
             .ToDictionary(definition => definition.Alias, StringComparer.Ordinal);
 
         HashSet<string> visiting = new(StringComparer.Ordinal);

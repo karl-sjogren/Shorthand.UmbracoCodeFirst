@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
 
 [Generator]
-public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
+public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private const string _generatorName = "Shorthand.UmbracoCodeFirst.SourceGenerators";
 
     private static readonly string _generatorVersion =
@@ -125,21 +125,35 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 })
             .Where(static symbol => symbol is not null)
             .Select(static (symbol, _) => symbol!);
+        var templates = context.AdditionalTextsProvider
+            .Where(static file => file.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+            .Collect()
+            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+                options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory) ? directory : null));
         context.RegisterSourceOutput(
-            definitions.Collect().Combine(context.CompilationProvider),
+            definitions.Collect().Combine(context.CompilationProvider).Combine(templates),
             static (productionContext, input) => {
-                var distinctDefinitions = input.Left
+                var distinctDefinitions = input.Left.Left
                     .Distinct(SymbolEqualityComparer.Default)
                     .Cast<INamedTypeSymbol>()
                     .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal)
                     .ToImmutableArray();
 
-                if(distinctDefinitions.Length == 0) {
+                var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, input.Right.Right);
+                if(distinctDefinitions.Length == 0 && templateDefinitions.Count == 0) {
                     return;
                 }
 
-                ReportUnresolvedPropertyAliasArguments(productionContext, distinctDefinitions, input.Right);
-                EmitRegistry(productionContext, distinctDefinitions, input.Right);
+                var templateCompilation = input.Left.Right;
+                if(templateDefinitions.Count > 0) {
+                    var source = BuildTemplateAliases(templateDefinitions);
+                    productionContext.AddSource("UmbracoTemplates.g.cs", source);
+                    var parseOptions = input.Left.Right.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
+                    templateCompilation = templateCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(source, parseOptions));
+                }
+
+                ReportUnresolvedPropertyAliasArguments(productionContext, distinctDefinitions, input.Left.Right);
+                EmitRegistry(productionContext, distinctDefinitions, input.Left.Right, templateCompilation, templateDefinitions);
                 EmitPublishedModels(productionContext, distinctDefinitions);
                 EmitOtherPropertyAliases(productionContext, distinctDefinitions);
                 EmitDataTypeAliases(productionContext, distinctDefinitions);
@@ -149,7 +163,9 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
     private static void EmitRegistry(
         SourceProductionContext context,
         ImmutableArray<INamedTypeSymbol> definitionSymbols,
-        Compilation compilation) {
+        Compilation compilation,
+        Compilation templateCompilation,
+        IReadOnlyList<TemplateDefinition> templates) {
         IEnumerable<INamedTypeSymbol> definitions = definitionSymbols
             .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal);
 
@@ -168,7 +184,18 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
         var dataTypeAliases = BuildDataTypeAliasMap(definitionSymbols);
         foreach (var definition in definitions) {
-            AppendDefinition(builder, definition, compilation, definitionSymbols, dataTypeAliases, context);
+            AppendDefinition(builder, definition, compilation, templateCompilation, definitionSymbols, dataTypeAliases, context);
+        }
+
+        foreach(var template in templates) {
+            builder.Append("new global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinition(");
+            builder.Append("global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinitionKind.Template, ");
+            builder.Append(SymbolDisplay.FormatLiteral(template.Alias, true));
+            builder.Append(", ");
+            builder.Append(SymbolDisplay.FormatLiteral(template.Name, true));
+            builder.Append(", null, [], TemplateContentHash: ");
+            builder.Append(SymbolDisplay.FormatLiteral(template.ContentHash, true));
+            builder.AppendLine("),");
         }
 
         builder.Indent--;
@@ -589,6 +616,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         IndentedStringBuilder builder,
         INamedTypeSymbol definition,
         Compilation compilation,
+        Compilation templateCompilation,
         ImmutableArray<INamedTypeSymbol> definitionSymbols,
         IReadOnlyDictionary<string, string> dataTypeAliases,
         SourceProductionContext context) {
@@ -682,7 +710,7 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
             builder.Indent--;
             builder.Append("], ");
-            builder.Append(BuildTypeSettings(contentTypeAttribute, definition, compilation, definitionSymbols, context));
+            builder.Append(BuildTypeSettings(contentTypeAttribute, definition, compilation, templateCompilation, definitionSymbols, context));
             builder.Append(", null, null, null, ");
             builder.Append(BuildCompositionAliases(definition));
             builder.Append(", ");
@@ -1234,9 +1262,13 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
         AttributeData attribute,
         INamedTypeSymbol definition,
         Compilation compilation,
+        Compilation templateCompilation,
         ImmutableArray<INamedTypeSymbol> definitions,
         SourceProductionContext context) {
-        var allowedTemplates = BuildStringArray(attribute, "AllowedTemplateAliases");
+        var templateAttribute = ReferenceEquals(compilation, templateCompilation)
+            ? attribute
+            : GetReboundAttribute(attribute, templateCompilation);
+        var allowedTemplates = BuildStringArray(templateAttribute, "AllowedTemplateAliases");
         var allowedChildren = BuildAllowedChildren(attribute, definition, compilation, definitions, context);
         var descriptionAttribute = FindAttribute(definition, _descriptionAttributeMetadataName);
         return $$"""
@@ -1246,12 +1278,24 @@ public sealed class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 {{IsAttribute(attribute, _elementTypeAttributeMetadataName).ToString().ToLowerInvariant()}},
                 {{GetNamedBoolArgument(attribute, "AllowAsRoot").ToString().ToLowerInvariant()}},
                 {{GetNamedBoolArgument(attribute, "AllowInLibrary").ToString().ToLowerInvariant()}},
-                {{GetNamedStringLiteral(attribute, "DefaultTemplateAlias")}},
+                {{GetNamedStringLiteral(templateAttribute, "DefaultTemplateAlias")}},
                 {{allowedTemplates}},
                 {{allowedChildren}},
                 {{GetNamedStringLiteral(attribute, "Variations")}},
                 {{BuildCollectionSettings(definition, attribute, context)}})
             """;
+    }
+
+    private static AttributeData GetReboundAttribute(AttributeData attribute, Compilation compilation) {
+        if(attribute.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax syntax
+            || syntax.FirstAncestorOrSelf<ClassDeclarationSyntax>() is not { } declaration) {
+            return attribute;
+        }
+
+        var symbol = compilation.GetSemanticModel(syntax.SyntaxTree).GetDeclaredSymbol(declaration);
+        return symbol?.GetAttributes().FirstOrDefault(candidate =>
+            candidate.ApplicationSyntaxReference?.SyntaxTree == syntax.SyntaxTree
+            && candidate.ApplicationSyntaxReference.Span == syntax.Span) ?? attribute;
     }
 
     private static string BuildCollectionSettings(

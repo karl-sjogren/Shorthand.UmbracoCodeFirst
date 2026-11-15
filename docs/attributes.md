@@ -36,6 +36,52 @@ Declares a Document Type. Media and Member Types use `UCFMedia` and `UCFMember`.
 
 Not inherited; one per class.
 
+## `UCFTemplate` – Razor view
+
+Mark a root-level view such as `Views/landingPage.cshtml`:
+
+```cshtml
+@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Landing Page")]
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+<h1>Landing page</h1>
+```
+
+The required display name must be a non-empty C# string literal, and the directive must be on
+one line. The filename stem is the template alias (`landingPage` here); use the exact same
+case when referencing it. Filenames must start with an ASCII letter and contain only ASCII
+letters, digits or underscores, up to 100 characters. Only files directly in `Views` are
+supported; nested views and partials are not registered.
+
+Template registration does not automatically associate a document type. Configure both settings:
+
+```csharp
+[UCFDocument("landingPage", "Landing Page",
+    DefaultTemplateAlias = UmbracoTemplates.LandingPage,
+    AllowedTemplateAliases = new[] { UmbracoTemplates.LandingPage })]
+public partial class LandingPage;
+```
+
+`UmbracoTemplates` is generated in `Shorthand.UmbracoCodeFirst` from marked views in the
+current project. Its constant names capitalize the first character of each filename stem and
+preserve the remaining characters; their values are the exact filename aliases. An alias named
+`umbracoTemplates` uses the constant `TemplateUmbracoTemplates`. Identifier collisions report
+UCF122.
+
+The package supplies the views as generator inputs automatically. Applications using project
+references instead of the packaged build targets must expose the project directory and add their root views:
+
+```xml
+<ItemGroup>
+  <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+  <AdditionalFiles Include="$(MSBuildProjectDirectory)\Views\*.cshtml" />
+</ItemGroup>
+```
+
+The physical view must also be present in the deployed `Views` directory; for Razor SDK projects
+you can set `CopyRazorGenerateFilesToPublishDirectory` to `true`. A compiled view alone is not
+sufficient for Umbraco template registration. See [Synchronization](synchronization.md#templates)
+for ownership and file behavior.
+
 ## `UCFCollection` – class
 
 Attach a collection to a code-first Document or Media Type using a concrete

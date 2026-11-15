@@ -45,6 +45,30 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it("renders template aliases and synchronization outcomes", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionTable: (headline: string, definitions: StatusItem[], showProperties: boolean, isTemplate: boolean) => string;
+    };
+    const template = {
+      alias: "landingPage",
+      kind: "Template",
+      name: "Landing Page",
+      folder: "/",
+      status: "Skipped",
+      message: "Not owned.",
+    } as StatusItem;
+
+    // Act
+    const output = view.renderDefinitionTable("Templates", [template], false, true);
+
+    // Assert
+    expect(output).toContain("landingPage");
+    expect(output).toContain("Not owned.");
+    expect(output).not.toContain("codeFirst_editor");
+    expect(output).not.toContain("codeFirst_properties");
+  });
+
   it("shows a pending header without a completion time when no report exists", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {
@@ -60,6 +84,7 @@ describe("code-first status messages", () => {
       elementTypes: [],
       mediaTypes: [],
       memberTypes: [],
+      templates: [],
     };
 
     // Act
@@ -88,6 +113,7 @@ describe("code-first status messages", () => {
       elementTypes: [],
       mediaTypes: [],
       memberTypes: [],
+      templates: [],
     };
 
     // Act

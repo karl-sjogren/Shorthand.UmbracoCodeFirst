@@ -6,6 +6,30 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstStatusMappingTests {
     [Fact]
+    public void Map_TemplateAndDocumentWithSameAlias_ReportsSeparateOutcomes() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", null, []),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", SynchronizationStatus.Skipped, "Not owned."),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", SynchronizationStatus.Created),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.TemplateCount.ShouldBe(1);
+        result.Definitions.Count.ShouldBe(2);
+        result.Templates.Single().Status.ShouldBe("Skipped");
+        result.Templates.Single().Message.ShouldBe("Not owned.");
+        result.DocumentTypes.Single().Status.ShouldBe("Created");
+    }
+
+    [Fact]
     public void Map_Collection_ReportsSummaryAndFailure() {
         // Arrange
         var registry = new TestRegistry([

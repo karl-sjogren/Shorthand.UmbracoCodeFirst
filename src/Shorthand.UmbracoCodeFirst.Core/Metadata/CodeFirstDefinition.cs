@@ -5,6 +5,7 @@ public enum CodeFirstDefinitionKind {
     DocumentType,
     MediaType,
     MemberType,
+    Template,
 }
 
 public sealed record CodeFirstPropertyDefinition(
@@ -57,7 +58,8 @@ public sealed record CodeFirstDefinition(
     string? EditorUiAlias = null,
     IReadOnlyList<string>? CompositionAliases = null,
     string? FolderPath = null,
-    CodeFirstEditorConfiguration? EditorConfiguration = null) {
+    CodeFirstEditorConfiguration? EditorConfiguration = null,
+    string? TemplateContentHash = null) {
     public string? EffectiveConfigurationJson =>
         EditorConfiguration?.Json ?? ConfigurationJson;
 

@@ -22,6 +22,10 @@ public sealed record CodeFirstStatusResponse(
 
     public string? SynchronizationError { get; init; }
 
+    public int TemplateCount { get; init; }
+
+    public IReadOnlyList<CodeFirstStatusItem> Templates { get; init; } = [];
+
     public IReadOnlyList<CodeFirstStatusItem> Definitions =>
-        DataTypes.Concat(DocumentTypes).Concat(ElementTypes).Concat(MediaTypes).Concat(MemberTypes).ToArray();
+        DataTypes.Concat(DocumentTypes).Concat(ElementTypes).Concat(MediaTypes).Concat(MemberTypes).Concat(Templates).ToArray();
 }

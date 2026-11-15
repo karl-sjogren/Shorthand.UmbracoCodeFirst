@@ -56,7 +56,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 dataTypeService,
                 contentTypeService,
                 mediaTypeService,
-                memberTypeService);
+                memberTypeService,
+                A.Fake<ITemplateService>());
 
         // Assert
         response.DataTypes.Single().BackofficeUrl.ShouldBe(
@@ -92,7 +93,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 A.Fake<IDataTypeService>(),
                 A.Fake<IContentTypeService>(),
                 mediaTypeService,
-                memberTypeService);
+                memberTypeService,
+                A.Fake<ITemplateService>());
 
         // Assert
         response.MediaTypes.Single().BackofficeUrl.ShouldBe(
@@ -120,7 +122,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
         await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
         var response = await new ShorthandUmbracoCodeFirstBackofficeApiController().StatusAsync(
             registry, reportStore, dataTypeService, A.Fake<IContentTypeService>(),
-            A.Fake<IMediaTypeService>(), A.Fake<IMemberTypeService>());
+            A.Fake<IMediaTypeService>(), A.Fake<IMemberTypeService>(), A.Fake<ITemplateService>());
 
         // Assert
         A.CallTo(() => store.ApplyAsync(A<CodeFirstDefinition>._, A<CancellationToken>._))

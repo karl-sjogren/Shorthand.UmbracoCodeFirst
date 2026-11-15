@@ -31,7 +31,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
             [FromServices] IDataTypeService dataTypeService,
             [FromServices] IContentTypeService contentTypeService,
             [FromServices] IMediaTypeService mediaTypeService,
-            [FromServices] IMemberTypeService memberTypeService) {
+            [FromServices] IMemberTypeService memberTypeService,
+            [FromServices] ITemplateService templateService) {
         var dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
         var urls = new Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string>();
 
@@ -45,6 +46,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
                 CodeFirstDefinitionKind.DocumentType => contentTypeService.Get(definition.Alias)?.Key,
                 CodeFirstDefinitionKind.MediaType => mediaTypeService.Get(definition.Alias)?.Key,
                 CodeFirstDefinitionKind.MemberType => memberTypeService.Get(definition.Alias)?.Key,
+                CodeFirstDefinitionKind.Template => (await templateService.GetAsync(definition.Alias))?.Key,
                 _ => null,
             };
 
@@ -53,6 +55,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
                     CodeFirstDefinitionKind.DataType => "data-type",
                     CodeFirstDefinitionKind.MediaType => "media-type",
                     CodeFirstDefinitionKind.MemberType => "member-type",
+                    CodeFirstDefinitionKind.Template => "template",
                     _ => "document-type",
                 };
                 urls[(definition.Kind, definition.Alias)] =

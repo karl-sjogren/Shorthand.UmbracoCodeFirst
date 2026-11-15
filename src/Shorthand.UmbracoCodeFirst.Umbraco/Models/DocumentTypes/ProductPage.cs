@@ -7,7 +7,9 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
     "Product Page",
     Icon = UmbracoIcons.Barcode,
     AllowAsRoot = true,
-    Variations = "Invariant")]
+    Variations = "Invariant",
+    DefaultTemplateAlias = UmbracoTemplates.ProductPage,
+    AllowedTemplateAliases = new[] { UmbracoTemplates.ProductPage })]
 [UCFComposite(typeof(HappySparkles))]
 [UCFComposite(typeof(SeoComposite))]
 [UCFDescription("A deliberately comprehensive product page used to exercise the code-first model generator.")]

@@ -13,4 +13,8 @@
     <PackageReference Include="Umbraco.Cms" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Views\packageConsumer.cshtml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

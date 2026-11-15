@@ -123,6 +123,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
             this.status.memberTypeCount,
             "codeFirst_memberTypes",
           )}
+          ${this.renderSummaryMetric(
+            this.status.templateCount,
+            "codeFirst_templates",
+          )}
           ${this.renderSummaryMetric(this.status.createdCount, "codeFirst_created")}
           ${this.renderSummaryMetric(this.status.updatedCount, "codeFirst_updated")}
           ${this.renderSummaryMetric(this.status.skippedCount, "codeFirst_skipped")}
@@ -157,6 +161,12 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_memberTypesHeadline"),
         this.status.memberTypes,
+        true,
+      )}
+      ${this.renderDefinitionTable(
+        this.localize.term("codeFirst_templatesHeadline"),
+        this.status.templates,
+        false,
         true,
       )}
     `;
@@ -292,6 +302,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     headline: string,
     definitions: StatusItem[],
     showProperties: boolean,
+    isTemplate = false,
   ) {
     const sortedDefinitions = sortDefinitions(definitions);
     return html`
@@ -300,10 +311,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
           <thead>
             <tr>
               <th scope="col">${this.localize.term("codeFirst_name")}</th>
-              ${showProperties
+              ${showProperties || isTemplate
                 ? html`<th scope="col">${this.localize.term("codeFirst_alias")}</th>`
                 : ""}
-              ${showProperties
+              ${isTemplate ? "" : showProperties
                 ? html`<th scope="col">${this.localize.term("codeFirst_properties")}</th>`
                 : html`<th scope="col">${this.localize.term("codeFirst_editor")}</th>`}
               <th scope="col">${this.localize.term("codeFirst_folder")}</th>
@@ -317,10 +328,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                 class=${this.isFailed(definition)
                   ? "definition-row failed-row"
                   : "definition-row"}
-                tabindex="0"
-                @click=${() => this.toggleDefinition(definition.alias)}
+                tabindex=${isTemplate ? -1 : 0}
+                @click=${() => { if (!isTemplate) this.toggleDefinition(definition.alias); }}
                 @keydown=${(event: KeyboardEvent) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                  if (!isTemplate && (event.key === "Enter" || event.key === " ")) {
                     event.preventDefault();
                     this.toggleDefinition(definition.alias);
                   }
@@ -335,14 +346,14 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                       >`
                     : definition.name}
                 </td>
-                ${showProperties
+                ${showProperties || isTemplate
                   ? html`<td>${definition.alias}</td>`
                   : ""}
-                <td>
+                ${isTemplate ? "" : html`<td>
                   ${showProperties
                     ? definition.propertyCount
                     : this.formatEditor(definition)}
-                </td>
+                </td>`}
                 <td>${definition.folder}</td>
                 <td>
                   <span
@@ -364,7 +375,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                     : ""}
                 </td>
               </tr>
-              ${this.expandedAlias === definition.alias
+              ${!isTemplate && this.expandedAlias === definition.alias
                 ? html`
                     <tr class="details-row">
                       <td colspan=${showProperties ? 5 : 4}>

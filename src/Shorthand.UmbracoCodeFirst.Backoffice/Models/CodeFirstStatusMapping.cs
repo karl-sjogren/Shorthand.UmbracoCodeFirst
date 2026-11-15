@@ -109,6 +109,8 @@ internal static class CodeFirstStatusMapping {
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MediaType)).ToArray(),
             definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.MemberType)).ToArray()) {
             SynchronizationError = report.Error,
+            TemplateCount = definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.Template)),
+            Templates = definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.Template)).ToArray(),
         };
     }
 }

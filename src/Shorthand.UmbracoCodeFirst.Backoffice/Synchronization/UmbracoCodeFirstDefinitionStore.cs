@@ -28,6 +28,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         IConfigurationEditorJsonSerializer configurationSerializer,
         IShortStringHelper shortStringHelper,
         ICodeFirstOwnershipStore ownershipStore,
+        ICodeFirstTemplateDefinitionStore templateDefinitionStore,
         ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore, ICodeFirstBlockDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
     private const string _collectionOwnershipKey = "shorthand.umbraco-codefirst.collection";
@@ -61,7 +62,9 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 CodeFirstDefinitionKind.DataType => await ApplyDataTypeAsync(definition),
                 CodeFirstDefinitionKind.DocumentType => await ApplyDocumentTypeAsync(definition),
                 CodeFirstDefinitionKind.MediaType => await ApplyMediaTypeAsync(definition),
-                _ => await ApplyMemberTypeAsync(definition),
+                CodeFirstDefinitionKind.MemberType => await ApplyMemberTypeAsync(definition),
+                CodeFirstDefinitionKind.Template => await templateDefinitionStore.ApplyAsync(definition, cancellationToken),
+                _ => throw new InvalidOperationException($"Unsupported definition kind '{definition.Kind}'."),
             };
 
             if(status == SynchronizationStatus.Skipped) {

@@ -7,6 +7,52 @@ namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class CodeFirstSynchronizerTests {
     [Fact]
+    public async Task SynchronizeAsync_TemplateAndDocumentWithSameAlias_TemplateIsAppliedFirst_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", null, []),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(0);
+        report.Items.Select(item => item.Kind).ShouldBe([
+            CodeFirstDefinitionKind.Template,
+            CodeFirstDefinitionKind.DocumentType,
+        ]);
+        store.Calls.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_DuplicateTemplateAliases_FailsTemplatesButNotDocument_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.Template, "page", "One", null, []),
+            new(CodeFirstDefinitionKind.Template, "Page", "Two", null, []),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(2);
+        report.Items.Single(item => item.Kind == CodeFirstDefinitionKind.DocumentType).Status.ShouldNotBe(SynchronizationStatus.Failed);
+        store.Calls.ShouldBe(["apply:page"]);
+    }
+
+    [Fact]
     public async Task SynchronizeAsync_BlockDataType_PreparesThenResolvesElementDependency_Async() {
         // Arrange
         var editor = new CodeFirstEditorConfiguration("Umbraco.BlockList", "{}") {

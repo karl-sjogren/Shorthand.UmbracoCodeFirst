@@ -1,5 +1,7 @@
 <Project>
   <ItemGroup>
     <UmbracoJsonSchemaFiles Include="$(MSBuildThisFileDirectory)appsettings-schema.Shorthand.UmbracoCodeFirst.json" />
+    <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\Views\*.cshtml" Exclude="@(AdditionalFiles)" />
   </ItemGroup>
 </Project>

@@ -31,7 +31,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
             .Throws(new InvalidOperationException("Update failed."));
         var store = new UmbracoCodeFirstDefinitionStore(
             dataTypeService, null!, null!, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
+            null!, null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
         var definition = new CodeFirstDefinition(
             CodeFirstDefinitionKind.DataType, "blocks", "Changed", "Umbraco.BlockList", [],
             EditorUiAlias: "Umb.PropertyEditorUi.BlockList",
@@ -66,7 +66,7 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
             .Returns(Attempt.SucceedWithStatus(DataTypeOperationStatus.Success, dataType));
         var store = new UmbracoCodeFirstDefinitionStore(
             dataTypeService, null!, null!, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
+            null!, null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
         var definition = new CodeFirstDefinition(
             CodeFirstDefinitionKind.DataType,
             "codingLanguage",

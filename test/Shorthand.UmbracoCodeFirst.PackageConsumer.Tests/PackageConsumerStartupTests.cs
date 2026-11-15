@@ -1,5 +1,11 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
@@ -39,6 +45,24 @@ public class PackageConsumerStartupTests : IDisposable {
         await using(var first = await CreateApplicationAsync(sql.GetConnectionString())) {
             await first.StartAsync(token);
             firstReport = first.Services.GetRequiredService<ISynchronizationReportStore>().Current;
+            using(var scope = first.Services.CreateScope()) {
+                var services = scope.ServiceProvider;
+                var document = services.GetRequiredService<IContentTypeService>().Get("packageConsumer").ShouldNotBeNull();
+                document.DefaultTemplate.ShouldNotBeNull().Alias.ShouldBe("packageConsumer");
+                document.AllowedTemplates.ShouldNotBeNull().Select(template => template.Alias).ShouldContain("packageConsumer");
+                var view = services.GetRequiredService<IRazorViewEngine>()
+                    .GetView(null, "~/Views/packageConsumer.cshtml", true);
+                view.Success.ShouldBeTrue();
+                var httpContext = new DefaultHttpContext { RequestServices = services };
+                var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+                var viewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary());
+                var tempData = new TempDataDictionary(httpContext, A.Fake<ITempDataProvider>());
+                using var output = new StringWriter();
+                await view.View.RenderAsync(new ViewContext(
+                    actionContext, view.View, viewData, tempData, output, new HtmlHelperOptions()));
+                output.ToString().ShouldContain("<h1>Package consumer template</h1>");
+            }
+
             await first.StopAsync(token);
         }
 
@@ -79,17 +103,25 @@ public class PackageConsumerStartupTests : IDisposable {
 
         // Assert
         definitions.ShouldContain(definition => definition.Name == "Package consumer text");
+        definitions.ShouldContain(definition => definition.Kind == CodeFirstDefinitionKind.Template
+            && definition.Alias == "packageConsumer" && definition.Name == "Package consumer template");
         firstReport.CompletedAt.ShouldNotBe(DateTimeOffset.MinValue);
         firstReport.Error.ShouldBeNull();
         firstReport.FailedCount.ShouldBe(0);
         firstReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text" && item.Status == SynchronizationStatus.Created);
+        firstReport.Items.ShouldContain(item =>
+            item.Kind == CodeFirstDefinitionKind.Template && item.Alias == "packageConsumer"
+            && item.Status == SynchronizationStatus.Created);
         restartReport.CompletedAt.ShouldNotBe(DateTimeOffset.MinValue);
         restartReport.Error.ShouldBeNull();
         restartReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text"
             && (item.Status == SynchronizationStatus.Updated || item.Status == SynchronizationStatus.Unchanged));
         restartReport.FailedCount.ShouldBe(0);
+        restartReport.Items.ShouldContain(item =>
+            item.Kind == CodeFirstDefinitionKind.Template && item.Alias == "packageConsumer"
+            && item.Status == SynchronizationStatus.Unchanged);
         upgradeLevel.ShouldBe(RuntimeLevel.Upgrading);
         reportBeforeUpgrade.CompletedAt.ShouldBe(DateTimeOffset.MinValue);
         upgradedState.ShouldBe(finalState);
@@ -143,3 +175,8 @@ public class PackageConsumerStartupTests : IDisposable {
 public partial class PackageConsumerTextDataType;
 
 public sealed class PackageConsumerTextConfiguration : UmbracoEditors.TextBox.Configuration;
+
+[UCFDocument("packageConsumer", "Package consumer page",
+    DefaultTemplateAlias = UmbracoTemplates.PackageConsumer,
+    AllowedTemplateAliases = new[] { UmbracoTemplates.PackageConsumer })]
+public partial class PackageConsumerPage;
