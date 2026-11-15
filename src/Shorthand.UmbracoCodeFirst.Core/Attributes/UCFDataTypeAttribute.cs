@@ -30,6 +30,7 @@ public sealed class UCFDataTypeAttribute : Attribute {
 
     public Type? Editor { get; }
 
+    [StringSyntax(StringSyntaxAttribute.Json)]
     public string? ConfigurationJson { get; set; }
 
     public Type? ConfigurationType { get; set; }

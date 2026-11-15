@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.PropertyEditors;
@@ -5,6 +7,32 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class AttributeContractTests {
+    [Fact]
+    public void StructuredStringMembers_ExposeSyntaxHints() {
+        // Arrange
+        var records = new[] {
+            (typeof(CodeFirstEditorConfiguration), nameof(CodeFirstEditorConfiguration.Json), StringSyntaxAttribute.Json),
+            (typeof(CodeFirstDefinition), nameof(CodeFirstDefinition.ConfigurationJson), StringSyntaxAttribute.Json),
+            (typeof(CodeFirstPropertyDefinition), nameof(CodeFirstPropertyDefinition.ValidationExpression), StringSyntaxAttribute.Regex),
+        };
+
+        // Act & Assert
+        GetSyntax(typeof(UCFDataTypeAttribute).GetProperty(nameof(UCFDataTypeAttribute.ConfigurationJson))!)
+            .ShouldBe(StringSyntaxAttribute.Json);
+        GetSyntax(typeof(CodeFirstEditorConfiguration).GetMethod(nameof(CodeFirstEditorConfiguration.FromJson))!
+            .GetParameters().Single(parameter => parameter.Name == "json"))
+            .ShouldBe(StringSyntaxAttribute.Json);
+        foreach(var (type, name, syntax) in records) {
+            GetSyntax(type.GetProperty(name)!).ShouldBe(syntax);
+            GetSyntax(type.GetConstructors().Single(constructor =>
+                constructor.GetParameters().Any(parameter => parameter.Name == name))
+                .GetParameters().Single(parameter => parameter.Name == name)).ShouldBe(syntax);
+        }
+    }
+
+    private static string GetSyntax(ICustomAttributeProvider provider) =>
+        provider.GetCustomAttributes(typeof(StringSyntaxAttribute), false).Cast<StringSyntaxAttribute>().Single().Syntax;
+
     [Theory]
     [InlineData(typeof(UCFDocumentAttribute), "Document")]
     [InlineData(typeof(UCFMediaAttribute), "Media")]

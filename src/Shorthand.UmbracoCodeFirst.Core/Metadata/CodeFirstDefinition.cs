@@ -21,6 +21,8 @@ public sealed record CodeFirstPropertyDefinition(
     int TabSortOrder = 0,
     int SortOrder = 0,
     bool Mandatory = false,
+    [property: StringSyntax(StringSyntaxAttribute.Regex)]
+    [param: StringSyntax(StringSyntaxAttribute.Regex)]
     string? ValidationExpression = null,
     string? ValidationMessage = null,
     bool LabelOnTop = false) {
@@ -54,6 +56,8 @@ public sealed record CodeFirstDefinition(
     IReadOnlyList<CodeFirstPropertyDefinition> Properties,
     CodeFirstTypeSettings? Settings = null,
     IReadOnlyList<CodeFirstGroupDefinition>? Groups = null,
+    [property: StringSyntax(StringSyntaxAttribute.Json)]
+    [param: StringSyntax(StringSyntaxAttribute.Json)]
     string? ConfigurationJson = null,
     string? EditorUiAlias = null,
     IReadOnlyList<string>? CompositionAliases = null,

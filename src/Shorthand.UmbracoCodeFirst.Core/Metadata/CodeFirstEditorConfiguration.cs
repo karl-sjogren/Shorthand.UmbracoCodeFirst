@@ -9,6 +9,8 @@ namespace Shorthand.UmbracoCodeFirst.Metadata;
 /// </summary>
 public sealed record CodeFirstEditorConfiguration(
     string EditorId,
+    [property: StringSyntax(StringSyntaxAttribute.Json)]
+    [param: StringSyntax(StringSyntaxAttribute.Json)]
     string Json,
     int SchemaVersion = 1) {
     [JsonIgnore]
@@ -22,7 +24,7 @@ public sealed record CodeFirstEditorConfiguration(
 
     public static CodeFirstEditorConfiguration FromJson(
         string editorId,
-        string json,
+        [StringSyntax(StringSyntaxAttribute.Json)] string json,
         int schemaVersion = 1) {
         ArgumentException.ThrowIfNullOrWhiteSpace(editorId);
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
