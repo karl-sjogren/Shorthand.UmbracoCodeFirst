@@ -34,6 +34,9 @@ internal sealed class CodeFirstCleanupService(
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
+            .Concat(registry.Definitions
+                .Where(definition => definition.Settings?.Collection is not null)
+                .Select(definition => CodeFirstCollectionSettings.GetDataTypeAlias(definition.Kind, definition.Alias)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var documentTypeAliases = registry.Definitions

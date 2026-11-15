@@ -114,5 +114,14 @@ internal static class CodeFirstDiagnosticDescriptors {
         isEnabledByDefault: true,
         helpLinkUri: DocumentationBaseUrl + "/UCF110.md",
         customTags: ["CompilationEnd"]);
+
+    public static readonly DiagnosticDescriptor InvalidCollectionConfigurationType = new(
+        CodeFirstDiagnosticIds.InvalidCollectionConfigurationType,
+        "Invalid collection configuration type",
+        "Collection configuration type '{0}' must inherit from CodeFirstCollectionConfiguration",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: DocumentationBaseUrl + "/UCF115.md");
 #pragma warning restore RS2008
 }

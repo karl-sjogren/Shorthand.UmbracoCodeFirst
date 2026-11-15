@@ -22,9 +22,8 @@ The Umbraco adapter applies these settings where the Umbraco 18.3 API exposes th
 - `AllowedChildAliases` for Document, Media and Member Types
 - `Variations` for supported content-type categories
 
-`IsListView` is exposed as metadata and status information, but a concrete Umbraco list-view
-definition key is required to persist the setting. The current boolean is therefore not used to
-invent or select a list-view entity.
+Collection configuration supports the built-in document and media list/grid layouts. Custom
+collection layouts and the workspace icon, name and content-first settings are not supported.
 
 ## Remaining limitations
 

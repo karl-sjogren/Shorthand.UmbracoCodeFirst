@@ -6,6 +6,30 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstStatusMappingTests {
     [Fact]
+    public void Map_Collection_ReportsSummaryAndFailure() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.MediaType, "assets", "Assets", null, [],
+                new CodeFirstTypeSettings(Collection: new CodeFirstCollectionSettings("{}", true, false, 25))),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.MediaType, "assets", "Assets", SynchronizationStatus.Failed, "Conflict"),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        var item = result.MediaTypes.Single();
+        item.Collection.ShouldNotBeNull().List.ShouldBeTrue();
+        item.Collection.Grid.ShouldBeFalse();
+        item.Collection.PageSize.ShouldBe(25);
+        item.Status.ShouldBe("Failed");
+        item.Message.ShouldBe("Conflict");
+    }
+
+    [Fact]
     public void Map_DefinitionsAndReportStatuses_OrdersDefinitionsAndUsesStatuses() {
         // Arrange
         var registry = new TestRegistry([

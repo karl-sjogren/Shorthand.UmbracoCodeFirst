@@ -219,4 +219,28 @@ describe("expanded definition details", () => {
     expect(settings).toContain("Description");
     expect(settings).not.toContain("<umb-icon");
   });
+
+  it("renders a collection summary", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionSettings: (definition: StatusItem) => string;
+    };
+    const definition = {
+      collection: { list: true, grid: false, pageSize: 25 },
+      allowedTemplateAliases: [],
+      allowedChildAliases: [],
+      compositionAliases: [],
+      groups: [],
+      tabs: [],
+    } as unknown as StatusItem;
+
+    // Act
+    const settings = view.renderDefinitionSettings(definition);
+
+    // Assert
+    expect(settings).toContain("codeFirst_collection");
+    expect(settings).toContain("codeFirst_collectionList");
+    expect(settings).not.toContain("codeFirst_collectionGrid");
+    expect(settings).toContain("codeFirst_collectionPageSize");
+  });
 });

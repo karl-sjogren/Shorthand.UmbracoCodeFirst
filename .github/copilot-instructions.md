@@ -32,6 +32,8 @@
 - Backoffice client tests use Vitest. Keep pure rendering/state helpers testable without importing
   the browser-only Umbraco runtime where possible.
 - Local Aspire site lifecycle:
+  - If no AppHost is running when smoke testing, start it yourself; stop it afterward if you started
+    it. Leave an already-running AppHost running.
   - Start from the AppHost project: `cd src/Shorthand.UmbracoCodeFirst.AppHost` then `aspire start`.
   - Stop the AppHost resources from the same directory with `aspire stop`.
   - The local Umbraco backoffice is normally available at `https://localhost:44363/umbraco/`.

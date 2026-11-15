@@ -39,7 +39,7 @@ public sealed record CodeFirstTypeSettings(
     IReadOnlyList<string>? AllowedTemplateAliases = null,
     IReadOnlyList<string>? AllowedChildAliases = null,
     string? Variations = null,
-    bool IsListView = false);
+    CodeFirstCollectionSettings? Collection = null);
 
 public sealed record CodeFirstDefinition(
     CodeFirstDefinitionKind Kind,

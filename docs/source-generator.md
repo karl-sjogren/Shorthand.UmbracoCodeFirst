@@ -36,6 +36,20 @@ For every `UCFDocumentType` class a partial implementation is emitted in the cla
 This follows the shape of Umbraco's ModelsBuilder output without depending on its internals. The
 property declarations in your class are `partial` definitions; do not add your own implementation.
 
+### Property aliases
+
+Code-first document, element, media and member types expose a generated `PropertyAliases` class.
+For each `UCFProperty`, its constant is named after the CLR property and contains the same explicit
+or display-name-derived alias emitted in the registry. For example, `Article.PropertyAliases.Title`
+is a compile-time string constant; `CodeFirstHelper<Article>.Alias(x => x.Title)` returns the same
+alias and supports normal property rename refactoring.
+
+If a model already declares `PropertyAliases`, UCF116 reports the conflict. UCF117 reports a
+generated property alias used by a UCF attribute in the same compilation: the generator cannot
+read its own output during its initial pass. Other C# attribute arguments and references from a
+previously compiled model can use the generated constants. For media and member models, UCF118
+reports file-local types or nested types whose containing types are not partial.
+
 ### Data Type alias – `<Type>.DataType.g.cs`
 
 A `public const string Alias` on each Data Type class, so `UCFProperty` can reference
@@ -67,8 +81,11 @@ A target without `UCFDocumentType` falls back to a derived alias; analyzer UCF10
 | Id | Severity | Meaning |
 | -- | -------- | ------- |
 | UCF001 | Error | A `UCFProperty` has a CLR type that cannot be generated as a published-model property (pointer, function pointer or `void`). |
+| UCF116 | Error | A model declaration conflicts with the generated `PropertyAliases` class. |
+| UCF117 | Error | A UCF attribute references a property alias generated in the same compilation. |
+| UCF118 | Error | A media or member model's container prevents generation of its property aliases. |
 
-All other rules are reported by the [analyzers](analyzers/README.md).
+Other rules include those reported by the [analyzers](analyzers/README.md).
 
 ## Supported property types
 

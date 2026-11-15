@@ -30,6 +30,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         ICodeFirstOwnershipStore ownershipStore,
         ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore, ICodeFirstBlockDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
+    private const string _collectionOwnershipKey = "shorthand.umbraco-codefirst.collection";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
 
     public async Task<SynchronizationResult> PrepareBlockDataTypeAsync(
@@ -127,6 +128,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             ApplyTypeSettings(created, definition.Settings);
 
+            await ApplyCollectionAsync(created, definition);
+
             ApplyAllowedChildren(created, definition.Settings, service.Get);
 
             await ApplyGroupsAndPropertiesAsync(created, definition);
@@ -150,7 +153,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             return SynchronizationStatus.Skipped;
         }
 
-        var changed = existing.Name != definition.Name;
+        var changed = await ApplyCollectionAsync(existing, definition);
+        changed |= existing.Name != definition.Name;
         existing.Name = definition.Name;
 
         var parentIdForExisting = await getParentId(definition.FolderPath);
@@ -178,7 +182,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return SynchronizationStatus.Updated;
     }
 
-    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
+    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition, bool onlyIfChanged = false) {
         var configurationJson = definition.EditorConfiguration is { } editorConfiguration
             && (editorConfiguration.BlockTypes is not null || editorConfiguration.BlockGroups is not null
                 || editorConfiguration.TypedSettings is not null)
@@ -205,7 +209,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             var oldParentId = existing.ParentId;
             var oldEditorUiAlias = existing.EditorUiAlias;
             var oldEditor = existing.Editor;
-            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null
+            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null || onlyIfChanged
                 ? new Dictionary<string, object>(existing.ConfigurationData)
                 : null;
             try {
@@ -242,7 +246,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
                 }
 
-                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration);
+                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration || onlyIfChanged);
                 return !changed
                     ? SynchronizationStatus.Unchanged
                     : await UpdateDataTypeAsync(existing, definition);
@@ -315,6 +319,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             ApplyTypeSettings(created, definition.Settings);
 
+            await ApplyCollectionAsync(created, definition);
+
             ApplyCompositions(created, definition);
 
             ApplyAllowedChildren(created, definition.Settings, contentTypeService.Get);
@@ -332,7 +338,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             return SynchronizationStatus.Skipped;
         }
 
-        var changed = contentType.Name != definition.Name;
+        var changed = await ApplyCollectionAsync(contentType, definition);
+        changed |= contentType.Name != definition.Name;
         contentType.Name = definition.Name;
 
         var parentId = await GetContentTypeParentIdAsync(definition.FolderPath);
@@ -395,6 +402,64 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
     private static bool IsOwned(IDataType dataType) =>
         dataType.ConfigurationData.TryGetValue(_ownershipKey, out var value) && value is string;
+
+    private async Task<bool> ApplyCollectionAsync(IContentTypeComposition contentType, CodeFirstDefinition definition) {
+        if(definition.Kind is not CodeFirstDefinitionKind.DocumentType and not CodeFirstDefinitionKind.MediaType) {
+            return false;
+        }
+
+        var collection = definition.Settings?.Collection;
+        if(collection is null && contentType.ListView is null) {
+            return false;
+        }
+
+        var alias = CodeFirstCollectionSettings.GetDataTypeAlias(definition.Kind, definition.Alias);
+        var existing = await FindOwnedDataTypeAsync(alias);
+        var isManaged = existing is not null
+            && existing.ConfigurationData.TryGetValue(_collectionOwnershipKey, out var owner)
+            && string.Equals(owner as string, alias, StringComparison.Ordinal);
+
+        if(collection is null) {
+            if(isManaged && contentType.ListView == existing!.Key) {
+                contentType.ListView = null;
+                return true;
+            }
+
+            return false;
+        }
+
+        if(collection.Error is not null) {
+            throw new InvalidOperationException(
+                $"The collection configuration for '{definition.Alias}' is invalid: {collection.Error}");
+        }
+
+        if(existing is not null && !isManaged) {
+            throw new InvalidOperationException($"The collection data type identity '{alias}' is already in use.");
+        }
+
+        if(contentType.ListView is not null && contentType.ListView != existing?.Key) {
+            throw new InvalidOperationException(
+                $"The {definition.Kind} '{definition.Alias}' already has a manually managed collection; it was left unchanged.");
+        }
+
+        var configuration = JsonNode.Parse(collection.Json)?.AsObject()
+            ?? throw new InvalidOperationException($"The collection configuration for '{definition.Alias}' is invalid.");
+        configuration[_collectionOwnershipKey] = alias;
+        var dataTypeDefinition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            alias,
+            $"Code First {definition.Kind} {definition.Alias} collection",
+            "Umbraco.ListView",
+            [],
+            ConfigurationJson: configuration.ToJsonString(),
+            EditorUiAlias: "Umb.PropertyEditorUi.Collection");
+        var status = await ApplyDataTypeAsync(dataTypeDefinition, onlyIfChanged: true);
+        var dataType = await FindOwnedDataTypeAsync(alias)
+            ?? throw new InvalidOperationException($"Could not find the collection data type for '{definition.Alias}'.");
+        var changed = contentType.ListView != dataType.Key;
+        contentType.ListView = dataType.Key;
+        return changed || status is SynchronizationStatus.Created or SynchronizationStatus.Updated;
+    }
 
     private async Task<IDataType?> FindOwnedDataTypeAsync(string alias) {
         if(_ownedDataTypes.TryGetValue(alias, out var cached)) {

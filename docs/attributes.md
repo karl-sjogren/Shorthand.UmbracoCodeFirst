@@ -21,7 +21,7 @@ Not inherited; one per class.
 
 ## `UCFDocumentType` – class
 
-Declares a Document Type. Only Document Types are supported; there is no media/member variant yet.
+Declares a Document Type. Media and Member Types use `UCFMediaType` and `UCFMemberType`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
@@ -33,9 +33,95 @@ Declares a Document Type. Only Document Types are supported; there is no media/m
 | `AllowedTemplateAliases` | named | Metadata only – *not yet synchronized*. |
 | `AllowedChildAliases` | named | Metadata only – *not yet synchronized*. |
 | `Variations` | named | Metadata only – *not yet synchronized*. |
-| `IsListView` | named | Metadata only – *not yet synchronized*. |
 
 Not inherited; one per class.
+
+## `UCFCollection` – class
+
+Attach a collection to a code-first Document or Media Type using a concrete
+`CodeFirstCollectionConfiguration` with a public parameterless constructor:
+
+```csharp
+using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Metadata;
+
+[UCFDocumentType("Articles")]
+[UCFCollection(typeof(ArticleCollection))]
+public partial class Articles;
+
+[UCFDocumentType("Article")]
+public partial class Article {
+    [UCFProperty("articleSummary", "Summary", "text")]
+    public partial string Summary { get; }
+}
+
+public sealed class ArticleCollection : CodeFirstCollectionConfiguration<Article> {
+    public ArticleCollection() {
+        List = true;
+        Grid = false;
+        PageSize = 25;
+        OrderBy = Alias(article => article.Summary);
+        OrderDirection = "desc";
+        Columns = [
+            new(CodeFirstCollectionSystemFields.UpdateDate, "Last edited"),
+            new(Article.PropertyAliases.Summary, "Summary", NameTemplate: "{=value}"),
+        ];
+    }
+}
+```
+
+`CodeFirstCollectionConfiguration<T>` is an optional subclass of the non-generic base. Its
+`Alias` method delegates to `CodeFirstHelper<T>.Alias`, so both forms can be used in a
+configuration. Both typed references above resolve to `articleSummary`, the explicit Umbraco alias;
+`nameof(Article.Summary)` would instead produce `Summary`. The expression helper supports direct
+`UCFProperty` selections, including CLR-inherited properties, and property rename refactoring.
+Generated `PropertyAliases` constants can be used where a compile-time constant is required; a
+property rename makes stale constant references fail to compile. Use the declaring model for a
+composed property if the composition is not CLR inheritance.
+
+```csharp
+[UCFMediaType("Media folders")]
+[UCFCollection(typeof(MediaCollection))]
+public partial class MediaFolders;
+
+[UCFMediaType("Image assets")]
+public partial class ImageAsset {
+    [UCFProperty("Caption", "text")]
+    public string? Caption { get; set; }
+}
+
+public sealed class MediaCollection : CodeFirstCollectionConfiguration<ImageAsset> {
+    public MediaCollection() {
+        OrderBy = ImageAsset.PropertyAliases.Caption;
+        Columns = [new(Alias(image => image.Caption), "Caption")];
+    }
+}
+```
+
+The same configuration may be reused across types; Umbraco's matching document or media layout
+aliases are selected automatically. Defaults enable both layouts, display 10 items per page, sort
+by `sortOrder` descending, and include Sort, Last edited and Created by columns.
+`OrderDirection` is `asc` or `desc`; the order field must be `name` or a displayed column.
+At least one layout and one column must be configured.
+
+`CodeFirstCollectionSystemFields` provides constants for the built-in fields offered by Umbraco;
+`Published` is document-only. A column's `IsSystem` is determined automatically by an exact,
+case-sensitive match against those aliases. Custom properties using the same alias are treated as
+system fields. A field being available as a column does not guarantee it can be used for sorting.
+Strings remain supported for manual properties or other fields.
+
+The expression helper does not execute the selector. It rejects nested properties, methods, fields,
+static properties, and properties without generated code-first aliases. Configuration errors are
+reported in synchronization status. It uses reflection; trimming support is not guaranteed. A
+generated alias constant used as an argument to a UCF attribute in the same compilation is not
+available to the generator in its initial pass: UCF117 reports this case. Use a string constant or
+reference a previously compiled model instead.
+
+Each parent gets its own owned Data Type, even if configurations are shared. Existing manual
+collections are not replaced; synchronization reports a conflict. Removing the attribute detaches
+only the matching code-first collection and leaves the Data Type intact. The old `IsListView`
+attribute property has been removed; replace it with `UCFCollection` to enable a collection.
+Custom layouts and workspace icon/name/content-first options are not supported.
 
 ## `UCFElementType` – class
 

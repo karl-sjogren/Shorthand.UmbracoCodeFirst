@@ -15,7 +15,6 @@ public class AttributeContractTests {
             AllowedTemplateAliases = ["productTemplate", "default"],
             AllowedChildAliases = ["variant"],
             Variations = "Culture",
-            IsListView = true,
         };
 
         // Act

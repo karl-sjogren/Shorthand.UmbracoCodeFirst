@@ -11,6 +11,4 @@ public sealed class UCFMediaTypeAttribute : UCFTypeAttribute {
     public bool AllowAsRoot { get; set; }
 
     public string[] AllowedChildAliases { get; set; } = [];
-
-    public bool IsListView { get; set; }
 }

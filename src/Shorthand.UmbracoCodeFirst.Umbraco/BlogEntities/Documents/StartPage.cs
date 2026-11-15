@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
@@ -7,8 +8,8 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
     "Start Page",
     Icon = UmbracoIcons.Star,
     AllowAsRoot = true,
-    IsListView = true,
     AllowedChildAliases = new[] { BlogPost.ModelTypeAlias })]
+[UCFCollection(typeof(StartPageCollectionConfiguration))]
 [UCFComposite(typeof(SeoComposite2))]
 public partial class StartPage {
     [UCFProperty(
@@ -19,4 +20,11 @@ public partial class StartPage {
     [UCFDescription("The main heading for the start page.")]
     [ContentTab]
     public partial string MainHeading { get; }
+}
+
+internal sealed class StartPageCollectionConfiguration : CodeFirstCollectionConfiguration {
+    public StartPageCollectionConfiguration() {
+        OrderBy = CodeFirstCollectionSystemFields.UpdateDate;
+        PageSize = 25;
+    }
 }

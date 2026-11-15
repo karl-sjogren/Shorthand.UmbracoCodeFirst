@@ -17,6 +17,7 @@ its own page with an example.
 | [UCF108](UCF108.md) | Unknown Umbraco property editor | Error |
 | [UCF109](UCF109.md) | Incompatible Umbraco property editor type | Warning |
 | [UCF110](UCF110.md) | Incompatible Document Type and Element Type composition | Warning |
+| [UCF115](UCF115.md) | Invalid collection configuration type | Error |
 
 The source generator additionally reports `UCF001` (unsupported published model property type) as
 an error; see [Source generator](../source-generator.md#generator-diagnostics).

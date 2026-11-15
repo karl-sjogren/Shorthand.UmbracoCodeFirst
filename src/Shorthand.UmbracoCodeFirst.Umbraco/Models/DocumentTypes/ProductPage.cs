@@ -7,7 +7,6 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
     "Product Page",
     Icon = UmbracoIcons.Barcode,
     AllowAsRoot = true,
-    IsListView = true,
     Variations = "Invariant")]
 [UCFComposite(typeof(HappySparkles))]
 [UCFComposite(typeof(SeoComposite))]

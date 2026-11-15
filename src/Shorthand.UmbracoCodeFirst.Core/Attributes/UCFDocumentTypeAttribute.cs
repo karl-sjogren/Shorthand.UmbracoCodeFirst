@@ -15,6 +15,4 @@ public sealed class UCFDocumentTypeAttribute : UCFTypeAttribute {
     public string[] AllowedTemplateAliases { get; set; } = [];
 
     public string[] AllowedChildAliases { get; set; } = [];
-
-    public bool IsListView { get; set; }
 }

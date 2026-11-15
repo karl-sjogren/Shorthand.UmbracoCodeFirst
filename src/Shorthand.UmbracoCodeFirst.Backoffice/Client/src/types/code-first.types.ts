@@ -33,7 +33,7 @@ export type StatusItem = {
   allowedTemplateAliases: string[];
   allowedChildAliases: string[];
   variations?: string;
-  isListView: boolean;
+  collection?: { list: boolean; grid: boolean; pageSize: number } | null;
   compositionAliases: string[];
   groups: LayoutItem[];
   tabs: LayoutItem[];

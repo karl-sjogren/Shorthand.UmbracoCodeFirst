@@ -459,7 +459,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       definition.allowAsRoot ||
       definition.allowInLibrary ||
       Boolean(definition.variations) ||
-      definition.isListView ||
+      Boolean(definition.collection) ||
       Boolean(definition.defaultTemplateAlias) ||
       definition.allowedTemplateAliases.length > 0 ||
       definition.allowedChildAliases.length > 0 ||
@@ -493,8 +493,12 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
           ${definition.variations
             ? html`<dt>${this.localize.term("codeFirst_variations")}</dt><dd>${definition.variations}</dd>`
             : ""}
-          ${definition.isListView
-            ? html`<dt>${this.localize.term("codeFirst_listView")}</dt><dd>Yes</dd>`
+          ${definition.collection
+            ? html`<dt>${this.localize.term("codeFirst_collection")}</dt>
+                <dd>${[
+                  definition.collection.list ? this.localize.term("codeFirst_collectionList") : "",
+                  definition.collection.grid ? this.localize.term("codeFirst_collectionGrid") : "",
+                ].filter(Boolean).join(", ")} (${this.localize.term("codeFirst_collectionPageSize", definition.collection.pageSize)})</dd>`
             : ""}
           ${definition.defaultTemplateAlias
             ? html`<dt>${this.localize.term("codeFirst_defaultTemplate")}</dt><dd>${definition.defaultTemplateAlias}</dd>`

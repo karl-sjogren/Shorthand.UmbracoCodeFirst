@@ -6,6 +6,55 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_CollectionConfiguration_EmitsKindAndReportsInvalidTarget() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Metadata {
+                public abstract class CodeFirstCollectionConfiguration { }
+                public abstract class CodeFirstCollectionConfiguration<T> : CodeFirstCollectionConfiguration { }
+            }
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDocumentTypeAttribute(string name) : global::System.Attribute;
+                public sealed class UCFMediaTypeAttribute(string name) : global::System.Attribute;
+                public sealed class UCFMemberTypeAttribute(string name) : global::System.Attribute;
+                public sealed class UCFCollectionAttribute(global::System.Type configuration) : global::System.Attribute;
+            }
+            namespace Example {
+                public sealed class Collection : Shorthand.UmbracoCodeFirst.Metadata.CodeFirstCollectionConfiguration;
+                public sealed class GenericCollection : Shorthand.UmbracoCodeFirst.Metadata.CodeFirstCollectionConfiguration<Page>;
+                public abstract class AbstractCollection : Shorthand.UmbracoCodeFirst.Metadata.CodeFirstCollectionConfiguration;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Page")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFCollection(typeof(GenericCollection))]
+                public partial class Page;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFMediaType("Media")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFCollection(typeof(Collection))]
+                public partial class Media;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFMemberType("Member")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFCollection(typeof(Collection))]
+                public partial class Member;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocumentType("Invalid")]
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFCollection(typeof(AbstractCollection))]
+                public partial class Invalid;
+            }
+            """;
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(item => item.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        registry.ShouldContain("CodeFirstCollectionConfiguration.FromType(typeof(global::Example.GenericCollection), global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinitionKind.DocumentType)");
+        registry.ShouldContain("CodeFirstCollectionConfiguration.FromType(typeof(global::Example.Collection), global::Shorthand.UmbracoCodeFirst.Metadata.CodeFirstDefinitionKind.MediaType)");
+        result.Diagnostics.Count(diagnostic => diagnostic.Id == "UCF114").ShouldBe(2);
+    }
+
+    [Fact]
     public void GenerateClasses_MarksRegistryAndPartialMembersButNotPartialTypes() {
         // Arrange
         const string source = """
@@ -1146,7 +1195,6 @@ public class CodeFirstRegistryGeneratorTests {
                     public string? DefaultTemplateAlias { get; set; }
                     public string[] AllowedTemplateAliases { get; set; } = [];
                     public string[] AllowedChildAliases { get; set; } = [];
-                    public bool IsListView { get; set; }
                 }
 
                 public sealed class UCFDescriptionAttribute(string description)
@@ -1171,8 +1219,7 @@ public class CodeFirstRegistryGeneratorTests {
                     AllowAsRoot = true,
                     DefaultTemplateAlias = "landing",
                     AllowedTemplateAliases = new[] { "landing", "campaign" },
-                    AllowedChildAliases = new[] { "article", "folder" },
-                    IsListView = true)]
+                    AllowedChildAliases = new[] { "article", "folder" })]
                 [Shorthand.UmbracoCodeFirst.Attributes.UCFDescription("Landing description")]
                 public partial class Landing;
             }

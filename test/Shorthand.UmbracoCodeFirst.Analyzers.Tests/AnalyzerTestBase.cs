@@ -23,6 +23,8 @@ public abstract class AnalyzerTestBase {
                 public UCFPropertyAttribute(string name, string dataTypeAlias) { }
                 public UCFPropertyAttribute(string alias, string name, string dataTypeAlias) { }
             }
+            [global::System.AttributeUsage(global::System.AttributeTargets.Class)]
+            public sealed class UCFCollectionAttribute(global::System.Type collectionConfiguration) : global::System.Attribute;
             [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
             public sealed class UCFCompositeAttribute(global::System.Type contentType) : global::System.Attribute;
             public class UCFGroupAttribute : global::System.Attribute {
@@ -35,6 +37,10 @@ public abstract class AnalyzerTestBase {
                 public UCFTabAttribute(string alias, string name) { }
             }
             public class UCFValidationAttribute(string expression, string message = null!) : global::System.Attribute;
+        }
+        namespace Shorthand.UmbracoCodeFirst.Metadata
+        {
+            public abstract class CodeFirstCollectionConfiguration;
         }
         """;
 
@@ -67,6 +73,7 @@ public abstract class AnalyzerTestBase {
         new EditorAliasAnalyzer(),
         new IncompatibleEditorTypeAnalyzer(),
         new IncompatibleCompositionTypeAnalyzer(),
+        new InvalidCollectionConfigurationTypeAnalyzer(),
     ];
 
     protected static string Source(string source) {

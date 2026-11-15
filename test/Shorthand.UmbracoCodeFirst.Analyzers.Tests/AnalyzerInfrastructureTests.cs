@@ -26,6 +26,7 @@ public class AnalyzerInfrastructureTests : AnalyzerTestBase {
             ["UCF108"] = $"{documentationBaseUrl}/UCF108.md",
             ["UCF109"] = $"{documentationBaseUrl}/UCF109.md",
             ["UCF110"] = $"{documentationBaseUrl}/UCF110.md",
+            ["UCF115"] = $"{documentationBaseUrl}/UCF115.md",
         });
     }
 

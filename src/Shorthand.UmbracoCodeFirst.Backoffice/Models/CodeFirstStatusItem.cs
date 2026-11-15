@@ -13,7 +13,7 @@ public sealed record CodeFirstStatusItem(
     IReadOnlyList<string> AllowedTemplateAliases,
     IReadOnlyList<string> AllowedChildAliases,
     string? Variations,
-    bool IsListView,
+    CodeFirstCollectionStatus? Collection,
     IReadOnlyList<string> CompositionAliases,
     IReadOnlyList<CodeFirstStatusLayoutItem> Groups,
     IReadOnlyList<CodeFirstStatusLayoutItem> Tabs,
@@ -25,3 +25,5 @@ public sealed record CodeFirstStatusItem(
     string? Message,
     string? BackofficeUrl,
     IReadOnlyList<CodeFirstStatusProperty> Properties);
+
+public sealed record CodeFirstCollectionStatus(bool List, bool Grid, int PageSize);

@@ -46,7 +46,9 @@ internal static class CodeFirstStatusMapping {
                     definition.Settings?.AllowedTemplateAliases ?? [],
                     definition.Settings?.AllowedChildAliases ?? [],
                     definition.Settings?.Variations,
-                    definition.Settings?.IsListView == true,
+                    definition.Settings?.Collection is { } collection
+                        ? new CodeFirstCollectionStatus(collection.List, collection.Grid, collection.PageSize)
+                        : null,
                     definition.CompositionAliases ?? [],
                     definition.EffectiveGroups
                         .Select(group => new CodeFirstStatusLayoutItem(group.Alias, group.Name, group.SortOrder))
