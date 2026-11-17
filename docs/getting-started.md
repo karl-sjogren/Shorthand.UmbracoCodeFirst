@@ -11,6 +11,28 @@
 Declaration classes must be `partial` and the code-first properties must be `partial` properties
 (the generator supplies their implementation).
 
+Set `Umbraco:CMS:ModelsBuilder:ModelsMode` to `Nothing` in the site's effective configuration
+to avoid conflicts with generated code-first models:
+
+```json
+{
+  "Umbraco": {
+    "CMS": {
+      "ModelsBuilder": {
+        "ModelsMode": "Nothing"
+      }
+    }
+  }
+}
+```
+
+The package logs a startup warning when the effective Models Builder mode is not `Nothing`,
+including when it comes from the Umbraco default or an environment-specific override.
+
+Keep `RazorCompileOnBuild` and `RazorCompileOnPublish` enabled in the web project. Explicitly
+setting either to `false` produces build warnings UCFB001 and UCFB002 respectively. Disabling
+build-time Razor compilation can also prevent Razor IntelliSense from working.
+
 ## 1. Declare a Data Type
 
 A Data Type is a partial class with `UCFDataType`. Use the `UmbracoEditors` constants rather than

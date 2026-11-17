@@ -7,6 +7,17 @@
     <CompilerVisibleProperty Include="UmbracoCodeFirstTemplateInputs" />
   </ItemGroup>
 
+  <Target Name="ShorthandUmbracoCodeFirstValidateRazorSettings"
+          BeforeTargets="PrepareForBuild;Publish"
+          Condition="'$(UsingMicrosoftNETSdkWeb)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Warning Code="UCFB001"
+             Condition="'$(RazorCompileOnBuild)' == 'false'"
+             Text="RazorCompileOnBuild is false. Set it to true to enable Razor source generation and IntelliSense." />
+    <Warning Code="UCFB002"
+             Condition="'$(RazorCompileOnPublish)' == 'false'"
+             Text="RazorCompileOnPublish is false. Set it to true to compile Razor views when publishing." />
+  </Target>
+
   <Target Name="ShorthandUmbracoCodeFirstCollectTemplates"
           BeforeTargets="GenerateMSBuildEditorConfigFileCore;CoreCompile">
     <PropertyGroup>

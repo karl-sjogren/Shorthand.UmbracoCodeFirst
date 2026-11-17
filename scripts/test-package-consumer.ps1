@@ -15,6 +15,28 @@ try {
 
     dotnet restore $fixture --configfile (Join-Path (Split-Path $fixture -Parent) 'nuget.config') "-p:CodeFirstPackageVersion=$version"
     if ($LASTEXITCODE -ne 0) { throw "Package consumer restore failed with exit code $LASTEXITCODE." }
+
+    $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=false' '-p:RazorCompileOnPublish=false' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -notmatch 'warning UCFB001' -or $output -notmatch 'warning UCFB002') {
+        throw "Disabled Razor compilation did not produce both warnings: $output"
+    }
+    $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=true' '-p:RazorCompileOnPublish=false' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -match 'warning UCFB001' -or $output -notmatch 'warning UCFB002') {
+        throw "Razor publish warning was not independent of the build setting: $output"
+    }
+    $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=false' '-p:RazorCompileOnPublish=true' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -notmatch 'warning UCFB001' -or $output -match 'warning UCFB002') {
+        throw "Razor build warning was not independent of the publish setting: $output"
+    }
+    $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=true' '-p:RazorCompileOnPublish=true' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -match 'warning UCFB00[12]') {
+        throw "Enabled Razor compilation unexpectedly produced a warning: $output"
+    }
+    $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=false' '-p:RazorCompileOnPublish=false' '-p:DesignTimeBuild=true' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -match 'warning UCFB00[12]') {
+        throw "Design-time build unexpectedly produced a Razor warning: $output"
+    }
+
     dotnet test $fixture --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -66,6 +88,10 @@ try {
 
     $modelsDirectory = Join-Path $root 'test\Shorthand.UmbracoCodeFirst.PackageConsumer.Models'
     $models = Join-Path $modelsDirectory 'Shorthand.UmbracoCodeFirst.PackageConsumer.Models.csproj'
+    $output = dotnet msbuild $models "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=false' '-p:RazorCompileOnPublish=false' --verbosity quiet 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $output -match 'warning UCFB00[12]') {
+        throw "A models library unexpectedly produced a Razor warning: $output"
+    }
     $views = Join-Path ([System.IO.Path]::GetTempPath()) "codefirst-views-$([Guid]::NewGuid().ToString('N'))"
     $mainView = Join-Path $views 'packageConsumer.cshtml'
     $extraView = Join-Path $views 'extra.cshtml'
