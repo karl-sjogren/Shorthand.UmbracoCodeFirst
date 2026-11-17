@@ -61,8 +61,10 @@ not been bound yet), so ordering of files does not matter.
 
 Marked root-level views generate `Shorthand.UmbracoCodeFirst.UmbracoTemplates` constants.
 The identifier is the filename alias with its first character capitalized, and the value retains
-the exact filename case. These constants can be used in document template settings in the same
-project; see [UCFTemplate](attributes.md#ucftemplate--razor-view).
+the exact filename case. The generator can consume a configurable external Views directory, so
+the models project owns both the constants and template registry entries while the site owns the
+physical views. See [UCFTemplate](attributes.md#ucftemplate--razor-view) for configuration and
+the single-registry requirement.
 
 ## Alias derivation
 
@@ -100,6 +102,7 @@ A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 re
 | [UCF121](analyzers/generator-diagnostics.md#ucf121) | Error | Multiple marked views have the same template alias (case-insensitive). |
 | [UCF122](analyzers/generator-diagnostics.md#ucf122) | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
 | [UCF123](analyzers/generator-diagnostics.md#ucf123) | Error | A property does not specify exactly one data type alias or valid data type key. |
+| [UCF124](analyzers/generator-diagnostics.md#ucf124) | Error | The site and a referenced template-owning project both generate code-first registries. |
 
 Other rules include those reported by the [analyzers](analyzers/README.md).
 The internal catalog generators also report [UCF200 and UCF201](analyzers/generator-diagnostics.md#internal-catalog-diagnostics).

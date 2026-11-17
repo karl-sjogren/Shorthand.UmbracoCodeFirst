@@ -13,7 +13,7 @@ public class ShorthandUmbracoCodeFirstBackofficeApiComposer : IComposer {
             document => document
                 .WithTitle("Shorthand Umbraco Code First Backoffice Backoffice API")
                 .WithBackOfficeAuthentication()
-                .WithJsonOptions(Umbraco.Cms.Core.Constants.JsonOptionsNames.BackOffice)
+                .WithJsonOptions(UmbracoConstants.JsonOptionsNames.BackOffice)
                 .ConfigureOpenApiOptions(options =>
                     options.AddDocumentTransformer((doc, _, _) => {
                         doc.Info.Version = "1.0";

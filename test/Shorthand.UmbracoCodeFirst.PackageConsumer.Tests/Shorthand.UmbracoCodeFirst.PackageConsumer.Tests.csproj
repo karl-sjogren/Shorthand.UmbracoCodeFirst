@@ -2,7 +2,18 @@
 
   <PropertyGroup>
     <IsIntegrationTestProject>true</IsIntegrationTestProject>
+    <UmbracoCodeFirstGenerateTemplates Condition="'$(CodeFirstSplitConsumer)' == 'true'">false</UmbracoCodeFirstGenerateTemplates>
+    <DefineConstants Condition="'$(CodeFirstSplitConsumer)' == 'true'">$(DefineConstants);CODEFIRST_SPLIT</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(CodeFirstDuplicateViewInput)' == 'true'">
+    <AdditionalFiles Include="Views\packageConsumer.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(CodeFirstSplitConsumer)' == 'true'">
+    <Compile Remove="PackageConsumerDefinitions.cs" />
+    <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.PackageConsumer.Models\Shorthand.UmbracoCodeFirst.PackageConsumer.Models.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageVersion Include="Shorthand.UmbracoCodeFirst" Version="$(CodeFirstPackageVersion)" />

@@ -57,8 +57,12 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
         var templates = context.AdditionalTextsProvider
             .Where(static file => file.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
             .Collect()
-            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
-                options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory) ? directory : null));
+            .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => {
+                options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory);
+                options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstViewsDirectory", out var viewsDirectory);
+                options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstGenerateTemplates", out var enabled);
+                return (directory, viewsDirectory, enabled: !string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase));
+            }));
         context.RegisterSourceOutput(
             definitions.Collect().Combine(context.CompilationProvider).Combine(templates),
             static (productionContext, input) => {
@@ -68,8 +72,16 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal)
                     .ToImmutableArray();
 
-                var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, input.Right.Right);
+                var (directory, viewsDirectory, enabled) = input.Right.Right;
+                var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, directory, viewsDirectory, enabled);
                 if(distinctDefinitions.Length == 0 && templateDefinitions.Count == 0) {
+                    return;
+                }
+
+                if(input.Left.Right.SourceModule.ReferencedAssemblySymbols.Any(static assembly =>
+                    assembly.GetTypeByMetadataName("Shorthand.UmbracoCodeFirst.UmbracoTemplates") is not null
+                    && assembly.GetTypeByMetadataName("Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry") is not null)) {
+                    productionContext.ReportDiagnostic(Diagnostic.Create(_multipleTemplateRegistries, Location.None));
                     return;
                 }
 

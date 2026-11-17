@@ -6,10 +6,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
-using Shorthand.UmbracoCodeFirst.PropertyEditors;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Testcontainers.MsSql;
 using Umbraco.Cms.Core;
@@ -45,6 +43,13 @@ public class PackageConsumerStartupTests : IDisposable {
         await using(var first = await CreateApplicationAsync(sql.GetConnectionString())) {
             await first.StartAsync(token);
             firstReport = first.Services.GetRequiredService<ISynchronizationReportStore>().Current;
+            var registry = first.Services.GetRequiredService<ICodeFirstDefinitionRegistry>();
+#if CODEFIRST_SPLIT
+            registry.GetType().Assembly.GetName().Name.ShouldBe("Shorthand.UmbracoCodeFirst.PackageConsumer.Models");
+            typeof(PackageConsumerStartupTests).Assembly.GetType("Shorthand.UmbracoCodeFirst.UmbracoTemplates").ShouldBeNull();
+#else
+            registry.GetType().Assembly.ShouldBe(typeof(PackageConsumerStartupTests).Assembly);
+#endif
             using(var scope = first.Services.CreateScope()) {
                 var services = scope.ServiceProvider;
                 var document = services.GetRequiredService<IContentTypeService>().Get("packageConsumer").ShouldNotBeNull();
@@ -170,13 +175,3 @@ public class PackageConsumerStartupTests : IDisposable {
         return app;
     }
 }
-
-[UCFDataType("Package consumer text", typeof(UmbracoEditors.TextBox), typeof(PackageConsumerTextConfiguration))]
-public partial class PackageConsumerTextDataType;
-
-public sealed class PackageConsumerTextConfiguration : UmbracoEditors.TextBox.Configuration;
-
-[UCFDocument("packageConsumer", "Package consumer page",
-    DefaultTemplateAlias = UmbracoTemplates.PackageConsumer,
-    AllowedTemplateAliases = new[] { UmbracoTemplates.PackageConsumer })]
-public partial class PackageConsumerPage;

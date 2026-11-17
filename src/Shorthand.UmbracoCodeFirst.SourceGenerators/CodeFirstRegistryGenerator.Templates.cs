@@ -34,30 +34,47 @@ public sealed partial class CodeFirstRegistryGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _multipleTemplateRegistries = new(
+        "UCF124",
+        "Multiple code-first registries",
+        "This project and a referenced project both generate code-first registries; move all code-first definitions to the models project and set UmbracoCodeFirstGenerateTemplates to false in this project",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 #pragma warning restore RS2008
 
-    private static bool IsRootView(string path, string projectDirectory) {
-        var fullPath = System.IO.Path.GetFullPath(System.IO.Path.IsPathRooted(path)
+    private static bool IsRootView(string path, string projectDirectory, string viewsDirectory) {
+        var fullPath = Path.GetFullPath(Path.IsPathRooted(path)
             ? path
-            : System.IO.Path.Combine(projectDirectory, path));
-        var viewsDirectory = System.IO.Path.GetFullPath(System.IO.Path.Combine(projectDirectory, "Views"));
-        var comparison = System.IO.Path.DirectorySeparatorChar == '\\'
+            : Path.Combine(projectDirectory, path));
+        viewsDirectory = Path.GetFullPath(Path.IsPathRooted(viewsDirectory)
+            ? viewsDirectory
+            : Path.Combine(projectDirectory, viewsDirectory));
+        if(viewsDirectory.Length > (Path.GetPathRoot(viewsDirectory)?.Length ?? 0)) {
+            viewsDirectory = viewsDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        var comparison = Path.DirectorySeparatorChar == '\\'
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
-        return string.Equals(System.IO.Path.GetDirectoryName(fullPath), viewsDirectory, comparison);
+        return string.Equals(Path.GetDirectoryName(fullPath), viewsDirectory, comparison);
     }
 
     private static IReadOnlyList<TemplateDefinition> ReadTemplates(
         SourceProductionContext context,
         ImmutableArray<AdditionalText> files,
-        string? projectDirectory) {
+        string? projectDirectory,
+        string? viewsDirectory,
+        bool enabled) {
         var definitions = new List<TemplateDefinition>();
-        if(projectDirectory is null || projectDirectory.Length == 0) {
+        if(!enabled || projectDirectory is null || projectDirectory.Length == 0) {
             return definitions;
         }
 
+        var templateDirectory = viewsDirectory is { Length: > 0 } ? viewsDirectory : Path.Combine(projectDirectory, "Views");
         foreach(var file in files.GroupBy(file => file.Path, StringComparer.Ordinal).Select(group => group.First())) {
-            if(!IsRootView(file.Path, projectDirectory)) {
+            if(!IsRootView(file.Path, projectDirectory, templateDirectory)) {
                 continue;
             }
 
@@ -102,7 +119,7 @@ public sealed partial class CodeFirstRegistryGenerator {
                 continue;
             }
 
-            var alias = System.IO.Path.GetFileNameWithoutExtension(file.Path);
+            var alias = Path.GetFileNameWithoutExtension(file.Path);
             if(alias.Length > 100 || !Regex.IsMatch(alias, @"^[A-Za-z][A-Za-z0-9_]*$")) {
                 context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, file.Path,
                     "the filename must start with a letter and contain only letters, digits or underscores (maximum 100 characters)"));
@@ -111,7 +128,7 @@ public sealed partial class CodeFirstRegistryGenerator {
 
             using var sha256 = SHA256.Create();
             var contentHash = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(text.ToString())));
-            definitions.Add(new TemplateDefinition(alias, literal.Token.ValueText, System.IO.Path.GetFileName(file.Path), contentHash, location));
+            definitions.Add(new TemplateDefinition(alias, literal.Token.ValueText, Path.GetFileName(file.Path), contentHash, location));
         }
 
         var duplicates = definitions.GroupBy(definition => definition.Alias, StringComparer.OrdinalIgnoreCase)

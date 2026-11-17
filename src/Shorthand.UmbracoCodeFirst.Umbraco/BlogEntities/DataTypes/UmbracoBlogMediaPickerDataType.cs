@@ -12,7 +12,7 @@ public partial class UmbracoBlogMediaPickerDataType;
 
 public sealed partial class UmbracoBlogMediaPickerDataType : UmbracoEditors.MediaPicker.Configuration {
     public UmbracoBlogMediaPickerDataType() {
-        AcceptedMediaTypeKeys = [global::Umbraco.Cms.Core.Constants.MediaTypes.Guids.ImageGuid];
+        AcceptedMediaTypeKeys = [UmbracoConstants.MediaTypes.Guids.ImageGuid];
         Multiple = true;
         ValidationLimit = new CodeFirstMediaPickerValidationLimit(Max: 3);
         EnableLocalFocalPoint = true;

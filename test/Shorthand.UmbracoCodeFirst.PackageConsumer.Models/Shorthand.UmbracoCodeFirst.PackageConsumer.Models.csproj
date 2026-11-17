@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UmbracoCodeFirstViewsDirectory>..\Shorthand.UmbracoCodeFirst.PackageConsumer.Tests\Views</UmbracoCodeFirstViewsDirectory>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shorthand.UmbracoCodeFirst.PackageConsumer.Tests\PackageConsumerDefinitions.cs" Link="PackageConsumerDefinitions.cs" />
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst" Version="$(CodeFirstPackageVersion)" />
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst.SourceGenerators" Version="$(CodeFirstPackageVersion)" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst.SourceGenerators" />
+    <PackageReference Include="Umbraco.Cms" />
+  </ItemGroup>
+</Project>

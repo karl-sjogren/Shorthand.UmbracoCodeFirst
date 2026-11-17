@@ -189,6 +189,13 @@ Use `[UCFProperty("Caption", "textstring")]`, or pass a known key with
 `[UCFProperty("Caption", DataTypeKey = "ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3")]`.
 Do not specify both.
 
+## UCF124
+
+The current project would generate a code-first registry while a referenced project already
+generates a template registry. The runtime does not merge them. Move all code-first definitions
+to the referenced models project and set `UmbracoCodeFirstGenerateTemplates` to `false` in the
+site project. See [UCFTemplate](../attributes.md#ucftemplate--razor-view).
+
 ## Internal catalog diagnostics
 
 UCF200 and UCF201 are for repository maintainers editing generator input catalogs, not normal

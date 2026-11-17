@@ -57,7 +57,9 @@ Test projects live under `test/` and follow `ProjectName.Tests`; see [Developmen
 2. The registry is found by `CodeFirstDefinitionRegistryDiscovery.Discover()`, which scans loaded
    assemblies for the first parameterless `ICodeFirstDefinitionRegistry` implementation – in
    practice the generated `Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry`.
-   If none is found an empty registry is used.
+   If none is found an empty registry is used. Registries are not merged; a split site/models
+   configuration must place all definitions in the models project. See
+   [UCFTemplate](attributes.md#ucftemplate--razor-view).
 3. The package's Umbraco startup notification handler awaits synchronization once the runtime
    reaches `Run`. Optional database-backed coordination serializes participating instances; see
    [Synchronization](synchronization.md#clustered-deployments-and-recovery).

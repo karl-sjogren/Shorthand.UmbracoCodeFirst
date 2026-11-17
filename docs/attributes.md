@@ -62,18 +62,53 @@ public partial class LandingPage;
 ```
 
 `UmbracoTemplates` is generated in `Shorthand.UmbracoCodeFirst` from marked views in the
-current project. Its constant names capitalize the first character of each filename stem and
+current project's `Views` directory by default. Its constant names capitalize the first character of each filename stem and
 preserve the remaining characters; their values are the exact filename aliases. An alias named
 `umbracoTemplates` uses the constant `TemplateUmbracoTemplates`. Identifier collisions report
 UCF122.
 
-The package supplies the views as generator inputs automatically. Applications using project
-references instead of the packaged build targets must expose the project directory and add their root views:
+To keep code-first models in a project referenced by the Umbraco site, install/reference both
+`Shorthand.UmbracoCodeFirst` and `Shorthand.UmbracoCodeFirst.SourceGenerators` in the models
+project, and set its Views directory:
 
 ```xml
+<PropertyGroup>
+  <UmbracoCodeFirstViewsDirectory>..\MySite\Views</UmbracoCodeFirstViewsDirectory>
+</PropertyGroup>
 <ItemGroup>
-  <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
-  <AdditionalFiles Include="$(MSBuildProjectDirectory)\Views\*.cshtml" />
+  <PackageReference Include="Shorthand.UmbracoCodeFirst" />
+  <PackageReference Include="Shorthand.UmbracoCodeFirst.SourceGenerators" />
+</ItemGroup>
+```
+
+Specify package versions through your normal NuGet configuration.
+The path is relative to the models project, or may be absolute. It must exist; an empty directory
+is allowed. The default local `Views` directory may be absent. Only its immediate `.cshtml` files
+are considered.
+
+Reference the models project from the site and disable template generation in the site:
+
+```xml
+<PropertyGroup>
+  <UmbracoCodeFirstGenerateTemplates>false</UmbracoCodeFirstGenerateTemplates>
+</PropertyGroup>
+<ItemGroup>
+  <ProjectReference Include="..\MyModels\MyModels.csproj" />
+</ItemGroup>
+```
+
+Keep all code-first definitions in the models project. The runtime selects one registry, rather
+than merging registries across projects; UCF124 reports a competing registry in this arrangement.
+The package supplies the build targets automatically. When using project references to the
+package source rather than NuGet, replace the package references with project references and
+import the build targets in each consuming project, adjusting paths for your solution:
+
+```xml
+<Import Project="..\Shorthand.UmbracoCodeFirst\buildTransitive\Shorthand.UmbracoCodeFirst.targets" />
+<ItemGroup>
+  <ProjectReference Include="..\Shorthand.UmbracoCodeFirst\Shorthand.UmbracoCodeFirst.csproj" />
+  <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
+                    OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
 </ItemGroup>
 ```
 

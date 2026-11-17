@@ -52,6 +52,83 @@ public class TemplateGeneratorTests {
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GenerateRegistry_ConfiguredExternalViews_UsesOnlyRootViews(bool absolutePath) {
+        // Arrange
+        var root = Path.GetFullPath(Path.Combine("site", "..", "web", "Views"));
+        var directory = absolutePath ? root : Path.Combine("..", "web", "Views");
+        var files = new[] {
+            new InMemoryAdditionalText(Path.Combine(root, "page.cshtml"), """@attribute [UCFTemplate("Page")]"""),
+            new InMemoryAdditionalText(Path.Combine(root, "Nested", "nested.cshtml"), """@attribute [UCFTemplate("Nested")]"""),
+            new InMemoryAdditionalText(Path.Combine("site", "Views", "local.cshtml"), """@attribute [UCFTemplate("Local")]"""),
+        };
+
+        // Act
+        var result = RunGenerator(new TestOptionsProvider(directory), files);
+
+        // Assert
+        var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
+        aliases.ShouldContain("public const string Page = \"page\";");
+        aliases.ShouldNotContain("Nested");
+        aliases.ShouldNotContain("Local");
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+        registry.ShouldContain("CodeFirstDefinitionKind.Template, \"page\", \"Page\"");
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void GenerateRegistry_DisabledTemplates_IgnoresManuallySuppliedView() {
+        // Arrange
+        var view = new InMemoryAdditionalText(Path.Combine("site", "Views", "page.cshtml"), """@attribute [UCFTemplate("Page")]""");
+
+        // Act
+        var result = RunGenerator(new TestOptionsProvider(enabled: false), view);
+
+        // Assert
+        result.GeneratedSources.ShouldBeEmpty();
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void GenerateRegistry_ReferencedTemplateRegistryAndLocalRegistry_ReportsDiagnostic(bool templatesEnabled) {
+        // Arrange
+        var referenceCompilation = CSharpCompilation.Create("Models",
+            [CSharpSyntaxTree.ParseText("""
+                namespace Shorthand.UmbracoCodeFirst { public static class UmbracoTemplates { } }
+                namespace Shorthand.UmbracoCodeFirst.Generated { public sealed class GeneratedCodeFirstDefinitionRegistry { } }
+                """, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        using var stream = new MemoryStream();
+        referenceCompilation.Emit(stream, cancellationToken: TestContext.Current.CancellationToken).Success.ShouldBeTrue();
+        var source = templatesEnabled ? "public class Example { }" : """
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDocumentAttribute(string name) : global::System.Attribute { }
+            }
+            [Shorthand.UmbracoCodeFirst.Attributes.UCFDocument("Page")]
+            public partial class Page { }
+            """;
+        var compilation = CSharpCompilation.Create("Site",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location), MetadataReference.CreateFromImage(stream.ToArray())],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var view = new InMemoryAdditionalText(Path.Combine("site", "Views", "page.cshtml"), """@attribute [UCFTemplate("Page")]""");
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            [new CodeFirstRegistryGenerator().AsSourceGenerator()], additionalTexts: [view],
+            optionsProvider: new TestOptionsProvider(enabled: templatesEnabled));
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+
+        // Assert
+        result.Diagnostics.Single().Id.ShouldBe("UCF124");
+        result.GeneratedSources.ShouldBeEmpty();
+    }
+
+    [Theory]
     [InlineData("@attribute [UCFTemplate(Names.Page)]", "non-empty string literal")]
     [InlineData("@attribute [UCFTemplate(\"\")]", "non-empty string literal")]
     [InlineData("@attribute [UCFTemplate(\"Page\")", "non-empty string literal")]
@@ -127,8 +204,10 @@ public class TemplateGeneratorTests {
         driver.GetRunResult().Results.Single().GeneratedSources.ShouldBeEmpty();
     }
 
-    [Fact]
-    public void GenerateRegistry_TemplateConstantsInSameCompilation_ResolveAttributeSettings() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GenerateRegistry_TemplateConstantsInSameCompilation_ResolveAttributeSettings(bool externalViews) {
         // Arrange
         const string source = """
             using Shorthand.UmbracoCodeFirst;
@@ -143,14 +222,15 @@ public class TemplateGeneratorTests {
                 AllowedTemplateAliases = new[] { "other", global::Shorthand.UmbracoCodeFirst.UmbracoTemplates.Page })]
             public partial class Page;
             """;
-        var view = new InMemoryAdditionalText(Path.Combine("site", "Views", "page.cshtml"), """@attribute [UCFTemplate("Page")]""");
+        var directory = externalViews ? Path.Combine("..", "web", "Views") : "Views";
+        var view = new InMemoryAdditionalText(Path.Combine("site", directory, "page.cshtml"), """@attribute [UCFTemplate("Page")]""");
         var compilation = CSharpCompilation.Create("Templates",
             [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             [new CodeFirstRegistryGenerator().AsSourceGenerator()], additionalTexts: [view],
-            optionsProvider: new TestOptionsProvider());
+            optionsProvider: new TestOptionsProvider(directory));
 
         // Act
         var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
@@ -179,9 +259,13 @@ public class TemplateGeneratorTests {
     }
 
     private static GeneratorRunResult RunGenerator(params AdditionalText[] files) {
+        return RunGenerator(new TestOptionsProvider(), files);
+    }
+
+    private static GeneratorRunResult RunGenerator(TestOptionsProvider options, params AdditionalText[] files) {
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
             [new CodeFirstRegistryGenerator().AsSourceGenerator()], additionalTexts: files,
-            optionsProvider: new TestOptionsProvider());
+            optionsProvider: options);
         var compilation = CSharpCompilation.Create("Templates",
             [CSharpSyntaxTree.ParseText("public class Example { }")],
             [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
@@ -195,8 +279,8 @@ public class TemplateGeneratorTests {
         public override SourceText GetText(CancellationToken cancellationToken = default) => SourceText.From(content);
     }
 
-    private sealed class TestOptionsProvider : AnalyzerConfigOptionsProvider {
-        private readonly AnalyzerConfigOptions _options = new TestOptions();
+    private sealed class TestOptionsProvider(string? viewsDirectory = null, bool enabled = true) : AnalyzerConfigOptionsProvider {
+        private readonly AnalyzerConfigOptions _options = new TestOptions(viewsDirectory, enabled);
 
         public override AnalyzerConfigOptions GlobalOptions => _options;
 
@@ -205,9 +289,14 @@ public class TemplateGeneratorTests {
         public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => _options;
     }
 
-    private sealed class TestOptions : AnalyzerConfigOptions {
+    private sealed class TestOptions(string? viewsDirectory, bool enabled) : AnalyzerConfigOptions {
         public override bool TryGetValue(string key, out string value) {
-            value = key == "build_property.MSBuildProjectDirectory" ? Path.GetFullPath("site") : null!;
+            value = key switch {
+                "build_property.MSBuildProjectDirectory" => Path.GetFullPath("site"),
+                "build_property.UmbracoCodeFirstViewsDirectory" => viewsDirectory!,
+                "build_property.UmbracoCodeFirstGenerateTemplates" => enabled ? "true" : "false",
+                _ => null!,
+            };
             return value is not null;
         }
     }
