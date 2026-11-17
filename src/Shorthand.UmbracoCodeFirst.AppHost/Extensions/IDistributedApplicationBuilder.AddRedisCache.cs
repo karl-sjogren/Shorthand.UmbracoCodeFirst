@@ -11,7 +11,7 @@ internal static partial class IDistributedApplicationBuilderExtensions {
             redisCache
                 .RunAsContainer(redis => {
                     redis.WithDataVolume();
-                    redis.WithRedisInsight();
+                    redis.WithRedisInsight(containerName: $"{redisCacheName}-insight");
                 });
         }
 

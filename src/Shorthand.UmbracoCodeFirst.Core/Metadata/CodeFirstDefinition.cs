@@ -5,6 +5,7 @@ public enum CodeFirstDefinitionKind {
     DocumentType,
     MediaType,
     MemberType,
+    Template,
 }
 
 public sealed record CodeFirstPropertyDefinition(
@@ -20,9 +21,16 @@ public sealed record CodeFirstPropertyDefinition(
     int TabSortOrder = 0,
     int SortOrder = 0,
     bool Mandatory = false,
+    [property: StringSyntax(StringSyntaxAttribute.Regex)]
+    [param: StringSyntax(StringSyntaxAttribute.Regex)]
     string? ValidationExpression = null,
     string? ValidationMessage = null,
-    bool LabelOnTop = false);
+    bool LabelOnTop = false,
+    string? DataTypeKey = null) {
+    public string? EffectiveGroupAlias => GroupAlias is null
+        ? TabAlias
+        : TabAlias is null ? GroupAlias : $"{TabAlias}/{GroupAlias}";
+}
 
 public sealed record CodeFirstGroupDefinition(
     string Alias,
@@ -39,7 +47,7 @@ public sealed record CodeFirstTypeSettings(
     IReadOnlyList<string>? AllowedTemplateAliases = null,
     IReadOnlyList<string>? AllowedChildAliases = null,
     string? Variations = null,
-    bool IsListView = false);
+    CodeFirstCollectionSettings? Collection = null);
 
 public sealed record CodeFirstDefinition(
     CodeFirstDefinitionKind Kind,
@@ -49,25 +57,42 @@ public sealed record CodeFirstDefinition(
     IReadOnlyList<CodeFirstPropertyDefinition> Properties,
     CodeFirstTypeSettings? Settings = null,
     IReadOnlyList<CodeFirstGroupDefinition>? Groups = null,
+    [property: StringSyntax(StringSyntaxAttribute.Json)]
+    [param: StringSyntax(StringSyntaxAttribute.Json)]
     string? ConfigurationJson = null,
     string? EditorUiAlias = null,
     IReadOnlyList<string>? CompositionAliases = null,
     string? FolderPath = null,
-    CodeFirstEditorConfiguration? EditorConfiguration = null) {
+    CodeFirstEditorConfiguration? EditorConfiguration = null,
+    string? TemplateContentHash = null) {
     public string? EffectiveConfigurationJson =>
         EditorConfiguration?.Json ?? ConfigurationJson;
 
-    public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups =>
-        Groups ?? Properties
-            .Where(property => property.GroupAlias is not null)
-            .GroupBy(property => property.GroupAlias!, StringComparer.Ordinal)
-            .Select(group => new CodeFirstGroupDefinition(
-                group.Key,
-                group.First().GroupName ?? group.Key,
-                group.First().GroupSortOrder))
-            .OrderBy(group => group.SortOrder)
-            .ThenBy(group => group.Alias, StringComparer.Ordinal)
-            .ToArray();
+    public IReadOnlyList<CodeFirstGroupDefinition> EffectiveGroups {
+        get {
+            var groups = Properties
+                .Where(property => property.GroupAlias is not null)
+                .GroupBy(property => property.EffectiveGroupAlias!, StringComparer.Ordinal)
+                .Select(group => new CodeFirstGroupDefinition(
+                    group.Key,
+                    group.First().GroupName ?? group.Key,
+                    group.First().GroupSortOrder));
+
+            if(Groups is not null) {
+                var explicitAliases = Groups.Select(group => group.Alias).ToHashSet(StringComparer.Ordinal);
+                return Groups.Concat(groups
+                    .Where(group => group.Alias.Contains('/', StringComparison.Ordinal) && !explicitAliases.Contains(group.Alias))
+                    .OrderBy(group => group.SortOrder)
+                    .ThenBy(group => group.Alias, StringComparer.Ordinal))
+                    .ToArray();
+            }
+
+            return groups
+                .OrderBy(group => group.SortOrder)
+                .ThenBy(group => group.Alias, StringComparer.Ordinal)
+                .ToArray();
+        }
+    }
 
     public IReadOnlyList<CodeFirstGroupDefinition> EffectiveTabs =>
         Properties

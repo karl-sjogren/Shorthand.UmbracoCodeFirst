@@ -19,9 +19,9 @@ synchronization.
 
 Not inherited; one per class.
 
-## `UCFDocumentType` – class
+## `UCFDocument` – class
 
-Declares a Document Type. Only Document Types are supported; there is no media/member variant yet.
+Declares a Document Type. Media and Member Types use `UCFMedia` and `UCFMember`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
@@ -29,13 +29,182 @@ Declares a Document Type. Only Document Types are supported; there is no media/m
 | `alias` | ctor (optional) | Umbraco alias. |
 | `Icon` | named | Icon alias, e.g. `icon-document`. |
 | `AllowAsRoot` | named | Allowed at content root. |
-| `DefaultTemplateAlias` | named | Metadata only – *not yet synchronized*. |
-| `AllowedTemplateAliases` | named | Metadata only – *not yet synchronized*. |
+| `DefaultTemplateAlias` | named | Default template alias; must be included in `AllowedTemplateAliases` ([UCF119](analyzers/UCF119.md)). |
+| `AllowedTemplateAliases` | named | Aliases of templates allowed for this document type. |
 | `AllowedChildAliases` | named | Metadata only – *not yet synchronized*. |
 | `Variations` | named | Metadata only – *not yet synchronized*. |
-| `IsListView` | named | Metadata only – *not yet synchronized*. |
 
 Not inherited; one per class.
+
+## `UCFTemplate` – Razor view
+
+Mark a root-level view such as `Views/landingPage.cshtml`:
+
+```cshtml
+@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Landing Page")]
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+<h1>Landing page</h1>
+```
+
+The required display name must be a non-empty C# string literal, and the directive must be on
+one line. The filename stem is the template alias (`landingPage` here); use the exact same
+case when referencing it. Filenames must start with an ASCII letter and contain only ASCII
+letters, digits or underscores, up to 100 characters. Only files directly in `Views` are
+supported; nested views and partials are not registered.
+
+Template registration does not automatically associate a document type. Configure both settings:
+
+```csharp
+[UCFDocument("landingPage", "Landing Page",
+    DefaultTemplateAlias = UmbracoTemplates.LandingPage,
+    AllowedTemplateAliases = new[] { UmbracoTemplates.LandingPage })]
+public partial class LandingPage;
+```
+
+`UmbracoTemplates` is generated in `Shorthand.UmbracoCodeFirst` from marked views in the
+current project's `Views` directory by default. Its constant names capitalize the first character of each filename stem and
+preserve the remaining characters; their values are the exact filename aliases. An alias named
+`umbracoTemplates` uses the constant `TemplateUmbracoTemplates`. Identifier collisions report
+UCF122.
+
+To keep code-first models in a project referenced by the Umbraco site, install/reference both
+`Shorthand.UmbracoCodeFirst` and `Shorthand.UmbracoCodeFirst.SourceGenerators` in the models
+project, and set its Views directory:
+
+```xml
+<PropertyGroup>
+  <UmbracoCodeFirstViewsDirectory>..\MySite\Views</UmbracoCodeFirstViewsDirectory>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="Shorthand.UmbracoCodeFirst" />
+  <PackageReference Include="Shorthand.UmbracoCodeFirst.SourceGenerators" />
+</ItemGroup>
+```
+
+Specify package versions through your normal NuGet configuration.
+The path is relative to the models project, or may be absolute. It must exist; an empty directory
+is allowed. The default local `Views` directory may be absent. Only its immediate `.cshtml` files
+are considered.
+
+Reference the models project from the site and disable template generation in the site:
+
+```xml
+<PropertyGroup>
+  <UmbracoCodeFirstGenerateTemplates>false</UmbracoCodeFirstGenerateTemplates>
+</PropertyGroup>
+<ItemGroup>
+  <ProjectReference Include="..\MyModels\MyModels.csproj" />
+</ItemGroup>
+```
+
+Keep all code-first definitions in the models project. The runtime selects one registry, rather
+than merging registries across projects; UCF124 reports a competing registry in this arrangement.
+The package supplies the build targets automatically. When using project references to the
+package source rather than NuGet, replace the package references with project references and
+import the build targets in each consuming project, adjusting paths for your solution:
+
+```xml
+<Import Project="..\Shorthand.UmbracoCodeFirst\buildTransitive\Shorthand.UmbracoCodeFirst.targets" />
+<ItemGroup>
+  <ProjectReference Include="..\Shorthand.UmbracoCodeFirst\Shorthand.UmbracoCodeFirst.csproj" />
+  <ProjectReference Include="..\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
+                    OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+</ItemGroup>
+```
+
+The physical view must also be present in the deployed `Views` directory; for Razor SDK projects
+you can set `CopyRazorGenerateFilesToPublishDirectory` to `true`. A compiled view alone is not
+sufficient for Umbraco template registration. See [Synchronization](synchronization.md#templates)
+for ownership and file behavior.
+
+## `UCFCollection` – class
+
+Attach a collection to a code-first Document or Media Type using a concrete
+`CodeFirstCollectionConfiguration` with a public parameterless constructor:
+
+```csharp
+using Shorthand.UmbracoCodeFirst.Attributes;
+using Shorthand.UmbracoCodeFirst.Metadata;
+
+[UCFDocument("Articles")]
+[UCFCollection(typeof(ArticleCollection))]
+public partial class Articles;
+
+[UCFDocument("Article")]
+public partial class Article {
+    [UCFProperty("articleSummary", "Summary", "text")]
+    public partial string Summary { get; }
+}
+
+public sealed class ArticleCollection : CodeFirstCollectionConfiguration<Article> {
+    public ArticleCollection() {
+        List = true;
+        Grid = false;
+        PageSize = 25;
+        OrderBy = Alias(article => article.Summary);
+        OrderDirection = "desc";
+        Columns = [
+            new(CodeFirstCollectionSystemFields.UpdateDate, "Last edited"),
+            new(Article.PropertyAliases.Summary, "Summary", NameTemplate: "{=value}"),
+        ];
+    }
+}
+```
+
+`CodeFirstCollectionConfiguration<T>` is an optional subclass of the non-generic base. Its
+`Alias` method delegates to `CodeFirstHelper<T>.Alias`, so both forms can be used in a
+configuration. Both typed references above resolve to `articleSummary`, the explicit Umbraco alias;
+`nameof(Article.Summary)` would instead produce `Summary`. The expression helper supports direct
+`UCFProperty` selections, including CLR-inherited properties, and property rename refactoring.
+Generated `PropertyAliases` constants can be used where a compile-time constant is required; a
+property rename makes stale constant references fail to compile. Use the declaring model for a
+composed property if the composition is not CLR inheritance.
+
+```csharp
+[UCFMedia("Media folders")]
+[UCFCollection(typeof(MediaCollection))]
+public partial class MediaFolders;
+
+[UCFMedia("Image assets")]
+public partial class ImageAsset {
+    [UCFProperty("Caption", "text")]
+    public string? Caption { get; set; }
+}
+
+public sealed class MediaCollection : CodeFirstCollectionConfiguration<ImageAsset> {
+    public MediaCollection() {
+        OrderBy = ImageAsset.PropertyAliases.Caption;
+        Columns = [new(Alias(image => image.Caption), "Caption")];
+    }
+}
+```
+
+The same configuration may be reused across types; Umbraco's matching document or media layout
+aliases are selected automatically. Defaults enable both layouts, display 10 items per page, sort
+by `sortOrder` descending, and include Sort, Last edited and Created by columns.
+`ListViewAlias` optionally selects a registered custom collection view instead of the built-in
+table view. The view must be available for the relevant document or media collection.
+`OrderDirection` is `asc` or `desc`; the order field must be `name` or a displayed column.
+At least one layout and one column must be configured.
+
+`CodeFirstCollectionSystemFields` provides constants for the built-in fields offered by Umbraco;
+`Published` is document-only. A column's `IsSystem` is determined automatically by an exact,
+case-sensitive match against those aliases. Custom properties using the same alias are treated as
+system fields. A field being available as a column does not guarantee it can be used for sorting.
+Strings remain supported for manual properties or other fields.
+
+The expression helper does not execute the selector. It rejects nested properties, methods, fields,
+static properties, and properties without generated code-first aliases. Configuration errors are
+reported in synchronization status. It uses reflection; trimming support is not guaranteed. A
+generated alias constant used as an argument to a UCF attribute in the same compilation is not
+available to the generator in its initial pass: UCF117 reports this case. Use a string constant or
+reference a previously compiled model instead.
+
+Each parent gets its own owned Data Type, even if configurations are shared. Existing manual
+collections are not replaced; synchronization reports a conflict. Removing the attribute detaches
+only the matching code-first collection and leaves the Data Type intact. The old `IsListView`
+attribute property has been removed; replace it with `UCFCollection` to enable a collection.
+Custom layouts and workspace icon/name/content-first options are not supported.
 
 ## `UCFElementType` – class
 
@@ -127,20 +296,29 @@ defaults to `1`. Unsupported typed fields report `UCF112`.
 ## `UCFProperty` – property
 
 Declares a Document Type property. Must be on a `partial` property of a class that has
-`UCFDocumentType`.
+`UCFDocument`.
 
 | Argument | Kind | Description |
 | -------- | ---- | ----------- |
 | `name` | ctor | Display name. |
 | `alias` | ctor (optional) | Property alias. |
-| `dataTypeAlias` | ctor | Alias of a code-first Data Type (use `MyDataType.Alias`). |
+| `dataTypeAlias` | ctor (optional) | Alias of a code-first Data Type (use `MyDataType.Alias`). |
+| `DataTypeKey` | named (optional) | GUID string identifying an existing Umbraco Data Type. |
+| `Alias` | named (optional) | Explicit property alias, useful with `DataTypeKey`. |
 | `SortOrder` | named | Property sort order. |
 | `Mandatory` | named | Whether a value is required. |
 | `LabelOnTop` | named | Show the label above the editor. |
 
-The referenced Data Type must be a code-first Data Type (see
-[Synchronization](synchronization.md#data-types)); referencing an Umbraco built-in Data Type is not
-currently supported.
+Supply exactly one code-first alias or existing Data Type key. For example:
+
+```csharp
+[UCFProperty("Image", DataTypeKey = global::Umbraco.Cms.Core.Constants.DataTypes.Guids.MediaPicker3SingleImage)]
+public partial MediaWithCrops? Image { get; }
+```
+
+The key can reference a built-in or manually created Data Type. Code First does not own, configure,
+or delete it. A missing key fails synchronization; changing the externally managed configuration
+can change the property's runtime value shape.
 
 ## `UCFDescription` – class or property
 
@@ -159,8 +337,19 @@ Place a property on a tab and/or group.
 `SortOrder` is also a named argument. Both attributes are inheritable and unsealed so they can be
 subclassed (the generator resolves the base-constructor arguments of derived attributes).
 
-If a property has both a tab and a group, the **group is the assignment target** in Umbraco (a
-property type belongs to a single property group); the tab is still created.
+If a property has both attributes, the group is placed inside the tab:
+
+```csharp
+[UCFTab("Content")]
+[UCFGroup("Details")]
+[UCFProperty("Heading", "text")]
+public partial string Heading { get; }
+```
+
+Group aliases are scoped to their parent tab. The same group alias on another tab, or on a
+property without a tab, identifies a separate group. Declarations for the same group within
+one parent must agree on its name and sort order. Synchronization reports a conflict rather
+than changing the type of an existing group containing manual properties or nested groups.
 
 ## `UCFValidation` – property
 

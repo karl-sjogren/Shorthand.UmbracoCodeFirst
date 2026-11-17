@@ -2,7 +2,7 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
-[UCFDocumentType("integrationComposedPage", "Integration Composed Page")]
+[UCFDocument("integrationComposedPage", "Integration Composed Page")]
 [UCFComposite(typeof(IntegrationNestedComposition))]
 [UCFComposite(typeof(IntegrationMetadataComposition))]
 public partial class IntegrationComposedPage {

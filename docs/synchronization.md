@@ -44,6 +44,9 @@ only (see [Architecture](architecture.md#runtime-lifecycle)).
 Before the first report, definitions are shown as `Pending`, not counted as skipped, and no completion
 time is shown. A definition absent from a completed report is shown as `Skipped` with an explanation.
 If coordination fails, its error is shown even when there are no definitions.
+Data types with the same code-first alias are reported as failed and are not applied, preventing
+them from overwriting one another. Give each data type a unique name or set `UCFDataType.Alias`
+explicitly. Aliases default to a camel-cased version of the data type name.
 
 Custom store implementations must return `SynchronizationResult` from both
 `ICodeFirstDefinitionStore.ApplyAsync` and `ICodeFirstBlockDefinitionStore.PrepareBlockDataTypeAsync`
@@ -109,11 +112,27 @@ Ownership is how code-first knows it may update something.
 - **Document Types and compositions** – ownership is stored in Umbraco's persisted key/value store,
   keyed by the Document Type alias and persisted key. It is not part of the editor-facing
   description.
+- **Templates** – a separate persisted key/value entry records the alias and Umbraco template key.
+  An existing template without the matching ownership entry is skipped, not adopted.
 
 Because ownership lives in Umbraco's own data, anything created manually in the backoffice, or by
 other tools, is never modified. A Document Type that already exists without ownership metadata is
 reported as `Skipped`. Sites upgraded from an earlier version are migrated automatically: legacy
 description markers are removed during synchronization.
+
+## Templates
+
+Marked root-level Razor views are registered before document types. An existing unowned template
+is left unchanged and reported as skipped; it can still be explicitly allowed by a document type.
+Code-first templates update their display name, but removing a declaration does not delete the
+Umbraco template or its view. Duplicate aliases are rejected case-insensitively. A missing or
+empty physical view fails synchronization instead of creating a default view.
+
+Umbraco's template service reads the view and, outside production mode, may rewrite the file on
+creation or display-name updates, including adding a UTF-8 BOM. View content is otherwise preserved.
+The deployment must include the physical view in `Views`, even when Razor views are precompiled.
+Template content participates in the cluster definition fingerprint; deploy identical views to all
+participating instances. See [`UCFTemplate`](attributes.md#ucftemplate--razor-view).
 
 ## Data Types
 

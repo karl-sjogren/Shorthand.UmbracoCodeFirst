@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.PropertyEditors;
@@ -6,16 +8,53 @@ namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class AttributeContractTests {
     [Fact]
-    public void UCFDocumentTypeAttribute_ExplicitSettings_PreservesValues() {
+    public void StructuredStringMembers_ExposeSyntaxHints() {
         // Arrange
-        var attribute = new UCFDocumentTypeAttribute("productPage", "Product Page") {
+        var records = new[] {
+            (typeof(CodeFirstEditorConfiguration), nameof(CodeFirstEditorConfiguration.Json), StringSyntaxAttribute.Json),
+            (typeof(CodeFirstDefinition), nameof(CodeFirstDefinition.ConfigurationJson), StringSyntaxAttribute.Json),
+            (typeof(CodeFirstPropertyDefinition), nameof(CodeFirstPropertyDefinition.ValidationExpression), StringSyntaxAttribute.Regex),
+        };
+
+        // Act & Assert
+        GetSyntax(typeof(UCFDataTypeAttribute).GetProperty(nameof(UCFDataTypeAttribute.ConfigurationJson))!)
+            .ShouldBe(StringSyntaxAttribute.Json);
+        GetSyntax(typeof(CodeFirstEditorConfiguration).GetMethod(nameof(CodeFirstEditorConfiguration.FromJson))!
+            .GetParameters().Single(parameter => parameter.Name == "json"))
+            .ShouldBe(StringSyntaxAttribute.Json);
+        foreach(var (type, name, syntax) in records) {
+            GetSyntax(type.GetProperty(name)!).ShouldBe(syntax);
+            GetSyntax(type.GetConstructors().Single(constructor =>
+                constructor.GetParameters().Any(parameter => parameter.Name == name))
+                .GetParameters().Single(parameter => parameter.Name == name)).ShouldBe(syntax);
+        }
+    }
+
+    private static string GetSyntax(ICustomAttributeProvider provider) =>
+        provider.GetCustomAttributes(typeof(StringSyntaxAttribute), false).Cast<StringSyntaxAttribute>().Single().Syntax;
+
+    [Theory]
+    [InlineData(typeof(UCFDocumentAttribute), "Document")]
+    [InlineData(typeof(UCFMediaAttribute), "Media")]
+    [InlineData(typeof(UCFMemberAttribute), "Member")]
+    public void RenamedAttributes_DoNotExposeOldNames(Type attributeType, string kind) {
+        // Act
+        var oldAttribute = attributeType.Assembly.GetType($"Shorthand.UmbracoCodeFirst.Attributes.UCF{kind}TypeAttribute");
+
+        // Assert
+        oldAttribute.ShouldBeNull();
+    }
+
+    [Fact]
+    public void UCFDocumentAttribute_ExplicitSettings_PreservesValues() {
+        // Arrange
+        var attribute = new UCFDocumentAttribute("productPage", "Product Page") {
             Icon = UmbracoIcons.Barcode,
             AllowAsRoot = true,
             DefaultTemplateAlias = "productTemplate",
             AllowedTemplateAliases = ["productTemplate", "default"],
             AllowedChildAliases = ["variant"],
             Variations = "Culture",
-            IsListView = true,
         };
 
         // Act
@@ -150,6 +189,28 @@ public class AttributeContractTests {
     }
 
     [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesMediaPickerSettings() {
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(TestMediaPickerConfiguration), UmbracoEditors.MediaPicker.Alias);
+
+        // Assert
+        configuration.Json.ShouldBe(
+            """{"crops":[{"alias":"thumb","height":200,"width":300}],"enableLocalFocalPoint":true,"filter":"cc07b313-0843-4aa8-bbda-871c8da728c8,4c52d8ab-54e6-40cd-999c-7a5f24903e4d","ignoreUserStartNodes":false,"multiple":true,"startNodeId":"11111111-2222-3333-4444-555555555555","validationLimit":{"max":1,"min":0}}""");
+    }
+
+    [Theory]
+    [InlineData(typeof(CSharpCodeEditorConfiguration), """{"language":"csharp"}""")]
+    [InlineData(typeof(CustomCodeEditorConfiguration), """{"language":"custom-language"}""")]
+    public void CodeFirstEditorConfiguration_FromType_SerializesCodeEditorLanguage(Type type, string expectedJson) {
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(type, UmbracoEditors.CodeEditor.Alias);
+
+        // Assert
+        configuration.Json.ShouldBe(expectedJson);
+    }
+
+    [Fact]
     public void CodeFirstEditorConfiguration_FromType_KeepsTypedBlockMetadataOutOfJson() {
         // Arrange
         // Act
@@ -257,6 +318,33 @@ public class AttributeContractTests {
 
     private sealed class TestTextConfiguration : CodeFirstEditorConfigurationDefinition {
         public int? MaxChars { get; set; } = 255;
+    }
+
+    private sealed class TestMediaPickerConfiguration : UmbracoEditors.MediaPicker.Configuration {
+        public TestMediaPickerConfiguration() {
+            AcceptedMediaTypeKeys = [
+                Guid.Parse("cc07b313-0843-4aa8-bbda-871c8da728c8"),
+                Guid.Parse("4c52d8ab-54e6-40cd-999c-7a5f24903e4d"),
+            ];
+            Multiple = true;
+            ValidationLimit = new(0, 1);
+            StartNodeId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+            EnableLocalFocalPoint = true;
+            IgnoreUserStartNodes = false;
+            Crops = [new("thumb", 300, 200)];
+        }
+    }
+
+    private sealed class CSharpCodeEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {
+        public CSharpCodeEditorConfiguration() {
+            Language = UmbracoCodeEditorLanguages.CSharp;
+        }
+    }
+
+    private sealed class CustomCodeEditorConfiguration : UmbracoEditors.CodeEditor.Configuration {
+        public CustomCodeEditorConfiguration() {
+            Language = "custom-language";
+        }
     }
 
     [UCFElementType("testElement", "Test Element")]

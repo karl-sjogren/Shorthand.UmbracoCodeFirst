@@ -5,6 +5,23 @@ const codeFirstWorkspaceAlias = "Shorthand.UmbracoCodeFirst.Workspace";
 
 export const manifests: Array<UmbExtensionManifest> = [
   {
+    name: "Blog Index Collection View",
+    alias: "Shorthand.UmbracoCodeFirst.CollectionView.BlogIndex",
+    type: "collectionView",
+    element: () => import("../views/blog-index-collection-view.js"),
+    meta: {
+      label: "Blog posts",
+      icon: "icon-list",
+      pathName: "blog-posts",
+    },
+    conditions: [
+      {
+        alias: "Umb.Condition.CollectionAlias",
+        match: "Umb.Collection.Document",
+      },
+    ],
+  },
+  {
     name: "Shorthand Umbraco Code First English Localization",
     alias: "Shorthand.UmbracoCodeFirst.Localization.En",
     type: "localization",

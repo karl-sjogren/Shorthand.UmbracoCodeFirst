@@ -34,6 +34,9 @@ internal sealed class CodeFirstCleanupService(
         var dataTypeAliases = registry.Definitions
             .Where(definition => definition.Kind == CodeFirstDefinitionKind.DataType)
             .Select(definition => definition.Alias)
+            .Concat(registry.Definitions
+                .Where(definition => definition.Settings?.Collection is not null)
+                .Select(definition => CodeFirstCollectionSettings.GetDataTypeAlias(definition.Kind, definition.Alias)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var documentTypeAliases = registry.Definitions
@@ -217,6 +220,7 @@ internal sealed class CodeFirstCleanupService(
                 .FirstOrDefault(candidate => candidate.Alias == item.Alias);
             if(group is null
                 || parent.CompositionPropertyGroups.Any(candidate => candidate.Alias == item.Alias)
+                || parent.PropertyGroups.Any(candidate => candidate.GetParentAlias() == item.Alias)
                 || group.PropertyTypes?.Any() == true) {
                 return false;
             }
@@ -288,6 +292,7 @@ internal sealed class CodeFirstCleanupService(
         foreach(var group in contentType.PropertyGroups
                     .Where(group => !compositionGroupAliases.Contains(group.Alias))
                     .Where(group => !desiredGroupAliases.Contains(group.Alias))
+                    .Where(group => !contentType.PropertyGroups.Any(candidate => candidate.GetParentAlias() == group.Alias))
                     .Where(group => group.PropertyTypes is null
                         || group.PropertyTypes.All(property => obsoletePropertyAliases.Contains(property.Alias)))) {
             items.Add(new(

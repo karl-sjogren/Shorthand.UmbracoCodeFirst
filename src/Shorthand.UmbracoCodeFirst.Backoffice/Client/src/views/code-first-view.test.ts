@@ -45,6 +45,30 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it("renders template aliases and synchronization outcomes", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionTable: (headline: string, definitions: StatusItem[], showProperties: boolean, isTemplate: boolean) => string;
+    };
+    const template = {
+      alias: "landingPage",
+      kind: "Template",
+      name: "Landing Page",
+      folder: "/",
+      status: "Skipped",
+      message: "Not owned.",
+    } as StatusItem;
+
+    // Act
+    const output = view.renderDefinitionTable("Templates", [template], false, true);
+
+    // Assert
+    expect(output).toContain("landingPage");
+    expect(output).toContain("Not owned.");
+    expect(output).not.toContain("codeFirst_editor");
+    expect(output).not.toContain("codeFirst_properties");
+  });
+
   it("shows a pending header without a completion time when no report exists", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {
@@ -60,6 +84,7 @@ describe("code-first status messages", () => {
       elementTypes: [],
       mediaTypes: [],
       memberTypes: [],
+      templates: [],
     };
 
     // Act
@@ -88,6 +113,7 @@ describe("code-first status messages", () => {
       elementTypes: [],
       mediaTypes: [],
       memberTypes: [],
+      templates: [],
     };
 
     // Act
@@ -218,5 +244,29 @@ describe("expanded definition details", () => {
     // Assert
     expect(settings).toContain("Description");
     expect(settings).not.toContain("<umb-icon");
+  });
+
+  it("renders a collection summary", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionSettings: (definition: StatusItem) => string;
+    };
+    const definition = {
+      collection: { list: true, grid: false, pageSize: 25 },
+      allowedTemplateAliases: [],
+      allowedChildAliases: [],
+      compositionAliases: [],
+      groups: [],
+      tabs: [],
+    } as unknown as StatusItem;
+
+    // Act
+    const settings = view.renderDefinitionSettings(definition);
+
+    // Assert
+    expect(settings).toContain("codeFirst_collection");
+    expect(settings).toContain("codeFirst_collectionList");
+    expect(settings).not.toContain("codeFirst_collectionGrid");
+    expect(settings).toContain("codeFirst_collectionPageSize");
   });
 });

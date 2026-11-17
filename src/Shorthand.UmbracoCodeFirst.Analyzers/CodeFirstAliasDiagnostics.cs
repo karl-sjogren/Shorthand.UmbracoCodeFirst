@@ -10,8 +10,7 @@ internal static class CodeFirstAliasDiagnostics {
         IEnumerable<CompositionOccurrence> compositions) {
         var allOccurrences = occurrences.ToArray();
         foreach(var group in allOccurrences
-                    .Where(static occurrence =>
-                        occurrence.Symbol is not IPropertySymbol || occurrence.LayoutKind is not null)
+                    .Where(static occurrence => occurrence.Symbol is not IPropertySymbol)
                     .GroupBy(static occurrence =>
                         $"{occurrence.Scope}:{CodeFirstAnalyzerHelpers.GetScopeName(occurrence)}:{occurrence.Alias}")) {
             var entries = group
@@ -27,12 +26,28 @@ internal static class CodeFirstAliasDiagnostics {
         }
 
         var propertyOccurrences = allOccurrences
-            .Where(static occurrence => occurrence.Symbol is IPropertySymbol)
+            .Where(static occurrence => occurrence.Symbol is IPropertySymbol && occurrence.LayoutKind is null)
             .ToArray();
         foreach(var group in propertyOccurrences
                     .GroupBy(static occurrence =>
                         $"{CodeFirstAnalyzerHelpers.GetScopeName(occurrence)}:{occurrence.Alias}")) {
             ReportIfDuplicate(context, group);
+        }
+
+        foreach(var group in allOccurrences
+                    .Where(static occurrence => occurrence.LayoutKind is not null)
+                    .GroupBy(occurrence =>
+                        $"{CodeFirstAnalyzerHelpers.GetScopeName(occurrence)}:{CodeFirstAnalyzerHelpers.GetLayoutIdentity(occurrence, context.Compilation)}")) {
+            var entries = group.OrderBy(static occurrence => occurrence.Location?.SourceSpan.Start ?? int.MaxValue).ToArray();
+            var first = entries[0];
+            var conflicting = entries.Skip(1).FirstOrDefault(entry =>
+                entry.LayoutKind != first.LayoutKind
+                || entry.LayoutName != first.LayoutName
+                || entry.SortOrder != first.SortOrder);
+            if(conflicting is not null) {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    CodeFirstDiagnosticDescriptors.DuplicateAlias, conflicting.Location, conflicting.Alias));
+            }
         }
 
         var graph = BuildCompositionGraph(compositions);

@@ -1,5 +1,29 @@
 <Project>
   <ItemGroup>
     <UmbracoJsonSchemaFiles Include="$(MSBuildThisFileDirectory)appsettings-schema.Shorthand.UmbracoCodeFirst.json" />
+    <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+    <CompilerVisibleProperty Include="UmbracoCodeFirstViewsDirectory" />
+    <CompilerVisibleProperty Include="UmbracoCodeFirstGenerateTemplates" />
+    <CompilerVisibleProperty Include="UmbracoCodeFirstTemplateInputs" />
   </ItemGroup>
+
+  <Target Name="ShorthandUmbracoCodeFirstCollectTemplates"
+          BeforeTargets="GenerateMSBuildEditorConfigFileCore;CoreCompile">
+    <PropertyGroup>
+      <_UmbracoCodeFirstExplicitViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">true</_UmbracoCodeFirstExplicitViewsDirectory>
+      <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' == ''">$(MSBuildProjectDirectory)\Views</_UmbracoCodeFirstViewsDirectory>
+      <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">$(UmbracoCodeFirstViewsDirectory)</_UmbracoCodeFirstViewsDirectory>
+      <_UmbracoCodeFirstViewsDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(_UmbracoCodeFirstViewsDirectory)'))</_UmbracoCodeFirstViewsDirectory>
+    </PropertyGroup>
+    <Error Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false' and '$(_UmbracoCodeFirstExplicitViewsDirectory)' == 'true' and !Exists('$(_UmbracoCodeFirstViewsDirectory)')"
+           Text="UmbracoCodeFirstViewsDirectory '$(_UmbracoCodeFirstViewsDirectory)' does not exist." />
+    <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false'">
+      <_UmbracoCodeFirstExistingAdditionalFiles Include="@(AdditionalFiles->'%(FullPath)')" />
+      <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)*.cshtml" />
+      <AdditionalFiles Include="@(_UmbracoCodeFirstTemplateFiles)" Exclude="@(_UmbracoCodeFirstExistingAdditionalFiles)" />
+    </ItemGroup>
+    <PropertyGroup>
+      <UmbracoCodeFirstTemplateInputs>@(_UmbracoCodeFirstTemplateFiles->'%(FullPath)')</UmbracoCodeFirstTemplateInputs>
+    </PropertyGroup>
+  </Target>
 </Project>

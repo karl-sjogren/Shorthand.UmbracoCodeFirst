@@ -3,12 +3,11 @@ using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
-[UCFDocumentType(
+[UCFDocument(
     "Start Page",
     Icon = UmbracoIcons.Star,
     AllowAsRoot = true,
-    IsListView = true,
-    AllowedChildAliases = new[] { BlogPost.ModelTypeAlias })]
+    AllowedChildAliases = new[] { BlogIndex.ModelTypeAlias })]
 [UCFComposite(typeof(SeoComposite2))]
 public partial class StartPage {
     [UCFProperty(

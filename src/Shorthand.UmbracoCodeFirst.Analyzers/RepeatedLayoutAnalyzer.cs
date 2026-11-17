@@ -20,8 +20,8 @@ public sealed class RepeatedLayoutAnalyzer : DiagnosticAnalyzer {
                 SymbolKind.Property);
             compilationContext.RegisterCompilationEndAction(endContext => {
                 foreach(var group in layouts
-                            .GroupBy(static layout =>
-                                $"{CodeFirstAnalyzerHelpers.GetScopeName(layout)}:{layout.LayoutKind}:{layout.Alias}")) {
+                            .GroupBy(layout =>
+                                $"{CodeFirstAnalyzerHelpers.GetScopeName(layout)}:{layout.LayoutKind}:{CodeFirstAnalyzerHelpers.GetLayoutIdentity(layout, endContext.Compilation)}")) {
                     var entries = group
                         .OrderBy(static layout => layout.Location?.SourceSpan.Start ?? int.MaxValue)
                         .ToArray();

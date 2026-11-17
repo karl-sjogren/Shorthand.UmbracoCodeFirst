@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- The diagnostic scenarios are exercised by the packaged-consumer script. -->
+    <IsTestProject>false</IsTestProject>
+    <DefineConstants>$(DefineConstants);$(DiagnosticCase)</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Diagnostics.cs" />
+    <PackageReference Include="Umbraco.Cms" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(CodeFirstPackageVersion)' == ''">
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Core\Shorthand.UmbracoCodeFirst.Core.csproj" />
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.SourceGenerators\Shorthand.UmbracoCodeFirst.SourceGenerators.csproj"
+                      PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\src\Shorthand.UmbracoCodeFirst.Analyzers\Shorthand.UmbracoCodeFirst.Analyzers.csproj"
+                      PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(CodeFirstPackageVersion)' != ''">
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst.Core" Version="$(CodeFirstPackageVersion)" />
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst.SourceGenerators" Version="$(CodeFirstPackageVersion)" />
+    <PackageVersion Include="Shorthand.UmbracoCodeFirst.Analyzers" Version="$(CodeFirstPackageVersion)" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst.Core" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst.SourceGenerators" />
+    <PackageReference Include="Shorthand.UmbracoCodeFirst.Analyzers" />
+  </ItemGroup>
+
+</Project>

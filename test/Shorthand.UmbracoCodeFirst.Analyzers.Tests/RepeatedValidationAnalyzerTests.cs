@@ -8,7 +8,7 @@ public class RepeatedValidationAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product", "Product")]
+                [UCFDocument("product", "Product")]
                 public partial class Product {
                     [UCFProperty("name", "Name", "text")]
                     [UCFValidation("^[A-Z]+$", "Uppercase only")]

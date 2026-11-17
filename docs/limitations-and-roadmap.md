@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- `UCFDataType`, `UCFDocumentType`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
+- `UCFDataType`, `UCFDocument`, `UCFProperty`, `UCFDescription`, `UCFTab`, `UCFGroup`,
   `UCFValidation`, `UCFComposite`, with derivable tab/group/validation attributes
 - Registry, published-model and Data Type `Alias` generation
 - Data Type creation/update including editor UI alias and raw JSON configuration
@@ -22,16 +22,14 @@ The Umbraco adapter applies these settings where the Umbraco 18.3 API exposes th
 - `AllowedChildAliases` for Document, Media and Member Types
 - `Variations` for supported content-type categories
 
-`IsListView` is exposed as metadata and status information, but a concrete Umbraco list-view
-definition key is required to persist the setting. The current boolean is therefore not used to
-invent or select a list-view entity.
+Collection configuration supports the built-in document and media list/grid layouts. Custom
+collection layouts and the workspace icon, name and content-first settings are not supported.
 
 ## Remaining limitations
 
 - Full catalog-driven typed, per-editor Data Type settings; reusable configuration types and raw
   `ConfigurationJson` compatibility are available, while editor-specific schema validation remains
   in progress
-- Referencing Umbraco built-in or manually created Data Types from `UCFProperty`
 - Changing the Data Type of an existing property
 - Automatic deletion/migration (removed definitions, properties, tabs, groups remain until the
   explicit cleanup action is applied)

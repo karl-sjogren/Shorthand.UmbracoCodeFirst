@@ -2,7 +2,7 @@ using Shorthand.UmbracoCodeFirst.Attributes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 
-[UCFDocumentType("integrationNestedComposition", "Integration Nested Composition")]
+[UCFDocument("integrationNestedComposition", "Integration Nested Composition")]
 [UCFComposite(typeof(IntegrationCompositionBase))]
 public partial class IntegrationNestedComposition {
     [UCFProperty("nestedValue", "Nested value", IntegrationTextDataType.Alias)]

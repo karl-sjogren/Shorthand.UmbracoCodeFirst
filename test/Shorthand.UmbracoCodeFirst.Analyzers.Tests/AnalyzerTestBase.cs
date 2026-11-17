@@ -7,9 +7,19 @@ public abstract class AnalyzerTestBase {
     protected const string AttributeDefinitions = """
         namespace Shorthand.UmbracoCodeFirst.Attributes
         {
-            public sealed class UCFDocumentTypeAttribute : global::System.Attribute {
-                public UCFDocumentTypeAttribute(string name) { }
-                public UCFDocumentTypeAttribute(string alias, string name) { }
+            public sealed class UCFDocumentAttribute : global::System.Attribute {
+                public UCFDocumentAttribute(string name) { }
+                public UCFDocumentAttribute(string alias, string name) { }
+                public string? DefaultTemplateAlias { get; set; }
+                public string[] AllowedTemplateAliases { get; set; } = [];
+            }
+            public sealed class UCFMediaAttribute : global::System.Attribute {
+                public UCFMediaAttribute(string name) { }
+                public UCFMediaAttribute(string alias, string name) { }
+            }
+            public sealed class UCFMemberAttribute : global::System.Attribute {
+                public UCFMemberAttribute(string name) { }
+                public UCFMemberAttribute(string alias, string name) { }
             }
             public sealed class UCFElementTypeAttribute : global::System.Attribute {
                 public UCFElementTypeAttribute(string name) { }
@@ -23,18 +33,24 @@ public abstract class AnalyzerTestBase {
                 public UCFPropertyAttribute(string name, string dataTypeAlias) { }
                 public UCFPropertyAttribute(string alias, string name, string dataTypeAlias) { }
             }
+            [global::System.AttributeUsage(global::System.AttributeTargets.Class)]
+            public sealed class UCFCollectionAttribute(global::System.Type collectionConfiguration) : global::System.Attribute;
             [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
             public sealed class UCFCompositeAttribute(global::System.Type contentType) : global::System.Attribute;
             public class UCFGroupAttribute : global::System.Attribute {
                 public UCFGroupAttribute(string name) { }
                 public UCFGroupAttribute(string alias, string name) { }
             }
-            public sealed class UCFTabAttribute : global::System.Attribute {
+            public class UCFTabAttribute : global::System.Attribute {
                 public UCFTabAttribute(string name) { }
                 public UCFTabAttribute(string name, int sortOrder) { }
                 public UCFTabAttribute(string alias, string name) { }
             }
             public class UCFValidationAttribute(string expression, string message = null!) : global::System.Attribute;
+        }
+        namespace Shorthand.UmbracoCodeFirst.Metadata
+        {
+            public abstract class CodeFirstCollectionConfiguration;
         }
         """;
 
@@ -67,6 +83,8 @@ public abstract class AnalyzerTestBase {
         new EditorAliasAnalyzer(),
         new IncompatibleEditorTypeAnalyzer(),
         new IncompatibleCompositionTypeAnalyzer(),
+        new InvalidCollectionConfigurationTypeAnalyzer(),
+        new DefaultTemplateNotAllowedAnalyzer(),
     ];
 
     protected static string Source(string source) {

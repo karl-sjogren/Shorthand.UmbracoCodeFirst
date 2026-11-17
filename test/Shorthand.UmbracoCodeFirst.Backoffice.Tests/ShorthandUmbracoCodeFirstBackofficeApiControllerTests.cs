@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Backoffice.Controllers;
+using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.Models;
@@ -55,7 +56,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 dataTypeService,
                 contentTypeService,
                 mediaTypeService,
-                memberTypeService);
+                memberTypeService,
+                A.Fake<ITemplateService>());
 
         // Assert
         response.DataTypes.Single().BackofficeUrl.ShouldBe(
@@ -91,13 +93,46 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 A.Fake<IDataTypeService>(),
                 A.Fake<IContentTypeService>(),
                 mediaTypeService,
-                memberTypeService);
+                memberTypeService,
+                A.Fake<ITemplateService>());
 
         // Assert
         response.MediaTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/media-type/edit/{mediaTypeKey:D}");
         response.MemberTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/member-type/edit/{memberTypeKey:D}");
+    }
+
+    [Fact]
+    public async Task StatusAsync_DuplicateDataTypes_ReportsConflictsWithoutApplyingThem_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+        ]);
+        var reportStore = new SynchronizationReportStore();
+        var store = A.Fake<ICodeFirstDefinitionStore>();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, reportStore, TimeProvider.System, NullLogger<CodeFirstSynchronizer>.Instance);
+        var dataTypeService = A.Fake<IDataTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+
+        // Act
+        await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+        var response = await new ShorthandUmbracoCodeFirstBackofficeApiController().StatusAsync(
+            registry, reportStore, dataTypeService, A.Fake<IContentTypeService>(),
+            A.Fake<IMediaTypeService>(), A.Fake<IMemberTypeService>(), A.Fake<ITemplateService>());
+
+        // Assert
+        A.CallTo(() => store.ApplyAsync(A<CodeFirstDefinition>._, A<CancellationToken>._))
+            .MustNotHaveHappened();
+        response.FailedCount.ShouldBe(2);
+        response.DataTypes.Count.ShouldBe(2);
+        foreach(var dataType in response.DataTypes) {
+            dataType.Status.ShouldBe(nameof(SynchronizationStatus.Failed));
+            dataType.Message.ShouldNotBeNull().ShouldContain("codeEditor");
+        }
     }
 
     private sealed class TestRegistry(IReadOnlyList<CodeFirstDefinition> definitions)

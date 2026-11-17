@@ -4,7 +4,7 @@ using Umbraco.Cms.Core.Models.Blocks;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
-[UCFDocumentType(
+[UCFDocument(
     "Blog Post",
     Icon = UmbracoIcons.Star,
     AllowAsRoot = false)]
@@ -20,9 +20,18 @@ public partial class BlogPost {
     public partial string MainHeading { get; }
 
     [UCFProperty(
+        "Publish date",
+        UmbracoBlogPublishDateDataType.Alias,
+        SortOrder = 1,
+        Mandatory = true)]
+    [UCFDescription("The editorial publish date for the blog post.")]
+    [ContentTab]
+    public partial DateTime PublishDate { get; }
+
+    [UCFProperty(
         "Main content",
         UmbracoBlogPostContentDataType.Alias,
-        SortOrder = 1)]
+        SortOrder = 2)]
     [UCFDescription("The main content for the blog post.")]
     [ContentTab]
     public partial IEnumerable<BlockListItem> MainContent { get; }
@@ -30,7 +39,7 @@ public partial class BlogPost {
     [UCFProperty(
         "Tags",
         UmbracoBlogTagsDataType.Alias,
-        SortOrder = 2)]
+        SortOrder = 3)]
     [UCFDescription("The tags for the blog post.")]
     [ContentTab]
     public partial IEnumerable<string> Tags { get; }

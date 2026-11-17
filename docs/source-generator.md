@@ -1,8 +1,8 @@
 # Source generator
 
 `CodeFirstRegistryGenerator` (project `Shorthand.UmbracoCodeFirst.SourceGenerators`) is an
-incremental generator. It runs over `partial` classes carrying `UCFDocumentType` or `UCFDataType` and
-emits three kinds of source. Output is deterministic (definitions are ordered by fully qualified
+incremental generator. It runs over `partial` code-first classes and marked root-level Razor views and
+emits registry, model and alias sources. Output is deterministic (definitions are ordered by fully qualified
 name).
 
 ## Generated output
@@ -14,6 +14,7 @@ name).
 Each definition carries:
 
 - Kind (`DataType` / `DocumentType`), alias, name
+- Templates: filename-derived alias, display name and a content hash for cluster coordination
 - Data Types: editor alias, editor UI alias, configuration JSON
 - Document Types: `CodeFirstTypeSettings`, the property list (`CodeFirstPropertyDefinition` with
   alias, name, Data Type alias, description, group/tab alias+name+sort, sort order, mandatory,
@@ -23,7 +24,7 @@ Each definition carries:
 
 ### Published models – `<Type>.PublishedModel.g.cs`
 
-For every `UCFDocumentType` class a partial implementation is emitted in the class's own namespace:
+For every `UCFDocument` class a partial implementation is emitted in the class's own namespace:
 
 - `[PublishedModel("alias")]` and `: PublishedContentModel`
 - `ModelTypeAlias`, `ModelItemType` (`Content`, or `Element` for `UCFElementType`),
@@ -36,11 +37,34 @@ For every `UCFDocumentType` class a partial implementation is emitted in the cla
 This follows the shape of Umbraco's ModelsBuilder output without depending on its internals. The
 property declarations in your class are `partial` definitions; do not add your own implementation.
 
+### Property aliases
+
+Code-first document, element, media and member types expose a generated `PropertyAliases` class.
+For each `UCFProperty`, its constant is named after the CLR property and contains the same explicit
+or display-name-derived alias emitted in the registry. For example, `Article.PropertyAliases.Title`
+is a compile-time string constant; `CodeFirstHelper<Article>.Alias(x => x.Title)` returns the same
+alias and supports normal property rename refactoring.
+
+If a model already declares `PropertyAliases`, UCF116 reports the conflict. UCF117 reports a
+generated property alias used by a UCF attribute in the same compilation: the generator cannot
+read its own output during its initial pass. Other C# attribute arguments and references from a
+previously compiled model can use the generated constants. For media and member models, UCF118
+reports file-local types or nested types whose containing types are not partial.
+
 ### Data Type alias – `<Type>.DataType.g.cs`
 
 A `public const string Alias` on each Data Type class, so `UCFProperty` can reference
 `MyDataType.Alias`. The generator resolves these references itself (including when the constant has
 not been bound yet), so ordering of files does not matter.
+
+### Template aliases – `UmbracoTemplates.g.cs`
+
+Marked root-level views generate `Shorthand.UmbracoCodeFirst.UmbracoTemplates` constants.
+The identifier is the filename alias with its first character capitalized, and the value retains
+the exact filename case. The generator can consume a configurable external Views directory, so
+the models project owns both the constants and template registry entries while the site owns the
+physical views. See [UCFTemplate](attributes.md#ucftemplate--razor-view) for configuration and
+the single-registry requirement.
 
 ## Alias derivation
 
@@ -59,16 +83,29 @@ Because letters inside a word are lower-cased, supply explicit aliases when you 
 
 ## Composition resolution
 
-`typeof(Target)` arguments of `UCFComposite` are resolved to the target's `UCFDocumentType` alias.
-A target without `UCFDocumentType` falls back to a derived alias; analyzer UCF106 reports it.
+`typeof(Target)` arguments of `UCFComposite` are resolved to the target's `UCFDocument` alias.
+A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 reports it.
 
 ## Generator diagnostics
 
 | Id | Severity | Meaning |
 | -- | -------- | ------- |
-| UCF001 | Error | A `UCFProperty` has a CLR type that cannot be generated as a published-model property (pointer, function pointer or `void`). |
+| [UCF001](analyzers/generator-diagnostics.md#ucf001) | Error | A published-model property has an unsupported CLR type. |
+| [UCF111](analyzers/generator-diagnostics.md#ucf111) | Error | A Data Type configuration has no usable settings or JSON. |
+| [UCF112](analyzers/generator-diagnostics.md#ucf112) | Error | A constant configuration setting has an unsupported type. |
+| [UCF113](analyzers/generator-diagnostics.md#ucf113) | Error | An allowed-child alias expression cannot be resolved. |
+| [UCF114](analyzers/generator-diagnostics.md#ucf114) | Error | A collection configuration or its target is invalid. |
+| [UCF116](analyzers/generator-diagnostics.md#ucf116) | Error | A model declaration conflicts with the generated `PropertyAliases` class. |
+| [UCF117](analyzers/generator-diagnostics.md#ucf117) | Error | A UCF attribute references a property alias generated in the same compilation. |
+| [UCF118](analyzers/generator-diagnostics.md#ucf118) | Error | A media or member model's container prevents generation of its property aliases. |
+| [UCF120](analyzers/generator-diagnostics.md#ucf120) | Error | A template directive or filename is invalid. |
+| [UCF121](analyzers/generator-diagnostics.md#ucf121) | Error | Multiple marked views have the same template alias (case-insensitive). |
+| [UCF122](analyzers/generator-diagnostics.md#ucf122) | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
+| [UCF123](analyzers/generator-diagnostics.md#ucf123) | Error | A property does not specify exactly one data type alias or valid data type key. |
+| [UCF124](analyzers/generator-diagnostics.md#ucf124) | Error | The site and a referenced template-owning project both generate code-first registries. |
 
-All other rules are reported by the [analyzers](analyzers/README.md).
+Other rules include those reported by the [analyzers](analyzers/README.md).
+The internal catalog generators also report [UCF200 and UCF201](analyzers/generator-diagnostics.md#internal-catalog-diagnostics).
 
 ## Supported property types
 

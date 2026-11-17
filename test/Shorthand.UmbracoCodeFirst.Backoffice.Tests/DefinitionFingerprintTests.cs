@@ -5,6 +5,20 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class DefinitionFingerprintTests {
     [Fact]
+    public void Create_ChangesWhenTemplateContentChanges() {
+        // Arrange
+        var first = new CodeFirstDefinition(CodeFirstDefinitionKind.Template, "page", "Page", null, [], TemplateContentHash: "first");
+        var second = first with { TemplateContentHash = "second" };
+
+        // Act
+        var firstHash = DefinitionFingerprint.Create([first]);
+        var secondHash = DefinitionFingerprint.Create([second]);
+
+        // Assert
+        firstHash.ShouldNotBe(secondHash);
+    }
+
+    [Fact]
     public void Create_ChangesWhenTypedBlockConfigurationChanges() {
         // Arrange
         var first = Definition("First");

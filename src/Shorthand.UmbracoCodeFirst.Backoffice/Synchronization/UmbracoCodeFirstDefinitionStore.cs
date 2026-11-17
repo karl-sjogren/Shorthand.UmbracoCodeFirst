@@ -28,8 +28,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         IConfigurationEditorJsonSerializer configurationSerializer,
         IShortStringHelper shortStringHelper,
         ICodeFirstOwnershipStore ownershipStore,
+        ICodeFirstTemplateDefinitionStore templateDefinitionStore,
         ILogger<UmbracoCodeFirstDefinitionStore> logger) : ICodeFirstDefinitionStore, ICodeFirstBlockDefinitionStore {
     private const string _ownershipKey = "shorthand.umbraco-codefirst";
+    private const string _collectionOwnershipKey = "shorthand.umbraco-codefirst.collection";
     private readonly ConcurrentDictionary<string, IDataType> _ownedDataTypes = new(StringComparer.Ordinal);
 
     public async Task<SynchronizationResult> PrepareBlockDataTypeAsync(
@@ -60,7 +62,9 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 CodeFirstDefinitionKind.DataType => await ApplyDataTypeAsync(definition),
                 CodeFirstDefinitionKind.DocumentType => await ApplyDocumentTypeAsync(definition),
                 CodeFirstDefinitionKind.MediaType => await ApplyMediaTypeAsync(definition),
-                _ => await ApplyMemberTypeAsync(definition),
+                CodeFirstDefinitionKind.MemberType => await ApplyMemberTypeAsync(definition),
+                CodeFirstDefinitionKind.Template => await templateDefinitionStore.ApplyAsync(definition, cancellationToken),
+                _ => throw new InvalidOperationException($"Unsupported definition kind '{definition.Kind}'."),
             };
 
             if(status == SynchronizationStatus.Skipped) {
@@ -127,6 +131,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             ApplyTypeSettings(created, definition.Settings);
 
+            await ApplyCollectionAsync(created, definition);
+
             ApplyAllowedChildren(created, definition.Settings, service.Get);
 
             await ApplyGroupsAndPropertiesAsync(created, definition);
@@ -150,7 +156,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             return SynchronizationStatus.Skipped;
         }
 
-        var changed = existing.Name != definition.Name;
+        var changed = await ApplyCollectionAsync(existing, definition);
+        changed |= existing.Name != definition.Name;
         existing.Name = definition.Name;
 
         var parentIdForExisting = await getParentId(definition.FolderPath);
@@ -178,7 +185,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return SynchronizationStatus.Updated;
     }
 
-    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
+    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition, bool onlyIfChanged = false) {
         var configurationJson = definition.EditorConfiguration is { } editorConfiguration
             && (editorConfiguration.BlockTypes is not null || editorConfiguration.BlockGroups is not null
                 || editorConfiguration.TypedSettings is not null)
@@ -205,7 +212,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             var oldParentId = existing.ParentId;
             var oldEditorUiAlias = existing.EditorUiAlias;
             var oldEditor = existing.Editor;
-            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null
+            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null || onlyIfChanged
                 ? new Dictionary<string, object>(existing.ConfigurationData)
                 : null;
             try {
@@ -242,7 +249,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
                 }
 
-                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration);
+                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration || onlyIfChanged);
                 return !changed
                     ? SynchronizationStatus.Unchanged
                     : await UpdateDataTypeAsync(existing, definition);
@@ -278,6 +285,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         ApplyConfiguration(dataType, configurationJson);
+        if(editor.Alias == UmbracoConstants.PropertyEditors.Aliases.DateTime) {
+            // Preserve existing storage choices for other editors; date sorting requires date storage.
+            dataType.DatabaseType = ValueTypes.ToStorageType(editor.GetValueEditor().ValueType);
+        }
 
         var result = await dataTypeService.CreateAsync(dataType, UmbracoConstants.Security.SuperUserKey);
         if(!result.Success) {
@@ -315,6 +326,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             ApplyTypeSettings(created, definition.Settings);
 
+            await ApplyCollectionAsync(created, definition);
+
             ApplyCompositions(created, definition);
 
             ApplyAllowedChildren(created, definition.Settings, contentTypeService.Get);
@@ -332,7 +345,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             return SynchronizationStatus.Skipped;
         }
 
-        var changed = contentType.Name != definition.Name;
+        var changed = await ApplyCollectionAsync(contentType, definition);
+        changed |= contentType.Name != definition.Name;
         contentType.Name = definition.Name;
 
         var parentId = await GetContentTypeParentIdAsync(definition.FolderPath);
@@ -395,6 +409,64 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
     private static bool IsOwned(IDataType dataType) =>
         dataType.ConfigurationData.TryGetValue(_ownershipKey, out var value) && value is string;
+
+    private async Task<bool> ApplyCollectionAsync(IContentTypeComposition contentType, CodeFirstDefinition definition) {
+        if(definition.Kind is not CodeFirstDefinitionKind.DocumentType and not CodeFirstDefinitionKind.MediaType) {
+            return false;
+        }
+
+        var collection = definition.Settings?.Collection;
+        if(collection is null && contentType.ListView is null) {
+            return false;
+        }
+
+        var alias = CodeFirstCollectionSettings.GetDataTypeAlias(definition.Kind, definition.Alias);
+        var existing = await FindOwnedDataTypeAsync(alias);
+        var isManaged = existing is not null
+            && existing.ConfigurationData.TryGetValue(_collectionOwnershipKey, out var owner)
+            && string.Equals(owner as string, alias, StringComparison.Ordinal);
+
+        if(collection is null) {
+            if(isManaged && contentType.ListView == existing!.Key) {
+                contentType.ListView = null;
+                return true;
+            }
+
+            return false;
+        }
+
+        if(collection.Error is not null) {
+            throw new InvalidOperationException(
+                $"The collection configuration for '{definition.Alias}' is invalid: {collection.Error}");
+        }
+
+        if(existing is not null && !isManaged) {
+            throw new InvalidOperationException($"The collection data type identity '{alias}' is already in use.");
+        }
+
+        if(contentType.ListView is not null && contentType.ListView != existing?.Key) {
+            throw new InvalidOperationException(
+                $"The {definition.Kind} '{definition.Alias}' already has a manually managed collection; it was left unchanged.");
+        }
+
+        var configuration = JsonNode.Parse(collection.Json)?.AsObject()
+            ?? throw new InvalidOperationException($"The collection configuration for '{definition.Alias}' is invalid.");
+        configuration[_collectionOwnershipKey] = alias;
+        var dataTypeDefinition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType,
+            alias,
+            $"Code First {definition.Kind} {definition.Alias} collection",
+            "Umbraco.ListView",
+            [],
+            ConfigurationJson: configuration.ToJsonString(),
+            EditorUiAlias: "Umb.PropertyEditorUi.Collection");
+        var status = await ApplyDataTypeAsync(dataTypeDefinition, onlyIfChanged: true);
+        var dataType = await FindOwnedDataTypeAsync(alias)
+            ?? throw new InvalidOperationException($"Could not find the collection data type for '{definition.Alias}'.");
+        var changed = contentType.ListView != dataType.Key;
+        contentType.ListView = dataType.Key;
+        return changed || status is SynchronizationStatus.Created or SynchronizationStatus.Updated;
+    }
 
     private async Task<IDataType?> FindOwnedDataTypeAsync(string alias) {
         if(_ownedDataTypes.TryGetValue(alias, out var cached)) {
@@ -700,15 +772,28 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         var changed = ApplyPropertyGroups(contentType, definition);
 
         foreach(var property in definition.Properties) {
-            var dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
+            IDataType? dataType;
+            if(property.DataTypeKey is not null) {
+                if(!string.IsNullOrWhiteSpace(property.DataTypeAlias)
+                    || !Guid.TryParse(property.DataTypeKey, out var key)
+                    || key == Guid.Empty) {
+                    throw new InvalidOperationException(
+                        $"The {definition.Kind} '{definition.Alias}' property '{property.Alias}' must specify either a data type alias or a valid data type key.");
+                }
+
+                dataType = (await dataTypeService.GetAllAsync()).FirstOrDefault(candidate => candidate.Key == key);
+            } else {
+                dataType = await FindOwnedDataTypeAsync(property.DataTypeAlias);
+            }
+
             if(dataType is null) {
                 throw new InvalidOperationException(
-                    $"The document type '{definition.Alias}' references unknown data type '{property.DataTypeAlias}'.");
+                    $"The {definition.Kind} '{definition.Alias}' property '{property.Alias}' references unknown data type '{property.DataTypeKey ?? property.DataTypeAlias}'.");
             }
 
             var existingProperty = contentType.PropertyTypes.FirstOrDefault(candidate => candidate.Alias == property.Alias);
 
-            var desiredGroupAlias = property.GroupAlias ?? property.TabAlias;
+            var desiredGroupAlias = property.EffectiveGroupAlias;
             if(existingProperty is not null) {
                 if(existingProperty.DataTypeKey != dataType.Key) {
                     if(existingProperty.ValueStorageType != dataType.DatabaseType) {
@@ -804,44 +889,51 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private static bool ApplyPropertyGroups(
             IContentTypeComposition contentType,
             CodeFirstDefinition definition) {
+        ValidatePropertyGroups(definition);
         var changed = false;
-
-        var desiredAliases = definition.EffectiveTabs
-            .Concat(definition.EffectiveGroups)
-            .Select(group => group.Alias)
+        var ownedPropertyAliases = definition.Properties.Select(property => property.Alias)
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach(var existingGroup in contentType.PropertyGroups.ToArray()) {
-            if(desiredAliases.Contains(existingGroup.Alias)
-                || existingGroup.PropertyTypes?.Any() == true
-                || string.IsNullOrWhiteSpace(existingGroup.Name)
-                || !string.Equals(
-                    existingGroup.Alias,
-                    ToLegacyAlias(existingGroup.Name),
-                    StringComparison.Ordinal)) {
-                continue;
-            }
-
-            contentType.RemovePropertyGroup(existingGroup.Alias);
-            changed = true;
-        }
-
         foreach(var tab in definition.EffectiveTabs) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab);
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, tab, PropertyGroupType.Tab, ownedPropertyAliases);
         }
 
         foreach(var group in definition.EffectiveGroups) {
-            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group);
+            changed |= ApplyPropertyGroup(contentType, definition.Alias, group, PropertyGroupType.Group, ownedPropertyAliases);
         }
 
         return changed;
+    }
+
+    private static void ValidatePropertyGroups(CodeFirstDefinition definition) {
+        foreach(var group in definition.Properties
+                    .Where(property => property.GroupAlias is not null)
+                    .GroupBy(property => property.EffectiveGroupAlias!, StringComparer.Ordinal)) {
+            if(group.Select(property => (property.GroupName ?? property.GroupAlias, property.GroupSortOrder))
+                .Distinct().Skip(1).Any()) {
+                throw new InvalidOperationException(
+                    $"The {definition.Kind} '{definition.Alias}' has conflicting declarations for group '{group.Key}'.");
+            }
+        }
+
+        foreach(var tab in definition.Properties
+                    .Where(property => property.TabAlias is not null)
+                    .GroupBy(property => property.TabAlias!, StringComparer.Ordinal)) {
+            if(tab.Select(property => (property.TabName ?? property.TabAlias, property.TabSortOrder))
+                .Distinct().Skip(1).Any()
+                || definition.EffectiveGroups.Any(group => group.Alias == tab.Key)) {
+                throw new InvalidOperationException(
+                    $"The {definition.Kind} '{definition.Alias}' has conflicting declarations for tab '{tab.Key}'.");
+            }
+        }
     }
 
     private static bool ApplyPropertyGroup(
             IContentTypeComposition contentType,
             string definitionAlias,
             CodeFirstGroupDefinition definition,
-            PropertyGroupType type) {
+            PropertyGroupType type,
+            IReadOnlySet<string> ownedPropertyAliases) {
         var changed = false;
 
         var existingGroup = contentType.PropertyGroups.FirstOrDefault(candidate => candidate.Alias == definition.Alias);
@@ -850,10 +942,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             existingGroup = contentType.PropertyGroups
                 .FirstOrDefault(candidate =>
                     candidate.Type == type
-                    && (string.Equals(candidate.Alias, legacyAlias, StringComparison.Ordinal)
+                    && candidate.GetParentAlias() == GetParentAlias(definition.Alias)
+                    && (string.Equals(candidate.GetLocalAlias(), legacyAlias, StringComparison.Ordinal)
                         || (string.Equals(candidate.Name, definition.Name, StringComparison.OrdinalIgnoreCase)
                             && string.Equals(
-                                candidate.Alias,
+                                candidate.GetLocalAlias(),
                                 definition.Name,
                                 StringComparison.OrdinalIgnoreCase))));
 
@@ -876,6 +969,13 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             changed = true;
         }
 
+        if(existingGroup.Type != type
+            && (existingGroup.PropertyTypes?.Any(property => !ownedPropertyAliases.Contains(property.Alias)) == true
+                || contentType.PropertyGroups.Any(candidate => candidate.GetParentAlias() == existingGroup.Alias))) {
+            throw new InvalidOperationException(
+                $"The document type '{definitionAlias}' cannot change the type of group '{definition.Alias}' because it contains manual properties or nested groups.");
+        }
+
         if(existingGroup.Name != definition.Name) {
             existingGroup.Name = definition.Name;
             changed = true;
@@ -892,6 +992,11 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         }
 
         return changed;
+    }
+
+    private static string? GetParentAlias(string alias) {
+        var index = alias.LastIndexOf('/');
+        return index < 0 ? null : alias[..index];
     }
 
     private static string ToLegacyAlias(string value) {

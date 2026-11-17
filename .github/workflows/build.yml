@@ -12,7 +12,6 @@ on:
     paths-ignore:
       - 'README.md'
       - 'docs/*'
-      - 'scripts/*'
       - '.vscode/*'
 
 permissions:
@@ -54,6 +53,10 @@ jobs:
 
     - name: Run .NET tests
       run: dotnet test --coverage --coverage-output-format cobertura --coverage-settings ./test/coverage.config --report-trx --no-build --configuration Release --no-progress
+
+    - name: Test packaged diagnostic consumer
+      shell: pwsh
+      run: ./scripts/test-diagnostics-consumer.ps1
 
     - name: Test packaged consumer startup
       shell: pwsh

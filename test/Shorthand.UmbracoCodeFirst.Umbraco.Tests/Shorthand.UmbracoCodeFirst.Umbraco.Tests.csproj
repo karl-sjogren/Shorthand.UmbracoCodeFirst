@@ -9,4 +9,9 @@
     <PackageReference Include="Testcontainers.MsSql" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\src\Shorthand.UmbracoCodeFirst.Umbraco\Views\*.cshtml"
+             Link="Views\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

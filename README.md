@@ -1,6 +1,6 @@
 # Shorthand.UmbracoCodeFirst [![codecov](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst/graph/badge.svg?token=Y1SnvwGAFf)](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst)
 
-Code-first definitions for Umbraco Document Types, Media Types, Member Types, and Data Types.
+Code-first definitions for Umbraco Document Types, Media Types, Member Types, Data Types, and templates.
 
 > [!WARNING]
 > This whole project was vibe coded over a few evenings and the code quality is not great.
@@ -8,7 +8,7 @@ Code-first definitions for Umbraco Document Types, Media Types, Member Types, an
 > a lot further refinement to become a robust and production-ready library. But it's kinda cool.
 
 Instead of configuring every definition manually in the Umbraco backoffice, declare partial C#
-classes and properties with `UCFDocumentType`, `UCFMediaType`, `UCFMemberType`, `UCFDataType`,
+classes and properties with `UCFDocument`, `UCFMedia`, `UCFMember`, `UCFDataType`,
 `UCFProperty`, tabs, groups, validation attributes, and compositions. A Roslyn source generator
 creates the definition registry and typed published-model members. When the Umbraco application
 starts, the synchronizer creates or updates the matching definitions.
@@ -33,7 +33,7 @@ using Shorthand.UmbracoCodeFirst.PropertyEditors;
     typeof(UmbracoEditors.TextBox))]
 public partial class ArticleTitleDataType;
 
-[UCFDocumentType("article", "Article", AllowAsRoot = true)]
+[UCFDocument("article", "Article", AllowAsRoot = true)]
 public partial class Article {
     [UCFProperty(
         "title",
@@ -80,6 +80,8 @@ The source generator and synchronizer support:
   structured JSON settings for blocks, pickers, crops, colors, dropdowns, and rich text. Typed
   configuration is available through `UCFDataType.ConfigurationType`; `ConfigurationJson` remains
   available as a raw compatibility escape hatch.
+- **Templates** declared with `@attribute [UCFTemplate("Name")]` in a root `Views` Razor file;
+  document types explicitly select their allowed and default template aliases.
 
 ## Analyzer diagnostics
 

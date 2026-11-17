@@ -59,7 +59,7 @@ internal static class CodeFirstDiagnosticDescriptors {
     public static readonly DiagnosticDescriptor PropertyOutsideDocumentType = new(
         CodeFirstDiagnosticIds.PropertyOutsideDocumentType,
         "Code-first property requires a content type",
-        "Property '{0}' uses UCFProperty but its containing class is not a UCFDocumentType",
+        "Property '{0}' uses UCFProperty but its containing class is not a UCFDocument",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -68,7 +68,7 @@ internal static class CodeFirstDiagnosticDescriptors {
     public static readonly DiagnosticDescriptor InvalidCompositionTarget = new(
         CodeFirstDiagnosticIds.InvalidCompositionTarget,
         "Invalid content composition target",
-        "Composition target '{0}' must have UCFDocumentTypeAttribute",
+        "Composition target '{0}' must have UCFDocumentAttribute",
         "CodeFirst",
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
@@ -114,5 +114,23 @@ internal static class CodeFirstDiagnosticDescriptors {
         isEnabledByDefault: true,
         helpLinkUri: DocumentationBaseUrl + "/UCF110.md",
         customTags: ["CompilationEnd"]);
+
+    public static readonly DiagnosticDescriptor InvalidCollectionConfigurationType = new(
+        CodeFirstDiagnosticIds.InvalidCollectionConfigurationType,
+        "Invalid collection configuration type",
+        "Collection configuration type '{0}' must inherit from CodeFirstCollectionConfiguration",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: DocumentationBaseUrl + "/UCF115.md");
+
+    public static readonly DiagnosticDescriptor DefaultTemplateNotAllowed = new(
+        CodeFirstDiagnosticIds.DefaultTemplateNotAllowed,
+        "Default template must be allowed",
+        "Default template '{0}' must be included in AllowedTemplateAliases",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: DocumentationBaseUrl + "/UCF119.md");
 #pragma warning restore RS2008
 }

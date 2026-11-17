@@ -3,12 +3,13 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
-[UCFDocumentType(
+[UCFDocument(
     "Product Page",
     Icon = UmbracoIcons.Barcode,
     AllowAsRoot = true,
-    IsListView = true,
-    Variations = "Invariant")]
+    Variations = "Invariant",
+    DefaultTemplateAlias = UmbracoTemplates.ProductPage,
+    AllowedTemplateAliases = new[] { UmbracoTemplates.ProductPage })]
 [UCFComposite(typeof(HappySparkles))]
 [UCFComposite(typeof(SeoComposite))]
 [UCFDescription("A deliberately comprehensive product page used to exercise the code-first model generator.")]

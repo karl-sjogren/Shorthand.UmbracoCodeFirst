@@ -4,23 +4,23 @@ Umbraco Document Types can be composed of other Document Types. C# inheritance c
 composed of several others, so composition is declared explicitly:
 
 ```csharp
-[UCFDocumentType("seoComposition", "SEO composition")]
+[UCFDocument("seoComposition", "SEO composition")]
 public partial class SeoComposition { /* properties */ }
 
-[UCFDocumentType("productPage", "Product Page")]
+[UCFDocument("productPage", "Product Page")]
 [UCFComposite(typeof(SeoComposition))]
 [UCFComposite(typeof(Article))]
 public partial class ProductPage { /* properties */ }
 ```
 
 `UCFComposite` is repeatable, class-targeted and not inherited. The target must itself be a
-`UCFDocumentType`.
+`UCFDocument`.
 
 ## Compile-time validation
 
 | Rule | Reports |
 | ---- | ------- |
-| [UCF106](analyzers/UCF106.md) | Target is not a `UCFDocumentType`. |
+| [UCF106](analyzers/UCF106.md) | Target is not a `UCFDocument`. |
 | [UCF107](analyzers/UCF107.md) | Duplicate composition, a type composing itself, or a composition cycle. |
 
 ## Metadata

@@ -19,11 +19,7 @@ internal sealed class EditorCatalog {
     public static EditorCatalog Load(ImmutableArray<AdditionalText> additionalFiles) {
         var metadataFile = additionalFiles.FirstOrDefault(static file =>
             file.Path.EndsWith("umbraco-property-editors.json", StringComparison.OrdinalIgnoreCase));
-        if(metadataFile is null) {
-            return Empty();
-        }
-
-        var content = metadataFile.GetText()?.ToString() ?? string.Empty;
+        var content = metadataFile?.GetText()?.ToString() ?? ReadEmbeddedCatalog();
         if(content.Length == 0) {
             return Empty();
         }
@@ -53,6 +49,16 @@ internal sealed class EditorCatalog {
 
     private static EditorCatalog Empty() =>
         new(ImmutableDictionary<string, EditorMetadata>.Empty);
+
+    private static string ReadEmbeddedCatalog() {
+        using var stream = typeof(EditorCatalog).Assembly.GetManifestResourceStream("umbraco-property-editors.json");
+        if(stream is null) {
+            return string.Empty;
+        }
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
 
     private static string? GetJsonString(JsonElement element, string propertyName) =>
         element.TryGetProperty(propertyName, out var property)

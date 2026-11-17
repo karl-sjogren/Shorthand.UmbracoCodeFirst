@@ -3,7 +3,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DataTypes;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 
-[UCFDocumentType(
+[UCFDocument(
     "Article",
     Icon = UmbracoIcons.Document,
     AllowAsRoot = true)]

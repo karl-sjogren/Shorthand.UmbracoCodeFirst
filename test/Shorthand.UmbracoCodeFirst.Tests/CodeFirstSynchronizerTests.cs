@@ -1,11 +1,57 @@
+using System.Text.Json;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
-using System.Text.Json;
 
 namespace Shorthand.UmbracoCodeFirst.Tests;
 
 public class CodeFirstSynchronizerTests {
+    [Fact]
+    public async Task SynchronizeAsync_TemplateAndDocumentWithSameAlias_TemplateIsAppliedFirst_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", null, []),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(0);
+        report.Items.Select(item => item.Kind).ShouldBe([
+            CodeFirstDefinitionKind.Template,
+            CodeFirstDefinitionKind.DocumentType,
+        ]);
+        store.Calls.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_DuplicateTemplateAliases_FailsTemplatesButNotDocument_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.Template, "page", "One", null, []),
+            new(CodeFirstDefinitionKind.Template, "Page", "Two", null, []),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(2);
+        report.Items.Single(item => item.Kind == CodeFirstDefinitionKind.DocumentType).Status.ShouldNotBe(SynchronizationStatus.Failed);
+        store.Calls.ShouldBe(["apply:page"]);
+    }
+
     [Fact]
     public async Task SynchronizeAsync_BlockDataType_PreparesThenResolvesElementDependency_Async() {
         // Arrange
@@ -416,6 +462,35 @@ public class CodeFirstSynchronizerTests {
             .Status
             .ShouldBe(SynchronizationStatus.Created);
         reportStore.Current.ShouldBe(report);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_DuplicateDataTypeAliases_FailsBothWithoutApplyingEither_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "C# editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "JavaScript editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "other", "Other", "Umbraco.TextBox", []),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", null, []),
+        ]);
+        var store = new RecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.AppliedAliases.ShouldBe(["other", "codeEditor"]);
+        report.FailedCount.ShouldBe(2);
+        foreach(var item in report.Items.Where(item => item.Kind == CodeFirstDefinitionKind.DataType && item.Alias == "codeEditor")) {
+            item.Status.ShouldBe(SynchronizationStatus.Failed);
+            item.Message.ShouldNotBeNull().ShouldContain("set its Alias explicitly");
+        }
+
+        report.Items.Single(item => item.Kind == CodeFirstDefinitionKind.DocumentType).Status
+            .ShouldBe(SynchronizationStatus.Created);
     }
 
     [Fact]

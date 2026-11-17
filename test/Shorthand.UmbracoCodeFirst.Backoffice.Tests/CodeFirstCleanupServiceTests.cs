@@ -9,6 +9,52 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstCleanupServiceTests {
     [Fact]
+    public async Task PreviewAsync_PreservesTabWithNestedGroup_Async() {
+        // Arrange
+        var dataTypes = A.Fake<IDataTypeService>();
+        var contentTypes = A.Fake<IContentTypeService>();
+        A.CallTo(() => dataTypes.GetAllAsync()).Returns(Task.FromResult<IEnumerable<IDataType>>([]));
+        var contentType = CreateContentType("page", "Page", "shorthand.umbraco-codefirst:page");
+        contentType.AddPropertyGroup("manualTab", "Manual tab");
+        contentType.PropertyGroups.Single(group => group.Alias == "manualTab").Type = PropertyGroupType.Tab;
+        contentType.AddPropertyGroup("manualTab/manualGroup", "Manual group");
+        A.CallTo(() => contentTypes.GetAll()).Returns([AsContentType(contentType)]);
+        var service = CreateService(dataTypes, contentTypes, [
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+
+        // Act
+        var preview = await service.PreviewAsync();
+
+        // Assert
+        preview.Items.ShouldNotContain(item => item.Alias == "manualTab");
+        preview.Items.ShouldContain(item => item.Alias == "manualTab/manualGroup");
+    }
+
+    [Fact]
+    public async Task PreviewAsync_PreservesConfiguredCollectionDataType_Async() {
+        // Arrange
+        var dataTypeService = A.Fake<IDataTypeService>();
+        var contentTypeService = A.Fake<IContentTypeService>();
+        var dataType = A.Fake<IDataType>();
+        A.CallTo(() => dataType.ConfigurationData).Returns(new Dictionary<string, object> {
+            ["shorthand.umbraco-codefirst"] = "collection:DocumentType:articles",
+        });
+        A.CallTo(() => dataTypeService.GetAllAsync()).Returns(Task.FromResult<IEnumerable<IDataType>>([dataType]));
+        A.CallTo(() => contentTypeService.GetAll()).Returns([]);
+        var service = CreateService(dataTypeService, contentTypeService, [
+            new(CodeFirstDefinitionKind.DocumentType, "articles", "Articles", null, [],
+                new CodeFirstTypeSettings(Collection: new CodeFirstCollectionSettings("{}", true, true, 10))),
+        ]);
+
+        // Act
+        var preview = await service.PreviewAsync();
+
+        // Assert
+        preview.Items.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task PreviewAsync_WhenNoOwnedItemsAreObsolete_ReturnsEmptyCleanupList_Async() {
         // Arrange
         var dataTypeService = A.Fake<IDataTypeService>();

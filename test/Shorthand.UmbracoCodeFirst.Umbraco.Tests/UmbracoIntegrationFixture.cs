@@ -47,7 +47,7 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
         await _sqlServer.StartAsync(_startupTimeout.Token);
 
         _application = await Program.CreateApplicationAsync(
-            [],
+            ["--contentRoot", AppContext.BaseDirectory],
             builder => {
                 builder.WebHost
                     .UseSetting("ConnectionStrings:umbracoDbDSN", _sqlServer.GetConnectionString())

@@ -3,14 +3,17 @@ using VerifyCS = Shorthand.UmbracoCodeFirst.Analyzers.Tests.RoslynUtils.CSharpAn
 namespace Shorthand.UmbracoCodeFirst.Analyzers.Tests;
 
 public class InvalidAliasAnalyzerTests : AnalyzerTestBase {
-    [Fact]
-    public async Task InvalidAlias_ReportsDiagnosticAsync() {
+    [Theory]
+    [InlineData("UCFDocument")]
+    [InlineData("UCFMedia")]
+    [InlineData("UCFMember")]
+    public async Task InvalidAlias_ReportsDiagnosticAsync(string attributeName) {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [[|UCFDocumentType("invalid_alias", "Product")|]]
+                [[|ATTRIBUTE("invalid_alias", "Product")|]]
                 public partial class Product;
-                """);
+                """.Replace("ATTRIBUTE", attributeName, StringComparison.Ordinal));
 
         // Act & Assert
         await VerifyCS.VerifyAnalyzerAsync(
@@ -22,7 +25,7 @@ public class InvalidAliasAnalyzerTests : AnalyzerTestBase {
         // Arrange
         var source = Source("""
                 using Shorthand.UmbracoCodeFirst.Attributes;
-                [UCFDocumentType("product-page.é", "Product")]
+                [UCFDocument("product-page.é", "Product")]
                 public partial class Product;
                 """);
 

@@ -18,6 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\Shorthand.UmbracoCodeFirst.Core\PropertyEditors\umbraco-property-editors.json"
+                      LogicalName="umbraco-property-editors.json" />
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 

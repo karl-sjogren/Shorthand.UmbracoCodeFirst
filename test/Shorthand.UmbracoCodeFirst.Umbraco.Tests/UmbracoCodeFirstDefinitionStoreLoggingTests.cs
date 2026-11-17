@@ -153,7 +153,7 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
             .ReturnsLazily((string value, CleanStringType _) => value);
         var store = new UmbracoCodeFirstDefinitionStore(
             null!, null!, contentTypeService, null!, null!, null!, null!, null!, null!,
-            null!, null!, helper, ownershipStore, new FakeLogger<UmbracoCodeFirstDefinitionStore>());
+            null!, null!, helper, ownershipStore, null!, new FakeLogger<UmbracoCodeFirstDefinitionStore>());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -196,5 +196,5 @@ public class UmbracoCodeFirstDefinitionStoreLoggingTests {
         ICodeFirstOwnershipStore ownershipStore,
         ILogger<UmbracoCodeFirstDefinitionStore> logger) =>
         new(null!, null!, contentTypeService, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, ownershipStore, logger);
+            null!, null!, null!, ownershipStore, null!, logger);
 }

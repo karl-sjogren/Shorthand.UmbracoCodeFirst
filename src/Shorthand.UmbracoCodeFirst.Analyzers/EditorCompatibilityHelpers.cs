@@ -29,9 +29,11 @@ internal static class EditorCompatibilityHelpers {
 
     private static bool IsEnumerableOf(ITypeSymbol type, SpecialType elementType) =>
         type is IArrayTypeSymbol array && array.ElementType.SpecialType == elementType
-        || type is INamedTypeSymbol namedType && namedType.AllInterfaces.Any(interfaceType =>
-            interfaceType is INamedTypeSymbol named
-            && named.Name == "IEnumerable"
-            && named.TypeArguments.Length == 1
-            && named.TypeArguments[0].SpecialType == elementType);
+        || type is INamedTypeSymbol namedType
+            && (IsMatchingEnumerable(namedType, elementType)
+                || namedType.AllInterfaces.Any(interfaceType => IsMatchingEnumerable(interfaceType, elementType)));
+
+    private static bool IsMatchingEnumerable(INamedTypeSymbol type, SpecialType elementType) =>
+        type.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T
+        && type.TypeArguments[0].SpecialType == elementType;
 }

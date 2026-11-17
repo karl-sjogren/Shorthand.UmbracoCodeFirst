@@ -169,6 +169,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
         builder.AppendLine($"        {_generatedCodeAttribute}");
         var baseType = editorId switch {
             "richTextEditor" => "CodeFirstRichTextEditorConfigurationDefinition",
+            "mediaPicker" => "CodeFirstMediaPickerConfigurationDefinition",
             "blockList" or "blockGrid" or "singleBlock" => "CodeFirstBlockEditorConfigurationDefinition",
             _ => "CodeFirstEditorConfigurationDefinition",
         };

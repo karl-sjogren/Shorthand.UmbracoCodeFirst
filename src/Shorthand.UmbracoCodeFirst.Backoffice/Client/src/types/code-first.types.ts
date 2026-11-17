@@ -8,6 +8,7 @@ export type StatusProperty = {
   alias: string;
   name: string;
   dataTypeAlias: string;
+  dataTypeKey?: string | null;
   description?: string;
   groupAlias?: string;
   groupName?: string;
@@ -33,7 +34,7 @@ export type StatusItem = {
   allowedTemplateAliases: string[];
   allowedChildAliases: string[];
   variations?: string;
-  isListView: boolean;
+  collection?: { list: boolean; grid: boolean; pageSize: number } | null;
   compositionAliases: string[];
   groups: LayoutItem[];
   tabs: LayoutItem[];
@@ -54,6 +55,7 @@ export type StatusResponse = {
   elementTypeCount: number;
   mediaTypeCount: number;
   memberTypeCount: number;
+  templateCount: number;
   createdCount: number;
   updatedCount: number;
   unchangedCount: number;
@@ -67,6 +69,7 @@ export type StatusResponse = {
   elementTypes: StatusItem[];
   mediaTypes: StatusItem[];
   memberTypes: StatusItem[];
+  templates: StatusItem[];
 };
 
 export type CleanupItem = {

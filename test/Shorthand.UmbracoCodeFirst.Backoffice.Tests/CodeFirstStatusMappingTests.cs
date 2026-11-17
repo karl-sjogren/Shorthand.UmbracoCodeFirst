@@ -6,6 +6,72 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
 public class CodeFirstStatusMappingTests {
     [Fact]
+    public void Map_PropertyWithDataTypeKey_ExposesReference() {
+        // Arrange
+        const string key = "ad9f0cf2-bda2-45d5-9ea1-a63cfc873fd3";
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null,
+                [new("image", "Image", "", DataTypeKey: key)]),
+        ]);
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, new SynchronizationReportStore());
+
+        // Assert
+        var property = result.Definitions.Single().Properties.Single();
+        property.DataTypeAlias.ShouldBeEmpty();
+        property.DataTypeKey.ShouldBe(key);
+    }
+
+    [Fact]
+    public void Map_TemplateAndDocumentWithSameAlias_ReportsSeparateOutcomes() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", null, []),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", null, []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.Template, "page", "Page template", SynchronizationStatus.Skipped, "Not owned."),
+            new(CodeFirstDefinitionKind.DocumentType, "page", "Page", SynchronizationStatus.Created),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.TemplateCount.ShouldBe(1);
+        result.Definitions.Count.ShouldBe(2);
+        result.Templates.Single().Status.ShouldBe("Skipped");
+        result.Templates.Single().Message.ShouldBe("Not owned.");
+        result.DocumentTypes.Single().Status.ShouldBe("Created");
+    }
+
+    [Fact]
+    public void Map_Collection_ReportsSummaryAndFailure() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.MediaType, "assets", "Assets", null, [],
+                new CodeFirstTypeSettings(Collection: new CodeFirstCollectionSettings("{}", true, false, 25))),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.MediaType, "assets", "Assets", SynchronizationStatus.Failed, "Conflict"),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        var item = result.MediaTypes.Single();
+        item.Collection.ShouldNotBeNull().List.ShouldBeTrue();
+        item.Collection.Grid.ShouldBeFalse();
+        item.Collection.PageSize.ShouldBe(25);
+        item.Status.ShouldBe("Failed");
+        item.Message.ShouldBe("Conflict");
+    }
+
+    [Fact]
     public void Map_DefinitionsAndReportStatuses_OrdersDefinitionsAndUsesStatuses() {
         // Arrange
         var registry = new TestRegistry([
@@ -98,6 +164,7 @@ public class CodeFirstStatusMappingTests {
         result.Definitions.Single(item => item.Alias == "productPage").ShouldSatisfyAllConditions(
             item => item.Status.ShouldBe(nameof(SynchronizationStatus.Created)),
             item => item.PropertyCount.ShouldBe(1),
+            item => item.Groups.Single().Alias.ShouldBe("commerce/pricing"),
             item => item.BackofficeUrl.ShouldBe(
                 "/umbraco/section/settings/workspace/document-type/edit/product-key"),
             item => item.Properties.Single().ShouldSatisfyAllConditions(
@@ -169,6 +236,53 @@ public class CodeFirstStatusMappingTests {
         // Assert
         result.SkippedCount.ShouldBe(1);
         result.Definitions.Single().Message.ShouldBe("Managed externally.");
+    }
+
+    [Fact]
+    public void Map_DuplicateAliases_MapsEachResultWithoutCrashing() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "First", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Second", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", null, []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Second", SynchronizationStatus.Failed, "Second failed."),
+            new(CodeFirstDefinitionKind.DocumentType, "codeEditor", "Document", SynchronizationStatus.Created),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "First", SynchronizationStatus.Failed, "First failed."),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.DataTypeCount.ShouldBe(2);
+        result.FailedCount.ShouldBe(2);
+        result.DataTypes.Single(item => item.Name == "First").Message.ShouldBe("First failed.");
+        result.DataTypes.Single(item => item.Name == "Second").Message.ShouldBe("Second failed.");
+        result.DocumentTypes.Single().Status.ShouldBe(nameof(SynchronizationStatus.Created));
+    }
+
+    [Fact]
+    public void Map_DuplicateAliasesWithSameNameAndIncompleteReport_DoesNotReuseResult() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", "Umbraco.Plain.String", []),
+        ]);
+        var reports = new SynchronizationReportStore();
+        reports.Set(new SynchronizationReport(DateTimeOffset.UtcNow, [
+            new(CodeFirstDefinitionKind.DataType, "codeEditor", "Code Editor", SynchronizationStatus.Failed, "Conflict."),
+        ]));
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, reports);
+
+        // Assert
+        result.DataTypes.Select(item => item.Status).ShouldBe(["Failed", "Skipped"]);
+        result.DataTypes[0].Message.ShouldBe("Conflict.");
+        result.DataTypes[1].Message.ShouldBe("No synchronization result is available for this definition.");
     }
 
     [Fact]

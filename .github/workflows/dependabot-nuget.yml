@@ -11,6 +11,7 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   NUGET_CERT_REVOCATION_MODE: offline
+  RUN_UMBRACO_INTEGRATION_TESTS: true
 
 jobs:
 
@@ -30,8 +31,15 @@ jobs:
     - name: Restore NuGet packages
       run: dotnet restore --verbosity minimal
 
+    - name: Build .NET solution
+      run: dotnet build --configuration Release --no-restore
+
     - name: Run .NET tests
-      run: dotnet test --no-build --configuration Release --no-progress
+      run: dotnet test --coverage --coverage-output-format cobertura --coverage-settings ./test/coverage.config --report-trx --no-build --configuration Release --no-progress
+
+    - name: Test packaged consumer startup
+      shell: pwsh
+      run: ./scripts/test-package-consumer.ps1
 
   net-build:
     name: .NET build
