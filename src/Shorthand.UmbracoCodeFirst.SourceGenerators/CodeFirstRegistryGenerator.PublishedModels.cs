@@ -72,7 +72,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.AppendLine(")]");
         builder.Append("public partial class ");
         builder.Append(definition.Name);
-        builder.AppendLine(" : PublishedContentModel {");
+        builder.AppendLine(isElement ? " : PublishedElementModel {" : " : PublishedContentModel {");
         builder.Indent++;
         AppendPropertyAliases(builder, definition, context);
         builder.AppendLine("#pragma warning disable 0109");
@@ -106,7 +106,9 @@ public sealed partial class CodeFirstRegistryGenerator {
         AppendGeneratedCodeAttribute(builder);
         builder.Append("public ");
         builder.Append(definition.Name);
-        builder.AppendLine("(IPublishedContent content, IPublishedValueFallback publishedValueFallback)");
+        builder.AppendLine(isElement
+            ? "(IPublishedElement content, IPublishedValueFallback publishedValueFallback)"
+            : "(IPublishedContent content, IPublishedValueFallback publishedValueFallback)");
         builder.AppendLine("    : base(content, publishedValueFallback) {");
         builder.Indent++;
         builder.AppendLine("_publishedValueFallback = publishedValueFallback;");

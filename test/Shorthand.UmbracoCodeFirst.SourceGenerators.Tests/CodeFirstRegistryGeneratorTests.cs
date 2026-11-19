@@ -420,13 +420,28 @@ public class CodeFirstRegistryGeneratorTests {
                 {
                     public string Path { get; } = path;
                 }
+
+                public sealed class UCFPropertyAttribute(string name, string dataTypeAlias)
+                    : global::System.Attribute { }
+
+                [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = true)]
+                public sealed class UCFCompositeAttribute(global::System.Type contentType)
+                    : global::System.Attribute { }
             }
 
             namespace Example
             {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFElementType("baseElement")]
+                public partial class BaseElement;
+
                 [Shorthand.UmbracoCodeFirst.Attributes.UCFElementType("seoElement")]
                 [Shorthand.UmbracoCodeFirst.Attributes.UCFFolderPath("Elements/SEO")]
-                public partial class SeoElement;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFComposite(typeof(BaseElement))]
+                public partial class SeoElement
+                {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Title", "textstring")]
+                    public partial string Title { get; }
+                }
             }
             """;
 
@@ -459,7 +474,11 @@ public class CodeFirstRegistryGeneratorTests {
         registrySource.ShouldContain("CodeFirstTypeSettings(");
         registrySource.ShouldContain("true,");
         registrySource.ShouldContain("\"Elements/SEO\"");
+        registrySource.ShouldContain("new global::System.String[] { \"baseElement\" }");
+        modelSource.ShouldContain("public partial class SeoElement : PublishedElementModel");
+        modelSource.ShouldContain("public SeoElement(IPublishedElement content, IPublishedValueFallback publishedValueFallback)");
         modelSource.ShouldContain("ModelItemType = PublishedItemType.Element");
+        modelSource.ShouldContain("public partial global::System.String Title => this.Value<global::System.String>(_publishedValueFallback, \"title\")");
     }
 
     [Theory]
@@ -599,6 +618,8 @@ public class CodeFirstRegistryGeneratorTests {
         generatedSource.ShouldNotContain("NotAModel");
         modelSource.ShouldContain("[PublishedModel(\"article\")]");
         modelSource.ShouldContain("public partial class Article : PublishedContentModel");
+        modelSource.ShouldContain("public Article(IPublishedContent content, IPublishedValueFallback publishedValueFallback)");
+        modelSource.ShouldContain("ModelItemType = PublishedItemType.Content");
         modelSource.ShouldContain("public new const string ModelTypeAlias = \"article\";");
         modelSource.ShouldContain("public new static IPublishedContentType GetModelContentType");
         modelSource.ShouldContain("public static IPublishedPropertyType GetModelPropertyType<TValue>");

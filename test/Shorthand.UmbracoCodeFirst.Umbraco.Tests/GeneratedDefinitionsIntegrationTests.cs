@@ -16,6 +16,7 @@ using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.Editors;
 using Umbraco.Cms.Core.PropertyEditors;
+using Umbraco.Cms.Core.PublishedCache;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Strings;
 using Xunit.Sdk;
@@ -586,6 +587,9 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         var element = services.GetRequiredService<IContentTypeService>().Get(CodeBlock.ModelTypeAlias);
         element.ShouldNotBeNull();
         element.PropertyTypes.Single(property => property.Alias == "code").DataTypeKey.ShouldBe(dataType.Key);
+        var publishedTypes = services.GetRequiredService<IPublishedContentTypeCache>();
+        CodeBlock.GetModelContentType(publishedTypes).ShouldNotBeNull().Alias.ShouldBe(CodeBlock.ModelTypeAlias);
+        CodeBlock.GetModelPropertyType(publishedTypes, model => model.Code).ShouldNotBeNull().Alias.ShouldBe("code");
         var blockList = (await dataTypes.GetAllAsync()).Single(item => item.Name == "Blog Post Content");
         JsonSerializer.SerializeToElement(blockList.ConfigurationData["blocks"]).EnumerateArray()
             .ShouldContain(block => block.GetProperty("contentElementTypeKey").GetGuid() == element.Key);

@@ -24,12 +24,15 @@ Each definition carries:
 
 ### Published models – `<Type>.PublishedModel.g.cs`
 
-For every `UCFDocument` class a partial implementation is emitted in the class's own namespace:
+For every `UCFDocument` and `UCFElementType` class a partial implementation is emitted in the
+class's own namespace:
 
-- `[PublishedModel("alias")]` and `: PublishedContentModel`
+- `[PublishedModel("alias")]` and `: PublishedContentModel` for documents, or
+  `: PublishedElementModel` for elements
 - `ModelTypeAlias`, `ModelItemType` (`Content`, or `Element` for `UCFElementType`),
   `GetModelContentType`, `GetModelPropertyType<TValue>`
-- a constructor `(IPublishedContent, IPublishedValueFallback)`
+- a constructor `(IPublishedContent, IPublishedValueFallback)` for documents, or
+  `(IPublishedElement, IPublishedValueFallback)` for elements
 - one generated property per `UCFProperty`, implemented with
   `this.Value<T>(_publishedValueFallback, "alias")` and decorated with
   `[ImplementPropertyType("alias")]`
