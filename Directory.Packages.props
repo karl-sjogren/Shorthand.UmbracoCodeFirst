@@ -7,20 +7,20 @@
     -->
     <UmbracoAppLocalIcuVersion Condition="'$(UmbracoAppLocalIcuVersion)' == ''">72.1.0.3</UmbracoAppLocalIcuVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <GlobalPackageReference Include="DotNet.ReproducibleBuilds" Version="2.0.5" />
     <GlobalPackageReference Include="Karls.Analyzers" Version="0.4.3" />
     <GlobalPackageReference Include="Roslynator.Analyzers" Version="5.0.1" />
     <GlobalPackageReference Include="Roslynator.Formatting.Analyzers" Version="5.0.1" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="17.0.0" />
     <PackageVersion Include="Aspire.Hosting.Azure.Sql" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -61,7 +61,6 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
-
   <!-- Transitive pinnings -->
   <ItemGroup>
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="[10.0.15,11.0.0)" />

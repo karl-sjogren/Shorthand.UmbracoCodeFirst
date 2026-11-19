@@ -2,7 +2,7 @@ using Umbraco.Aspire.AppHost.Extensions;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var umbraco = builder.AddUmbracoProject<Projects.Shorthand_UmbracoCodeFirst_Umbraco>("umbraco-codefirst");
+var umbraco = builder.AddUmbracoProject("umbraco-codefirst");
 
 builder
     .AddSqlServer(umbraco, "umbraco-codefirst-sql", "umbraco-codefirst-sqldb")

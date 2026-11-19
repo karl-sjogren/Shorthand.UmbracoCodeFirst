@@ -1,9 +1,11 @@
+using Aspire.Hosting.Dotnet;
+
 namespace Umbraco.Aspire.AppHost.Extensions;
 
 internal static partial class IDistributedApplicationBuilderExtensions {
     public static IDistributedApplicationBuilder AddAzureStorage(
             this IDistributedApplicationBuilder builder,
-            IResourceBuilder<ProjectResource> umbracoProject,
+            IResourceBuilder<DotnetProjectResource> umbracoProject,
             string accountName,
             string containerName) {
         var storage = builder
