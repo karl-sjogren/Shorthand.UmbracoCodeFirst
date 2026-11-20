@@ -114,6 +114,7 @@ public sealed partial class CodeFirstRegistryGenerator {
                     continue;
                 }
 
+                propertyAttribute = GetReboundAttribute(propertyAttribute, templateCompilation);
                 var propertySyntax = FindAttributeSyntax(property, _propertyAttributeMetadataName);
                 var (propertyName, propertyAlias) = GetPropertyMetadata(propertyAttribute, propertySyntax);
                 var dataTypeAlias = GetDataTypeArgument(propertyAttribute, dataTypeAliases, propertySyntax);
@@ -255,12 +256,16 @@ public sealed partial class CodeFirstRegistryGenerator {
     }
 
     private static AttributeData GetReboundAttribute(AttributeData attribute, Compilation compilation) {
-        if(attribute.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax syntax
-            || syntax.FirstAncestorOrSelf<ClassDeclarationSyntax>() is not { } declaration) {
+        if(attribute.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax syntax) {
             return attribute;
         }
 
-        var symbol = compilation.GetSemanticModel(syntax.SyntaxTree).GetDeclaredSymbol(declaration);
+        var model = compilation.GetSemanticModel(syntax.SyntaxTree);
+        ISymbol? symbol = syntax.FirstAncestorOrSelf<PropertyDeclarationSyntax>() is { } property
+            ? model.GetDeclaredSymbol(property)
+            : syntax.FirstAncestorOrSelf<ClassDeclarationSyntax>() is { } declaration
+                ? model.GetDeclaredSymbol(declaration)
+                : null;
         return symbol?.GetAttributes().FirstOrDefault(candidate =>
             candidate.ApplicationSyntaxReference?.SyntaxTree == syntax.SyntaxTree
             && candidate.ApplicationSyntaxReference.Span == syntax.Span) ?? attribute;

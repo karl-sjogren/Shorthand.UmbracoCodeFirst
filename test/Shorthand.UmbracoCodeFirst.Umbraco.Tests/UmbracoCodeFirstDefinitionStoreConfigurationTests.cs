@@ -11,6 +11,82 @@ using Umbraco.Cms.Core.Services.OperationStatus;
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 
 public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
+    [Theory]
+    [InlineData(true, SynchronizationStatus.Unchanged)]
+    [InlineData(false, SynchronizationStatus.Updated)]
+    public async Task ApplyAsync_SuffixedDataTypeName_DependsOnExistingCollision_Async(
+        bool hasCollision,
+        SynchronizationStatus expectedStatus) {
+        // Arrange
+        var dataType = A.Fake<IDataType>();
+        dataType.Name = "Picker (1)";
+        dataType.ParentId = -1;
+        dataType.ConfigurationData = new Dictionary<string, object> { ["shorthand.umbraco-codefirst"] = "picker" };
+        A.CallTo(() => dataType.Key).Returns(Guid.NewGuid());
+        A.CallTo(() => dataType.EditorAlias).Returns("Umbraco.MediaPicker3");
+        dataType.EditorUiAlias = "Umb.PropertyEditorUi.MediaPicker";
+        var other = A.Fake<IDataType>();
+        A.CallTo(() => other.Key).Returns(Guid.NewGuid());
+        A.CallTo(() => other.Name).Returns(hasCollision ? "Picker" : "Other");
+        other.ConfigurationData = new Dictionary<string, object>();
+        var dataTypeService = A.Fake<IDataTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([dataType, other]));
+        A.CallTo(() => dataTypeService.UpdateAsync(dataType, A<Guid>._))
+            .Returns(Attempt.SucceedWithStatus(DataTypeOperationStatus.Success, dataType));
+        var store = new UmbracoCodeFirstDefinitionStore(
+            dataTypeService, null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType, "picker", "Picker", "Umbraco.MediaPicker3", [],
+            EditorUiAlias: "Umb.PropertyEditorUi.MediaPicker");
+
+        // Act
+        var status = await store.ApplyAsync(definition, CancellationToken.None);
+
+        // Assert
+        status.Status.ShouldBe(expectedStatus);
+        dataType.Name.ShouldBe(hasCollision ? "Picker (1)" : "Picker");
+        A.CallTo(() => dataTypeService.UpdateAsync(dataType, A<Guid>._))
+            .MustHaveHappened(hasCollision ? 0 : 1, Times.Exactly);
+    }
+
+    [Theory]
+    [InlineData("""{"items":["csharp","javascript"],"nested":{"enabled":true,"count":3}}""")]
+    [InlineData("{}")]
+    public async Task ApplyAsync_UnchangedConfiguration_DoesNotUpdate_Async(string json) {
+        // Arrange
+        var dataType = A.Fake<IDataType>();
+        var configuration = new Dictionary<string, object> {
+            ["shorthand.umbraco-codefirst"] = "codingLanguage",
+            ["items"] = new[] { "csharp", "javascript" },
+            ["nested"] = new Dictionary<string, object> { ["count"] = 3, ["enabled"] = true },
+            ["manualSetting"] = "preserved",
+        };
+        A.CallTo(() => dataType.ConfigurationData).Returns(configuration);
+        A.CallTo(() => dataType.Name).Returns("Coding language");
+        A.CallTo(() => dataType.ParentId).Returns(-1);
+        A.CallTo(() => dataType.EditorAlias).Returns("Umbraco.DropDown.Flexible");
+        A.CallTo(() => dataType.EditorUiAlias).Returns("Umb.PropertyEditorUi.Dropdown");
+        var dataTypeService = A.Fake<IDataTypeService>();
+        A.CallTo(() => dataTypeService.GetAllAsync())
+            .Returns(Task.FromResult<IEnumerable<IDataType>>([dataType]));
+        var store = new UmbracoCodeFirstDefinitionStore(
+            dataTypeService, null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!, null!, null!, NullLogger<UmbracoCodeFirstDefinitionStore>.Instance);
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DataType, "codingLanguage", "Coding language", "Umbraco.DropDown.Flexible", [],
+            ConfigurationJson: json, EditorUiAlias: "Umb.PropertyEditorUi.Dropdown");
+
+        // Act
+        var status = await store.ApplyAsync(definition, CancellationToken.None);
+
+        // Assert
+        status.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        configuration["manualSetting"].ShouldBe("preserved");
+        A.CallTo(() => dataTypeService.UpdateAsync(A<IDataType>._, A<Guid>._)).MustNotHaveHappened();
+    }
+
     [Fact]
     public async Task ApplyAsync_FailedBlockUpdate_RestoresInMemoryConfiguration_Async() {
         // Arrange
@@ -78,9 +154,12 @@ public class UmbracoCodeFirstDefinitionStoreConfigurationTests {
 
         // Act
         var status = await store.ApplyAsync(definition, CancellationToken.None);
+        var repeated = await store.ApplyAsync(definition, CancellationToken.None);
 
         // Assert
         status.Status.ShouldBe(SynchronizationStatus.Updated);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        A.CallTo(() => dataTypeService.UpdateAsync(dataType, A<Guid>._)).MustHaveHappenedOnceExactly();
         var items = configuration["items"].ShouldBeAssignableTo<IEnumerable<string>>();
         var validator = new ValueListUniqueValueValidator(A.Fake<IConfigurationEditorJsonSerializer>());
         validator.Validate(items, null, null, null!).ShouldBeEmpty();

@@ -122,7 +122,7 @@ public class PackageConsumerStartupTests : IDisposable {
         restartReport.Error.ShouldBeNull();
         restartReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text"
-            && (item.Status == SynchronizationStatus.Updated || item.Status == SynchronizationStatus.Unchanged));
+            && item.Status == SynchronizationStatus.Unchanged);
         restartReport.FailedCount.ShouldBe(0);
         restartReport.Items.ShouldContain(item =>
             item.Kind == CodeFirstDefinitionKind.Template && item.Alias == "packageConsumer"
@@ -134,13 +134,13 @@ public class PackageConsumerStartupTests : IDisposable {
         upgradeReport.Error.ShouldBeNull();
         upgradeReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text"
-            && (item.Status == SynchronizationStatus.Updated || item.Status == SynchronizationStatus.Unchanged));
+            && item.Status == SynchronizationStatus.Unchanged);
         upgradeReport.FailedCount.ShouldBe(0);
         runtimeRestartReport.ShouldNotBeSameAs(upgradeReport);
         runtimeRestartReport.FailedCount.ShouldBe(0);
         runtimeRestartReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text"
-            && (item.Status == SynchronizationStatus.Updated || item.Status == SynchronizationStatus.Unchanged));
+            && item.Status == SynchronizationStatus.Unchanged);
     }
 
     private static async Task<WebApplication> CreateApplicationAsync(string connectionString) {

@@ -6,6 +6,44 @@ namespace Shorthand.UmbracoCodeFirst.SourceGenerators.Tests;
 
 public class CodeFirstRegistryGeneratorTests {
     [Fact]
+    public void GenerateRegistry_GeneratedDataTypeAlias_PreservesNamedPropertySettings() {
+        // Arrange
+        const string source = """
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDocumentAttribute(string name) : global::System.Attribute;
+                public sealed class UCFDataTypeAttribute(string name, string editor, string ui) : global::System.Attribute;
+                public sealed class UCFPropertyAttribute(string name, string dataTypeAlias) : global::System.Attribute {
+                    public int SortOrder { get; set; }
+                    public bool Mandatory { get; set; }
+                    public bool LabelOnTop { get; set; }
+                }
+            }
+            namespace Example {
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDataType("Text", "editor", "ui")]
+                public partial class Text;
+                [Shorthand.UmbracoCodeFirst.Attributes.UCFDocument("Page")]
+                public partial class Page {
+                    [Shorthand.UmbracoCodeFirst.Attributes.UCFProperty("Headline", Text.Alias, SortOrder = 7, Mandatory = true, LabelOnTop = true)]
+                    public string Headline { get; }
+                }
+            }
+            """;
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CodeFirstRegistryGenerator().AsSourceGenerator());
+        var compilation = CSharpCompilation.Create(
+            "GeneratorTests",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(item => item.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        registry.ShouldContain("\"headline\", \"Headline\", \"text\", null, null, null, 0, null, null, 0, 7, true, null, null, true, null");
+    }
+
+    [Fact]
     public void GenerateRegistry_DataTypeKey_EmitsKeyAndRejectsInvalidReferences() {
         // Arrange
         const string source = """

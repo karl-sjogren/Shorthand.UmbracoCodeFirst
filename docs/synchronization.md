@@ -175,6 +175,10 @@ For an existing **owned** Document Type, the following are reconciled:
   mandatory, validation expression/message and label-on-top updated, and are moved to the desired
   tab/group. Their Data Type is updated when the old and new storage types match.
 
+Properties with the same sort order retain their declaration order within a tab or group.
+Manually managed properties keep their positions; managed properties use the next available
+sort positions when there is a collision.
+
 Changing a property's Data Type does not migrate or convert its existing values. Editors can use
 different value formats even when their storage types match, so check existing content and plan any
 needed migration before changing the definition. A change to a different storage type fails

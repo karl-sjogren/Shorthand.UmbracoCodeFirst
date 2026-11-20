@@ -85,7 +85,7 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     return;
                 }
 
-                var templateCompilation = input.Left.Right;
+                var templateCompilation = EmitDataTypeAliases(productionContext, distinctDefinitions, input.Left.Right);
                 if(templateDefinitions.Count > 0) {
                     var source = BuildTemplateAliases(templateDefinitions);
                     productionContext.AddSource("UmbracoTemplates.g.cs", source);
@@ -97,7 +97,6 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 EmitRegistry(productionContext, distinctDefinitions, input.Left.Right, templateCompilation, templateDefinitions);
                 EmitPublishedModels(productionContext, distinctDefinitions, input.Left.Right);
                 EmitOtherPropertyAliases(productionContext, distinctDefinitions);
-                EmitDataTypeAliases(productionContext, distinctDefinitions);
             });
     }
 

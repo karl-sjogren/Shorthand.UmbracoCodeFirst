@@ -185,7 +185,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return SynchronizationStatus.Updated;
     }
 
-    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition, bool onlyIfChanged = false) {
+    private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
         var configurationJson = definition.EditorConfiguration is { } editorConfiguration
             && (editorConfiguration.BlockTypes is not null || editorConfiguration.BlockGroups is not null
                 || editorConfiguration.TypedSettings is not null)
@@ -205,19 +205,17 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             }
 
             _ownedDataTypes[definition.Alias] = existing;
-            var typedBlockConfiguration = definition.EditorConfiguration is { } configuration
-                && (configuration.BlockTypes is not null || configuration.BlockGroups is not null
-                    || configuration.TypedSettings is not null);
             var oldName = existing.Name;
             var oldParentId = existing.ParentId;
             var oldEditorUiAlias = existing.EditorUiAlias;
             var oldEditor = existing.Editor;
-            var oldConfiguration = typedBlockConfiguration || replacementEditor is not null || onlyIfChanged
-                ? new Dictionary<string, object>(existing.ConfigurationData)
-                : null;
+            var oldConfiguration = new Dictionary<string, object>(existing.ConfigurationData);
             try {
-                var changed = existing.Name != definition.Name;
-                existing.Name = definition.Name;
+                var nameMatches = await DataTypeNameMatchesAsync(existing, definition.Name);
+                var changed = !nameMatches;
+                if(!nameMatches) {
+                    existing.Name = definition.Name;
+                }
 
                 var parentId = await GetDataTypeParentIdAsync(definition.FolderPath);
                 if(existing.ParentId != parentId) {
@@ -249,18 +247,16 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     logger.LogDebug("Applying configuration for data type {DefinitionAlias}", definition.Alias);
                 }
 
-                changed |= ApplyConfiguration(existing, configurationJson, typedBlockConfiguration || onlyIfChanged);
+                changed |= ApplyConfiguration(existing, configurationJson);
                 return !changed
                     ? SynchronizationStatus.Unchanged
                     : await UpdateDataTypeAsync(existing, definition);
             } catch {
-                if(oldConfiguration is not null) {
-                    existing.Name = oldName;
-                    existing.ParentId = oldParentId;
-                    existing.EditorUiAlias = oldEditorUiAlias;
-                    existing.Editor = oldEditor;
-                    existing.ConfigurationData = oldConfiguration;
-                }
+                existing.Name = oldName;
+                existing.ParentId = oldParentId;
+                existing.EditorUiAlias = oldEditorUiAlias;
+                existing.Editor = oldEditor;
+                existing.ConfigurationData = oldConfiguration;
 
                 throw;
             }
@@ -311,6 +307,23 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         _ownedDataTypes[definition.Alias] = result.Result;
 
         return SynchronizationStatus.Updated;
+    }
+
+    private async Task<bool> DataTypeNameMatchesAsync(IDataType dataType, string desiredName) {
+        if(string.Equals(dataType.Name, desiredName, StringComparison.Ordinal)) {
+            return true;
+        }
+
+        var prefix = desiredName + " (";
+        if(dataType.Name is null || !dataType.Name.StartsWith(prefix, StringComparison.Ordinal)
+            || !dataType.Name.EndsWith(')')
+            || !int.TryParse(dataType.Name.AsSpan(prefix.Length, dataType.Name.Length - prefix.Length - 1), out var suffix)
+            || suffix < 1 || dataType.Name != $"{desiredName} ({suffix})") {
+            return false;
+        }
+
+        return (await dataTypeService.GetAllAsync()).Any(other =>
+            other.Key != dataType.Key && string.Equals(other.Name, desiredName, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<SynchronizationStatus> ApplyDocumentTypeAsync(CodeFirstDefinition definition) {
@@ -460,7 +473,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             [],
             ConfigurationJson: configuration.ToJsonString(),
             EditorUiAlias: "Umb.PropertyEditorUi.Collection");
-        var status = await ApplyDataTypeAsync(dataTypeDefinition, onlyIfChanged: true);
+        var status = await ApplyDataTypeAsync(dataTypeDefinition);
         var dataType = await FindOwnedDataTypeAsync(alias)
             ?? throw new InvalidOperationException($"Could not find the collection data type for '{definition.Alias}'.");
         var changed = contentType.ListView != dataType.Key;
@@ -717,8 +730,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
     private static bool ApplyConfiguration(
         IDataType dataType,
-        string? configurationJson,
-        bool onlyIfChanged = false) {
+        string? configurationJson) {
         if(string.IsNullOrWhiteSpace(configurationJson)) {
             return false;
         }
@@ -730,8 +742,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
         var changed = false;
         foreach(var item in configuration) {
-            if(onlyIfChanged
-                && dataType.ConfigurationData.TryGetValue(item.Key, out var existing)
+            if(dataType.ConfigurationData.TryGetValue(item.Key, out var existing)
                 && (JsonNode.DeepEquals(
                     JsonSerializer.SerializeToNode(existing),
                     JsonNode.Parse(item.Value.GetRawText()))
@@ -744,7 +755,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             changed = true;
         }
 
-        return onlyIfChanged ? changed : true;
+        return changed;
     }
 
     private static object ConvertJsonElement(JsonElement element) =>
@@ -770,8 +781,30 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             IContentTypeComposition contentType,
             CodeFirstDefinition definition) {
         var changed = ApplyPropertyGroups(contentType, definition);
+        var sortOrders = new Dictionary<string, int>(StringComparer.Ordinal);
+        var ownedAliases = definition.Properties.Select(property => property.Alias).ToHashSet(StringComparer.Ordinal);
+        foreach(var group in definition.Properties.GroupBy(property => property.EffectiveGroupAlias, StringComparer.Ordinal)) {
+            var groupProperties = group.Key is null
+                ? contentType.PropertyTypes.Where(property => !contentType.PropertyGroups.Any(existingGroup =>
+                    existingGroup.PropertyTypes?.Any(candidate => candidate.Alias == property.Alias) == true))
+                : contentType.PropertyGroups.FirstOrDefault(existingGroup => existingGroup.Alias == group.Key)?.PropertyTypes
+                    ?.AsEnumerable() ?? [];
+            var reserved = groupProperties.Where(property => !ownedAliases.Contains(property.Alias))
+                .Select(property => property.SortOrder).ToHashSet();
+            int? previous = null;
+            foreach(var property in group.OrderBy(property => property.SortOrder)) {
+                var sortOrder = previous is null ? property.SortOrder : Math.Max(property.SortOrder, checked(previous.Value + 1));
+                while(reserved.Contains(sortOrder)) {
+                    sortOrder = checked(sortOrder + 1);
+                }
+
+                sortOrders[property.Alias] = sortOrder;
+                previous = sortOrder;
+            }
+        }
 
         foreach(var property in definition.Properties) {
+            var sortOrder = sortOrders[property.Alias];
             IDataType? dataType;
             if(property.DataTypeKey is not null) {
                 if(!string.IsNullOrWhiteSpace(property.DataTypeAlias)
@@ -816,7 +849,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                     changed = true;
                 }
 
-                if(ApplyPropertySettings(existingProperty, property)) {
+                if(ApplyPropertySettings(existingProperty, property, sortOrder)) {
                     logger.LogDebug(
                         "Updating property {PropertyAlias} on {DefinitionKind} {DefinitionAlias}",
                         property.Alias,
@@ -855,7 +888,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
                 Name = property.Name,
             };
 
-            ApplyPropertySettings(propertyType, property);
+            ApplyPropertySettings(propertyType, property, sortOrder);
 
             if(string.IsNullOrWhiteSpace(desiredGroupAlias)) {
                 contentType.AddPropertyType(propertyType);
@@ -870,7 +903,7 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
 
             var addedProperty = contentType.PropertyTypes.FirstOrDefault(candidate => candidate.Alias == property.Alias);
             if(addedProperty is not null) {
-                ApplyPropertySettings(addedProperty, property);
+                ApplyPropertySettings(addedProperty, property, sortOrder);
             }
 
             logger.LogDebug(
@@ -1129,7 +1162,10 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
         return changed;
     }
 
-    private static bool ApplyPropertySettings(IPropertyType propertyType, CodeFirstPropertyDefinition definition) {
+    private static bool ApplyPropertySettings(
+            IPropertyType propertyType,
+            CodeFirstPropertyDefinition definition,
+            int sortOrder) {
         var changed = false;
 
         if(propertyType.Name != definition.Name) {
@@ -1142,8 +1178,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
             changed = true;
         }
 
-        if(propertyType.SortOrder != definition.SortOrder) {
-            propertyType.SortOrder = definition.SortOrder;
+        if(propertyType.SortOrder != sortOrder) {
+            propertyType.SortOrder = sortOrder;
             changed = true;
         }
 

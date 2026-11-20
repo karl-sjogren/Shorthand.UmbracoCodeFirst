@@ -15,6 +15,7 @@ using Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
 using Shorthand.UmbracoCodeFirst.Umbraco.Models.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
+using Umbraco.Cms.Core.Cache;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.Editors;
 using Umbraco.Cms.Core.Models.PublishedContent;
@@ -31,6 +32,143 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 [Collection("Umbraco integration")]
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
+    [Fact]
+    public async Task SynchronizeAsync_GeneratedDefinitions_AreUnchangedAfterReload_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var registry = new GeneratedCodeFirstDefinitionRegistry();
+        CodeFirstSynchronizer CreateSynchronizer() => new(
+            registry,
+            ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services),
+            new SynchronizationReportStore(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var token = TestContext.Current.CancellationToken;
+
+        // Act
+        var first = await CreateSynchronizer().SynchronizeAsync(token);
+        var second = await CreateSynchronizer().SynchronizeAsync(token);
+        var third = await CreateSynchronizer().SynchronizeAsync(token);
+
+        // Assert
+        first.Items.Where(item => item.Status == SynchronizationStatus.Failed)
+            .Select(item => $"{item.Alias}: {item.Message}").ShouldBeEmpty();
+        second.Items.Where(item => item.Status != SynchronizationStatus.Unchanged)
+            .Select(item => $"{item.Kind} {item.Alias}: {item.Status} {item.Message}").ShouldBeEmpty();
+        var article = registry.Definitions.Single(item => item.Alias == "article");
+        article.Properties.Single(property => property.Alias == "bodyText").SortOrder.ShouldBe(1);
+        article.Properties.Single(property => property.Alias == "title").Mandatory.ShouldBeTrue();
+        third.Items.Where(item => item.Status != SynchronizationStatus.Unchanged)
+            .Select(item => $"{item.Kind} {item.Alias}: {item.Status} {item.Message}").ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(CodeFirstDefinitionKind.DocumentType)]
+    [InlineData(CodeFirstDefinitionKind.MediaType)]
+    [InlineData(CodeFirstDefinitionKind.MemberType)]
+    public async Task Store_DuplicatePropertySortOrders_ConvergeAndApplyChanges_Async(CodeFirstDefinitionKind kind) {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        UmbracoCodeFirstDefinitionStore CreateStore() =>
+            ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var token = TestContext.Current.CancellationToken;
+        var key = Constants.DataTypes.Guids.MediaPicker3SingleImage;
+        var definition = new CodeFirstDefinition(
+            kind, $"integrationOrder{kind}", $"Integration Order {kind}", null, [
+                new("first", "First", "", DataTypeKey: key),
+                new("second", "Second", "", DataTypeKey: key),
+                new("third", "Third", "", SortOrder: 2, DataTypeKey: key),
+            ]);
+        var changed = definition with {
+            Properties = [
+                definition.Properties[0] with { Mandatory = true },
+                definition.Properties[1],
+                definition.Properties[2] with { SortOrder = -1 },
+            ],
+        };
+
+        // Act
+        var created = await CreateStore().ApplyAsync(definition, token);
+        var unchanged = await CreateStore().ApplyAsync(definition, token);
+        var updated = await CreateStore().ApplyAsync(changed, token);
+        var repeated = await CreateStore().ApplyAsync(changed, token);
+        IContentTypeComposition? persisted = kind switch {
+            CodeFirstDefinitionKind.DocumentType => services.GetRequiredService<IContentTypeService>().Get(definition.Alias),
+            CodeFirstDefinitionKind.MediaType => services.GetRequiredService<IMediaTypeService>().Get(definition.Alias),
+            CodeFirstDefinitionKind.MemberType => services.GetRequiredService<IMemberTypeService>().Get(definition.Alias),
+            _ => null,
+        };
+
+        // Assert
+        created.Status.ShouldBe(SynchronizationStatus.Created);
+        unchanged.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        updated.Status.ShouldBe(SynchronizationStatus.Updated);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        persisted.ShouldNotBeNull().PropertyTypes.OrderBy(property => property.SortOrder)
+            .Select(property => property.Alias).ShouldBe(["third", "first", "second"]);
+        persisted.PropertyTypes.Single(property => property.Alias == "first").Mandatory.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Store_ManualPropertyWithCollidingSortOrder_Converges_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        UmbracoCodeFirstDefinitionStore CreateStore() =>
+            ActivatorUtilities.CreateInstance<UmbracoCodeFirstDefinitionStore>(services);
+        var types = services.GetRequiredService<IContentTypeService>();
+        var token = TestContext.Current.CancellationToken;
+        var key = Constants.DataTypes.Guids.MediaPicker3SingleImage;
+        var definition = new CodeFirstDefinition(
+            CodeFirstDefinitionKind.DocumentType, "integrationReversedOrder", "Integration Reversed Order", null, [
+                new("first", "First", "", GroupAlias: "group", TabAlias: "tab", DataTypeKey: key),
+                new("second", "Second", "", GroupAlias: "group", TabAlias: "tab", DataTypeKey: key),
+            ]);
+        (await CreateStore().ApplyAsync(definition, token)).Status.ShouldBe(SynchronizationStatus.Created);
+        var contentType = types.Get(definition.Alias).ShouldNotBeNull();
+        var dataType = (await services.GetRequiredService<IDataTypeService>().GetAllAsync())
+            .Single(item => item.Key == Guid.Parse(key));
+        contentType.AddPropertyType(
+            new PropertyType(services.GetRequiredService<IShortStringHelper>(), dataType, "manual") {
+                Name = "Manual",
+                SortOrder = 0,
+            }, "tab/group");
+        contentType.PropertyTypes.Single(property => property.Alias == "manual").SortOrder = 0;
+        contentType.PropertyTypes.Single(property => property.Alias == "first").SortOrder = 0;
+        contentType.PropertyTypes.Single(property => property.Alias == "second").SortOrder = 1;
+        (await types.UpdateAsync(contentType, Constants.Security.SuperUserKey)).Success.ShouldBeTrue();
+        services.GetRequiredService<AppCaches>().IsolatedCaches.ClearCache<IContentType>();
+        var manualOrder = types.Get(definition.Alias).ShouldNotBeNull().PropertyTypes
+            .Single(property => property.Alias == "manual").SortOrder;
+
+        // Act
+        var updated = await CreateStore().ApplyAsync(definition, token);
+        services.GetRequiredService<AppCaches>().IsolatedCaches.ClearCache<IContentType>();
+        var repeated = await CreateStore().ApplyAsync(definition, token);
+        var persisted = types.Get(definition.Alias).ShouldNotBeNull();
+
+        // Assert
+        updated.Status.ShouldBeOneOf(SynchronizationStatus.Updated, SynchronizationStatus.Unchanged);
+        repeated.Status.ShouldBe(SynchronizationStatus.Unchanged);
+        persisted.PropertyTypes.Single(property => property.Alias == "manual").SortOrder.ShouldBe(manualOrder);
+        persisted.PropertyTypes.Where(property => property.Alias != "manual")
+            .OrderBy(property => property.SortOrder).Select(property => property.Alias).ShouldBe(["first", "second"]);
+    }
+
     [Fact]
     public async Task Store_MediaPicker_PersistsSettingsAndReferencesBuiltInWithoutChangingIt_Async() {
         // Arrange
