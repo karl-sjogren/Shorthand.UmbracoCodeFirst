@@ -50,6 +50,38 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it.each([
+    ["1.2.3", "1.2.3"],
+    [undefined, "codeFirst_versionUnknown"],
+  ])("shows the library version by the title, separate from synchronization", (version, expected) => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      status: unknown;
+      render: () => string;
+    };
+    view.status = {
+      version,
+      hasReport: false,
+      failedCount: 0,
+      dataTypes: [],
+      documentTypes: [],
+      elementTypes: [],
+      mediaTypes: [],
+      memberTypes: [],
+      templates: [],
+    };
+
+    // Act
+    const output = view.render();
+    const title = output.split('<div class="header-title">')[1].split("</div>")[0];
+    const synchronization = output.split('<div class="header-meta">')[1].split("</div>")[0];
+
+    // Assert
+    expect(title).toContain("codeFirst_version");
+    expect(title).toContain(expected);
+    expect(synchronization).not.toContain("codeFirst_version");
+  });
+
   it("places available navigation and source actions in the row popover", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {

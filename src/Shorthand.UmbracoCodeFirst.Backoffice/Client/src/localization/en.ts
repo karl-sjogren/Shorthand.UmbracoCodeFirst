@@ -6,9 +6,9 @@ export default {
     pageDescription:
       "Review the Umbraco types generated and synchronized from your C# models.",
     lastSynchronized: "Last synchronized",
-    version: "Version",
+    version: "Code First version",
     versionUnknown: "Unknown",
-    repository: "GitHub repository",
+    repository: "Code First on GitHub",
     actions: "Actions",
     actionsFor: "Actions for {0}",
     openInUmbraco: "Open in Umbraco",

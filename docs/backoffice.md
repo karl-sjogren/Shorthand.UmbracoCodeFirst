@@ -28,6 +28,7 @@ Umbraco backoffice at **Settings > Advanced > Code First**
   non-destructive cleanup preview for diagnostics and tooling.
 
 Links use the persisted Umbraco keys, so they appear once an item has actually been created.
+The project's GitHub repository is linked from the backoffice Help menu.
 
 The generated-code action requires the project containing the generated registry to be built in
 **Debug** and the running host to use the **Development** environment. If models are in a separate

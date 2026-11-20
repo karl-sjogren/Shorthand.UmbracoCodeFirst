@@ -68,7 +68,13 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
         <div class="header-content">
           <img class="header-logo" src=${logoUrl} alt="" />
           <div class="header-copy">
-            <h1>${this.localize.term("codeFirst_pageTitle")}</h1>
+            <div class="header-title">
+              <h1>${this.localize.term("codeFirst_pageTitle")}</h1>
+              <span class="library-version">
+                ${this.localize.term("codeFirst_version")}:
+                ${this.status.version || this.localize.term("codeFirst_versionUnknown")}
+              </span>
+            </div>
             <p>${this.localize.term("codeFirst_pageDescription")}</p>
             <div class="header-meta">
               <span
@@ -87,16 +93,6 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                     </span>
                   `
                 : ""}
-              <span>
-                ${this.localize.term("codeFirst_version")}:
-                ${this.status.version || this.localize.term("codeFirst_versionUnknown")}
-              </span>
-              <a
-                href="https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst"
-                target="_blank"
-                rel="noopener noreferrer"
-                >${this.localize.term("codeFirst_repository")}</a
-              >
             </div>
             ${this.status.synchronizationError
               ? html`<p class="status-error">${this.status.synchronizationError}</p>`
@@ -775,10 +771,22 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       background: #171b20;
     }
 
-    .header-copy h1 {
+    .header-title {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: var(--uui-size-2) var(--uui-size-3);
+    }
+
+    .header-title h1 {
       margin: 0;
       font-size: var(--uui-type-h3-size);
       line-height: 1.2;
+    }
+
+    .library-version {
+      color: var(--uui-color-text-alt);
+      font-size: 0.875rem;
     }
 
     .header-copy p {

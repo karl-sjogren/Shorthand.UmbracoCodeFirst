@@ -1,9 +1,16 @@
+import { UMB_HELP_MENU_ALIAS } from "@umbraco-cms/backoffice/help";
 import { UMB_WORKSPACE_CONDITION_ALIAS } from "@umbraco-cms/backoffice/workspace";
 
 const codeFirstEntityType = "shorthand-code-first";
 const codeFirstWorkspaceAlias = "Shorthand.UmbracoCodeFirst.Workspace";
 
 export const manifests: Array<UmbExtensionManifest> = [
+  {
+    type: "icons",
+    alias: "Shorthand.UmbracoCodeFirst.Icons",
+    name: "Shorthand Umbraco Code First Icons",
+    js: () => import("../icons/icons.js"),
+  },
   {
     type: "modal",
     alias: "Shorthand.UmbracoCodeFirst.Modal.GeneratedSource",
@@ -59,7 +66,7 @@ export const manifests: Array<UmbExtensionManifest> = [
     meta: {
       label: "#codeFirst_viewLabel",
       pathname: "overview",
-      icon: "icon-code",
+      icon: "shorthand-code-first",
     },
     conditions: [
       {
@@ -75,9 +82,21 @@ export const manifests: Array<UmbExtensionManifest> = [
     weight: 100,
     meta: {
       label: "#codeFirst_menuLabel",
-      icon: "icon-code",
+      icon: "shorthand-code-first",
       entityType: codeFirstEntityType,
       menus: ["Umb.Menu.AdvancedSettings"],
+    },
+  },
+  {
+    name: "Shorthand Umbraco Code First GitHub Repository",
+    alias: "Shorthand.UmbracoCodeFirst.MenuItem.Repository",
+    type: "menuItem",
+    kind: "link",
+    meta: {
+      label: "#codeFirst_repository",
+      icon: "shorthand-code-first",
+      href: "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst",
+      menus: [UMB_HELP_MENU_ALIAS],
     },
   },
 ];

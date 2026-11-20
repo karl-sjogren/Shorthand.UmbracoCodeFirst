@@ -45,7 +45,7 @@ describe("generated source file selection", () => {
     expect(initial).toContain("model source");
     expect(modal.selectedIndex).toBe(1);
     expect(selected).toContain("original template");
-    expect(selected).toContain("language=html");
+    expect(selected).toContain("language=razor");
     expect(selected).not.toContain("model source");
   });
 });
