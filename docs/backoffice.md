@@ -2,7 +2,7 @@
 
 The `Shorthand.UmbracoCodeFirst.Backoffice` project adds a read-only **Code First** page to the
 Umbraco backoffice at **Settings > Advanced > Code First**
-(`/umbraco/section/settings/view/code-first`).
+(`/umbraco/section/settings/workspace/shorthand-code-first`).
 
 ## What the page shows
 
@@ -10,18 +10,32 @@ Umbraco backoffice at **Settings > Advanced > Code First**
   metric tiles (generated definitions, created, updated, unchanged, skipped, failed). Failures are
   highlighted both here and in the tables.
 - **Data Types table** – name, alias, **Editor** (formatted like Umbraco: `EditorUiAlias |
-  EditorAlias`), status, message and a link to the Data Type in the backoffice.
+  EditorAlias`), status, message and row actions.
 - **Document, Element, Media and Member Type tables** – name, alias, folder, property count,
-  status, message and a link to the corresponding Umbraco workspace. Rows expand to show type
+  status, message and row actions. Rows expand to show type
   settings, compositions, tabs/groups and properties (alias, name, Data Type, mandatory,
   validation, etc.).
 - **Failure messages** – for a failed item, the exception message from the failed synchronization.
+- **Row actions** – where available, open the corresponding Umbraco workspace or inspect generated
+  code. The source action opens the actual generated C# in a read-only,
+  syntax-highlighted viewer. Choose a file to see the original source, definition-specific output
+  or complete shared registry; templates also include the complete shared template aliases file.
+  Partial declarations can have multiple original files. The originals are snapshots from the build,
+  not live files.
 - **Cleanup** – a button opens a review panel listing obsolete owned types, properties, groups and
   tabs. The user can cancel or explicitly proceed; cleanup is never automatic.
 - **Reconciliation preview** – the API exposes the latest synchronization report together with the
   non-destructive cleanup preview for diagnostics and tooling.
 
 Links use the persisted Umbraco keys, so they appear once an item has actually been created.
+
+The generated-code action requires the project containing the generated registry to be built in
+**Debug** and the running host to use the **Development** environment. If models are in a separate
+project, that models project must be built in Debug even if the host is built separately. Only
+backoffice users with Settings access can retrieve the source. The catalog is embedded in the Debug
+assembly, including complete original files that may contain unrelated sensitive information.
+Do not distribute Debug builds if this source is sensitive; the runtime gate does not remove it
+from the assembly.
 
 ## Localization
 
@@ -34,9 +48,11 @@ registrations in `Client/src/entrypoints/manifest.ts`.
 The page reads from a Management API endpoint:
 
 - Route: `/umbraco/management/api/v1/shorthandumbracocodefirstbackoffice/status`
-  (plus `/reconciliation-preview`, `/cleanup-preview`, `/cleanup` and `/ping`), group
+  (plus `/generated-source/{id}`, `/reconciliation-preview`, `/cleanup-preview`, `/cleanup` and `/ping`), group
   `Shorthand.UmbracoCodeFirst.Backoffice`
 - Authorization: `AuthorizationPolicies.BackOfficeAccess` (backoffice users only)
+- Generated-source requests additionally require `AuthorizationPolicies.SectionAccessSettings`,
+  a Development host and a Debug-generated catalog; responses are not cached.
 - The controller maps the generated registry plus the latest `SynchronizationReport` to DTOs
   (`CodeFirstStatusModels.cs`): separate Data Type, Document Type, Element Type, Media Type and
   Member Type collections, detailed settings/property DTOs, backoffice URLs, editor aliases and

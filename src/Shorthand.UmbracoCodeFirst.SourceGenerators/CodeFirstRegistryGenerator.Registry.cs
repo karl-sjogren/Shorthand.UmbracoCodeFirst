@@ -37,7 +37,8 @@ public sealed partial class CodeFirstRegistryGenerator {
         ImmutableArray<INamedTypeSymbol> definitionSymbols,
         Compilation compilation,
         Compilation templateCompilation,
-        IReadOnlyList<TemplateDefinition> templates) {
+        IReadOnlyList<TemplateDefinition> templates,
+        List<CapturedSource>? capturedSources) {
         IEnumerable<INamedTypeSymbol> definitions = definitionSymbols
             .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal);
 
@@ -75,7 +76,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.Indent--;
         builder.AppendLine("}");
 
-        context.AddSource("CodeFirstRegistry.g.cs", builder.ToString());
+        AddGeneratedSource(context, "CodeFirstRegistry.g.cs", builder.ToString(), capturedSources);
     }
 
     private static void AppendDefinition(

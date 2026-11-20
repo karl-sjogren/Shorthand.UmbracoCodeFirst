@@ -18,7 +18,8 @@ public sealed partial class CodeFirstRegistryGenerator {
     private static void EmitPublishedModels(
         SourceProductionContext context,
         ImmutableArray<INamedTypeSymbol> definitions,
-        Compilation compilation) {
+        Compilation compilation,
+        List<CapturedSource>? capturedSources) {
         var graph = BuildCompositionGraph(definitions);
         RemoveConflictingCompositions(context, graph, compilation);
         var compositeTargets = new HashSet<INamedTypeSymbol>(
@@ -35,7 +36,7 @@ public sealed partial class CodeFirstRegistryGenerator {
             }
 
             var hintName = $"{SanitizeHintName(definition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.PublishedModel.g.cs";
-            context.AddSource(hintName, source);
+            AddGeneratedSource(context, hintName, source, capturedSources, definition);
         }
     }
 

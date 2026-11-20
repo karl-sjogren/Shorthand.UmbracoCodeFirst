@@ -5,23 +5,26 @@ import {
   getSynchronizationCssClass,
   getSynchronizationState,
   hasSynchronizationFailures,
-  isLinkInteraction,
+  isInteractiveInteraction,
   sortDefinitions,
 } from "./code-first-view.helpers";
 
 describe("code-first view helpers", () => {
-  it("recognizes link interactions without mistaking other row interactions for links", () => {
+  it("recognizes links and buttons without mistaking other row interactions for controls", () => {
     // Arrange
     const linkEvent = { composedPath: () => [{ tagName: "SPAN" }, { tagName: "A" }, { tagName: "TR" }] } as unknown as Event;
     const rowEvent = { composedPath: () => [{ tagName: "TD" }, { tagName: "TR" }] } as unknown as Event;
+    const buttonEvent = { composedPath: () => [{ tagName: "BUTTON" }, { tagName: "UUI-BUTTON" }, { tagName: "TR" }] } as unknown as Event;
 
     // Act
-    const link = isLinkInteraction(linkEvent);
-    const row = isLinkInteraction(rowEvent);
+    const link = isInteractiveInteraction(linkEvent);
+    const row = isInteractiveInteraction(rowEvent);
+    const button = isInteractiveInteraction(buttonEvent);
 
     // Assert
     expect(link).toBe(true);
     expect(row).toBe(false);
+    expect(button).toBe(true);
   });
 
   it("formats UI and schema aliases in display order", () => {

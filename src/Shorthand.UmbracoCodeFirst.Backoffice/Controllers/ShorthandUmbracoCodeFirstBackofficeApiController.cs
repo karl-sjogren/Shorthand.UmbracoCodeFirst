@@ -32,7 +32,8 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
             [FromServices] IContentTypeService contentTypeService,
             [FromServices] IMediaTypeService mediaTypeService,
             [FromServices] IMemberTypeService memberTypeService,
-            [FromServices] ITemplateService templateService) {
+            [FromServices] ITemplateService templateService,
+            [FromServices] ICodeFirstGeneratedSourceService? generatedSources = null) {
         var dataTypes = (await dataTypeService.GetAllAsync()).ToArray();
         var urls = new Dictionary<(CodeFirstDefinitionKind Kind, string Alias), string>();
 
@@ -63,7 +64,19 @@ public class ShorthandUmbracoCodeFirstBackofficeApiController : ShorthandUmbraco
             }
         }
 
-        return CodeFirstStatusMapping.Map(registry, reportStore, urls);
+        return CodeFirstStatusMapping.Map(registry, reportStore, urls, generatedSources);
+    }
+
+    [HttpGet("generated-source/{id}")]
+    [Authorize(Policy = AuthorizationPolicies.SectionAccessSettings)]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    [ProducesResponseType<IReadOnlyList<CodeFirstGeneratedSource>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<IReadOnlyList<CodeFirstGeneratedSource>> GeneratedSource(
+            string id,
+            [FromServices] ICodeFirstGeneratedSourceService generatedSources) {
+        var sources = generatedSources.GetSources(id);
+        return sources is null ? NotFound() : Ok(sources);
     }
 
     [HttpGet("cleanup-preview")]

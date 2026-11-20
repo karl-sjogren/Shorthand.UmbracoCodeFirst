@@ -24,6 +24,8 @@ public sealed record CodeFirstStatusItem(
     string Status,
     string? Message,
     string? BackofficeUrl,
-    IReadOnlyList<CodeFirstStatusProperty> Properties);
+    IReadOnlyList<CodeFirstStatusProperty> Properties) {
+    public string? GeneratedSourceId { get; init; }
+}
 
 public sealed record CodeFirstCollectionStatus(bool List, bool Grid, int PageSize);

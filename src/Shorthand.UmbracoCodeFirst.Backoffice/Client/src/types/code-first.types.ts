@@ -45,7 +45,14 @@ export type StatusItem = {
   status: string;
   message?: string;
   backofficeUrl?: string;
+  generatedSourceId?: string | null;
   properties: StatusProperty[];
+};
+
+export type GeneratedSource = {
+  fileName: string;
+  content: string;
+  isOriginal?: boolean;
 };
 
 export type StatusResponse = {

@@ -16,6 +16,11 @@ try {
     dotnet restore $fixture --configfile (Join-Path (Split-Path $fixture -Parent) 'nuget.config') "-p:CodeFirstPackageVersion=$version"
     if ($LASTEXITCODE -ne 0) { throw "Package consumer restore failed with exit code $LASTEXITCODE." }
 
+    foreach ($configuration in @('Debug', 'Release')) {
+        dotnet test $fixture --configuration $configuration --no-restore "-p:CodeFirstPackageVersion=$version" --filter "FullyQualifiedName~PackagedConsumer_GeneratedCatalogMatchesBuildConfiguration"
+        if ($LASTEXITCODE -ne 0) { throw "Package consumer catalog test failed in $configuration." }
+    }
+
     $output = dotnet msbuild $fixture "-p:CodeFirstPackageVersion=$version" '-target:PrepareForBuild' '-p:RazorCompileOnBuild=false' '-p:RazorCompileOnPublish=false' --verbosity quiet 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0 -or $output -notmatch 'warning UCFB001' -or $output -notmatch 'warning UCFB002') {
         throw "Disabled Razor compilation did not produce both warnings: $output"
@@ -78,6 +83,10 @@ try {
 
     dotnet restore $fixture --configfile (Join-Path $fixtureDirectory 'nuget.config') "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true'
     if ($LASTEXITCODE -ne 0) { throw "Split package consumer restore failed with exit code $LASTEXITCODE." }
+    foreach ($configuration in @('Debug', 'Release')) {
+        dotnet test $fixture --configuration $configuration --no-restore "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true' --filter "FullyQualifiedName~PackagedConsumer_GeneratedCatalogMatchesBuildConfiguration"
+        if ($LASTEXITCODE -ne 0) { throw "Split package consumer catalog test failed in $configuration." }
+    }
     dotnet test $fixture --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true'
     if ($LASTEXITCODE -ne 0) { throw "Split package consumer test failed with exit code $LASTEXITCODE." }
 

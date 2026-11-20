@@ -5,6 +5,12 @@ const codeFirstWorkspaceAlias = "Shorthand.UmbracoCodeFirst.Workspace";
 
 export const manifests: Array<UmbExtensionManifest> = [
   {
+    type: "modal",
+    alias: "Shorthand.UmbracoCodeFirst.Modal.GeneratedSource",
+    name: "Code First Generated Source",
+    element: () => import("../views/generated-source-modal.js"),
+  },
+  {
     name: "Blog Index Collection View",
     alias: "Shorthand.UmbracoCodeFirst.CollectionView.BlogIndex",
     type: "collectionView",

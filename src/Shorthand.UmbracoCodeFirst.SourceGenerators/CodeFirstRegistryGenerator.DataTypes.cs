@@ -28,7 +28,8 @@ public sealed partial class CodeFirstRegistryGenerator {
     private static Compilation EmitDataTypeAliases(
         SourceProductionContext context,
         ImmutableArray<INamedTypeSymbol> definitions,
-        Compilation compilation) {
+        Compilation compilation,
+        List<CapturedSource>? capturedSources) {
         var parseOptions = compilation.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
         foreach (var definition in definitions) {
             if (FindAttribute(definition, _dataTypeAttributeMetadataName) is not AttributeData dataTypeAttribute) {
@@ -65,7 +66,7 @@ public sealed partial class CodeFirstRegistryGenerator {
 
             var hintName = $"{SanitizeHintName(definition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}.DataType.g.cs";
             var source = builder.ToString();
-            context.AddSource(hintName, source);
+            AddGeneratedSource(context, hintName, source, capturedSources, definition);
             compilation = compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(source, parseOptions));
         }
 

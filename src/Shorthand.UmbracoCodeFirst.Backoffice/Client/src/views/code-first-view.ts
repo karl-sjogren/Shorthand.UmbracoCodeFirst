@@ -1,4 +1,5 @@
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
+import { umbOpenModal } from "@umbraco-cms/backoffice/modal";
 import { css, html, customElement, state } from "@umbraco-cms/backoffice/external/lit";
 import logoUrl from "../../../../../resources/logo.svg";
 import { client } from "../api/client.gen.js";
@@ -13,9 +14,10 @@ import {
   formatEditorAliases,
   getSynchronizationCssClass,
   getSynchronizationState,
-  isLinkInteraction,
+  isInteractiveInteraction,
   sortDefinitions,
 } from "./code-first-view.helpers.js";
+import { GENERATED_SOURCE_MODAL } from "./generated-source-modal.token.js";
 
 @customElement("shorthand-code-first-view")
 export default class ShorthandCodeFirstViewElement extends UmbLitElement {
@@ -152,32 +154,43 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
         this.localize.term("codeFirst_dataTypesHeadline"),
         this.status.dataTypes,
         false,
+        false,
+        "data-types",
       )}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_documentTypesHeadline"),
         this.status.documentTypes,
         true,
+        false,
+        "document-types",
       )}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_elementTypesHeadline"),
         this.status.elementTypes,
         true,
+        false,
+        "element-types",
       )}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_mediaTypesHeadline"),
         this.status.mediaTypes,
         true,
+        false,
+        "media-types",
       )}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_memberTypesHeadline"),
         this.status.memberTypes,
         true,
+        false,
+        "member-types",
       )}
       ${this.renderDefinitionTable(
         this.localize.term("codeFirst_templatesHeadline"),
         this.status.templates,
         false,
         true,
+        "templates",
       )}
     `;
   }
@@ -313,6 +326,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     definitions: StatusItem[],
     showProperties: boolean,
     isTemplate = false,
+    tableId = "definitions",
   ) {
     const sortedDefinitions = sortDefinitions(definitions);
     return html`
@@ -329,34 +343,30 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                 : html`<th scope="col">${this.localize.term("codeFirst_editor")}</th>`}
               <th scope="col">${this.localize.term("codeFirst_folder")}</th>
               <th scope="col">${this.localize.term("codeFirst_status")}</th>
+              <th scope="col">${this.localize.term("codeFirst_actions")}</th>
             </tr>
           </thead>
           <tbody>
           ${sortedDefinitions.map(
-            (definition) => html`
+            (definition, index) => html`
               <tr
-                class=${this.isFailed(definition)
-                  ? "definition-row failed-row"
-                  : "definition-row"}
-                tabindex=${isTemplate ? -1 : 0}
+                class=${[
+                  "definition-row",
+                  showProperties ? "expandable-row" : "",
+                  this.isFailed(definition) ? "failed-row" : "",
+                ].filter(Boolean).join(" ")}
+                tabindex=${showProperties ? 0 : -1}
                 @click=${(event: MouseEvent) => {
-                  if (!isTemplate && !isLinkInteraction(event)) this.toggleDefinition(definition.alias);
+                  if (showProperties && !isInteractiveInteraction(event)) this.toggleDefinition(definition.alias);
                 }}
                 @keydown=${(event: KeyboardEvent) => {
-                  if (!isTemplate && !isLinkInteraction(event) && (event.key === "Enter" || event.key === " ")) {
+                  if (showProperties && !isInteractiveInteraction(event) && (event.key === "Enter" || event.key === " ")) {
                     event.preventDefault();
                     this.toggleDefinition(definition.alias);
                   }
                 }}
               >
-                <td>
-                  ${definition.backofficeUrl
-                    ? html`<a
-                        href=${definition.backofficeUrl}
-                        >${definition.name}</a
-                      >`
-                    : definition.name}
-                </td>
+                <td>${definition.name}</td>
                 ${showProperties || isTemplate
                   ? html`<td>${definition.alias}</td>`
                   : ""}
@@ -385,11 +395,41 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                       >`
                     : ""}
                 </td>
+                <td class="actions-cell">
+                  ${definition.backofficeUrl || definition.generatedSourceId
+                    ? html`
+                        <uui-button
+                          compact
+                          look="secondary"
+                          label=${this.localize.term("codeFirst_actionsFor", definition.name)}
+                          popovertarget=${`code-first-actions-${tableId}-${index}`}
+                        >...</uui-button>
+                        <uui-popover-container
+                          id=${`code-first-actions-${tableId}-${index}`}
+                          placement="bottom-end"
+                        >
+                          <div class="action-menu">
+                            ${definition.backofficeUrl
+                              ? html`<a href=${definition.backofficeUrl} @click=${this.closeActionMenu}>
+                                  ${this.localize.term("codeFirst_openInUmbraco")}
+                                </a>`
+                              : ""}
+                            ${definition.generatedSourceId
+                              ? html`<button type="button" @click=${(event: MouseEvent) => {
+                                  this.closeActionMenu(event);
+                                  void this.openGeneratedSource(definition);
+                                }}>${this.localize.term("codeFirst_viewGeneratedSource")}</button>`
+                              : ""}
+                          </div>
+                        </uui-popover-container>
+                      `
+                    : ""}
+                </td>
               </tr>
-              ${!isTemplate && this.expandedAlias === definition.alias
+              ${showProperties && this.expandedAlias === definition.alias
                 ? html`
                     <tr class="details-row">
-                      <td colspan=${showProperties ? 5 : 4}>
+                      <td colspan=${showProperties ? 6 : 5}>
                         ${this.renderProperties(definition)}
                       </td>
                     </tr>
@@ -557,6 +597,17 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   @state()
   private expandedAlias?: string;
 
+  private closeActionMenu(event: Event): void {
+    (event.currentTarget as HTMLElement).closest("uui-popover-container")?.hidePopover();
+  }
+
+  private async openGeneratedSource(definition: StatusItem): Promise<void> {
+    if (!definition.generatedSourceId) return;
+    await umbOpenModal(this, GENERATED_SOURCE_MODAL, {
+      data: { id: definition.generatedSourceId, name: definition.name },
+    }).catch(() => undefined);
+  }
+
   private toggleDefinition(alias: string): void {
     this.expandedAlias = this.expandedAlias === alias ? undefined : alias;
     this.requestUpdate();
@@ -655,6 +706,8 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     :host {
       display: block;
       padding: var(--uui-size-layout-1);
+      --code-first-danger-text: color-mix(in srgb, var(--uui-color-danger) 55%, var(--uui-color-text));
+      --code-first-positive-text: color-mix(in srgb, var(--uui-color-positive) 55%, var(--uui-color-text));
     }
 
     uui-box {
@@ -703,11 +756,11 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     }
 
     .cleanup-error {
-      color: var(--uui-color-danger);
+      color: var(--code-first-danger-text);
     }
 
     .cleanup-result {
-      color: var(--uui-color-positive);
+      color: var(--code-first-positive-text);
       font-weight: 700;
     }
 
@@ -743,18 +796,28 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       font-size: 0.875rem;
     }
 
+    a,
+    a:visited {
+      color: var(--uui-color-interactive);
+    }
+
+    a:hover {
+      color: var(--uui-color-interactive-emphasis);
+    }
+
     .sync-status {
       display: inline-flex;
       gap: var(--uui-size-2);
       align-items: center;
-      color: var(--uui-color-positive);
+      color: var(--code-first-positive-text);
       font-weight: 700;
     }
 
     .sync-status-error,
     .summary-metric-failure,
-    .status-error {
-      color: var(--uui-color-danger);
+    .status-error,
+    .header-copy p.status-error {
+      color: var(--code-first-danger-text);
     }
 
     .sync-status-pending {
@@ -818,7 +881,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       }
     }
 
-    .definition-row {
+    .expandable-row {
       cursor: pointer;
     }
 
@@ -854,6 +917,42 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       outline-offset: -4px;
     }
 
+    .definition-table .actions-cell {
+      width: 1%;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .action-menu {
+      display: flex;
+      flex-direction: column;
+      min-width: 12rem;
+      padding: var(--uui-size-2);
+      border: 1px solid var(--uui-color-border);
+      border-radius: var(--uui-border-radius);
+      background: var(--uui-color-surface);
+      box-shadow: var(--uui-shadow-depth-3);
+    }
+
+    .action-menu a,
+    .action-menu button {
+      display: block;
+      padding: var(--uui-size-3);
+      border: 0;
+      border-radius: var(--uui-border-radius);
+      background: transparent;
+      color: var(--uui-color-text);
+      font: inherit;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .action-menu a:hover,
+    .action-menu button:hover {
+      background: var(--uui-color-surface-alt);
+    }
+
     .failed-row {
       background: color-mix(
         in srgb,
@@ -883,12 +982,16 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     uui-table small,
     .definition-table small {
       display: block;
-      color: var(--uui-color-danger);
+      color: var(--uui-color-text-alt);
       white-space: normal;
     }
 
     .definition-table small.status-message:not(.status-error) {
       color: inherit;
+    }
+
+    .definition-table small.status-message.status-error {
+      color: var(--code-first-danger-text);
     }
 
     .failure-indicator {
@@ -899,7 +1002,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       margin-right: var(--uui-size-1);
       border-radius: 50%;
       color: var(--uui-color-surface);
-      background: var(--uui-color-danger);
+      background: var(--code-first-danger-text);
       font-size: 0.75rem;
       font-weight: 700;
     }

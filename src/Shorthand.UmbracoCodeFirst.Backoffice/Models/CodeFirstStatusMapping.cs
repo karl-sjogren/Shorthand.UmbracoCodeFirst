@@ -1,4 +1,5 @@
 using Shorthand.UmbracoCodeFirst.Contracts;
+using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 
@@ -9,7 +10,8 @@ internal static class CodeFirstStatusMapping {
             ICodeFirstDefinitionRegistry registry,
             ISynchronizationReportStore reportStore,
             IReadOnlyDictionary<(CodeFirstDefinitionKind Kind, string Alias),
-            string>? backofficeUrls = null) {
+            string>? backofficeUrls = null,
+            ICodeFirstGeneratedSourceService? generatedSources = null) {
         var report = reportStore.Current;
         var results = report.Items
             .GroupBy(item => (item.Kind, item.Alias, item.Name))
@@ -25,9 +27,11 @@ internal static class CodeFirstStatusMapping {
             .ToHashSet();
 
         IReadOnlyList<CodeFirstStatusItem> definitions = registry.Definitions
-            .OrderBy(definition => definition.Kind)
-            .ThenBy(definition => definition.Alias)
-            .Select(definition => {
+            .Select((definition, index) => (definition, index))
+            .OrderBy(item => item.definition.Kind)
+            .ThenBy(item => item.definition.Alias)
+            .Select(item => {
+                var (definition, index) = item;
                 var key = (definition.Kind, definition.Alias);
                 results.TryGetValue((definition.Kind, definition.Alias, definition.Name), out var matchingResults);
                 var result = matchingResults is { Count: > 0 }
@@ -87,7 +91,9 @@ internal static class CodeFirstStatusMapping {
                             property.ValidationMessage,
                             property.LabelOnTop,
                             property.DataTypeKey))
-                        .ToArray());
+                        .ToArray()) {
+                    GeneratedSourceId = generatedSources?.GetId(index),
+                };
             })
             .ToArray();
 

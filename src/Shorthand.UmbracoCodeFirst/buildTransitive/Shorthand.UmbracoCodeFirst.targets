@@ -5,6 +5,7 @@
     <CompilerVisibleProperty Include="UmbracoCodeFirstViewsDirectory" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstGenerateTemplates" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstTemplateInputs" />
+    <CompilerVisibleProperty Include="Configuration" />
   </ItemGroup>
 
   <Target Name="ShorthandUmbracoCodeFirstValidateRazorSettings"

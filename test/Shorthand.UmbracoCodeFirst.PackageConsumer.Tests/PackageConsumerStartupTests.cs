@@ -29,6 +29,32 @@ public class PackageConsumerStartupTests : IDisposable {
     public void Dispose() => AssemblyLoadContext.Default.Resolving -= _assemblyResolver;
 
     [Fact]
+    public void PackagedConsumer_GeneratedCatalogMatchesBuildConfiguration() {
+        // Arrange
+        var registry = new Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry();
+        var catalogType = registry.GetType().Assembly.GetType(
+            "Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstSourceCatalog");
+
+        // Act & Assert
+#if DEBUG
+        var catalog = ((ICodeFirstGeneratedSourceCatalog?)Activator.CreateInstance(catalogType.ShouldNotBeNull())).ShouldNotBeNull();
+        var index = registry.Definitions.ToList().FindIndex(definition => definition.Kind == CodeFirstDefinitionKind.Template);
+        index.ShouldBeGreaterThanOrEqualTo(0);
+        var files = catalog.GetSources(index);
+        files.ShouldContain(file => file.FileName == "CodeFirstRegistry.g.cs" && file.Content.Contains("packageConsumer", StringComparison.Ordinal));
+        files.ShouldContain(file => file.FileName == "UmbracoTemplates.g.cs");
+        files.ShouldContain(file => file.IsOriginal && file.FileName == "packageConsumer.cshtml"
+            && file.Content.Contains("Package consumer template", StringComparison.Ordinal));
+        var typeIndex = registry.Definitions.ToList().FindIndex(definition => definition.Kind == CodeFirstDefinitionKind.DataType);
+        typeIndex.ShouldBeGreaterThanOrEqualTo(0);
+        catalog.GetSources(typeIndex).ShouldContain(file => file.IsOriginal
+            && file.FileName == "PackageConsumerDefinitions.cs" && file.Content.Contains("UCFDataType", StringComparison.Ordinal));
+#else
+        catalogType.ShouldBeNull();
+#endif
+    }
+
+    [Fact]
     public async Task PackagedConsumer_UnattendedInstallRestartAndUpgrade_SynchronizesGeneratedDefinition_Async() {
         // Arrange
         var token = TestContext.Current.CancellationToken;

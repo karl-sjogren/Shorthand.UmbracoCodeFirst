@@ -126,7 +126,7 @@ public sealed partial class CodeFirstRegistryGenerator {
 
             using var sha256 = SHA256.Create();
             var contentHash = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(text.ToString())));
-            definitions.Add(new TemplateDefinition(alias, literal.Token.ValueText, Path.GetFileName(file.Path), contentHash, location));
+            definitions.Add(new TemplateDefinition(alias, literal.Token.ValueText, Path.GetFileName(file.Path), contentHash, location, text.ToString()));
         }
 
         var duplicates = definitions.GroupBy(definition => definition.Alias, StringComparer.OrdinalIgnoreCase)
@@ -210,7 +210,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         return result.ToString();
     }
 
-    private sealed class TemplateDefinition(string alias, string name, string fileName, string contentHash, Location location) {
+    private sealed class TemplateDefinition(string alias, string name, string fileName, string contentHash, Location location, string content) {
         public string Alias { get; } = alias;
 
         public string Name { get; } = name;
@@ -220,5 +220,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         public string ContentHash { get; } = contentHash;
 
         public Location Location { get; } = location;
+
+        public string Content { get; } = content;
     }
 }

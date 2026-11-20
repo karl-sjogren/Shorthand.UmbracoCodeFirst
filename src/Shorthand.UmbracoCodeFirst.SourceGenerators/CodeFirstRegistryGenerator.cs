@@ -61,7 +61,8 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                 options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory);
                 options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstViewsDirectory", out var viewsDirectory);
                 options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstGenerateTemplates", out var enabled);
-                return (directory, viewsDirectory, enabled: !string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase));
+                options.GlobalOptions.TryGetValue("build_property.Configuration", out var configuration);
+                return (directory, viewsDirectory, enabled: !string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase), configuration);
             }));
         context.RegisterSourceOutput(
             definitions.Collect().Combine(context.CompilationProvider).Combine(templates),
@@ -72,7 +73,7 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal)
                     .ToImmutableArray();
 
-                var (directory, viewsDirectory, enabled) = input.Right.Right;
+                var (directory, viewsDirectory, enabled, configuration) = input.Right.Right;
                 var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, directory, viewsDirectory, enabled);
                 if(distinctDefinitions.Length == 0 && templateDefinitions.Count == 0) {
                     return;
@@ -85,18 +86,24 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     return;
                 }
 
-                var templateCompilation = EmitDataTypeAliases(productionContext, distinctDefinitions, input.Left.Right);
+                List<CapturedSource>? capturedSources = string.Equals(configuration, "Debug", StringComparison.OrdinalIgnoreCase)
+                    ? []
+                    : null;
+                var templateCompilation = EmitDataTypeAliases(productionContext, distinctDefinitions, input.Left.Right, capturedSources);
                 if(templateDefinitions.Count > 0) {
                     var source = BuildTemplateAliases(templateDefinitions);
-                    productionContext.AddSource("UmbracoTemplates.g.cs", source);
+                    AddGeneratedSource(productionContext, "UmbracoTemplates.g.cs", source, capturedSources);
                     var parseOptions = input.Left.Right.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
                     templateCompilation = templateCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(source, parseOptions));
                 }
 
                 ReportUnresolvedPropertyAliasArguments(productionContext, distinctDefinitions, input.Left.Right);
-                EmitRegistry(productionContext, distinctDefinitions, input.Left.Right, templateCompilation, templateDefinitions);
-                EmitPublishedModels(productionContext, distinctDefinitions, input.Left.Right);
-                EmitOtherPropertyAliases(productionContext, distinctDefinitions);
+                EmitRegistry(productionContext, distinctDefinitions, input.Left.Right, templateCompilation, templateDefinitions, capturedSources);
+                EmitPublishedModels(productionContext, distinctDefinitions, input.Left.Right, capturedSources);
+                EmitOtherPropertyAliases(productionContext, distinctDefinitions, capturedSources);
+                if(capturedSources is not null) {
+                    EmitSourceCatalog(productionContext, distinctDefinitions, templateDefinitions, capturedSources);
+                }
             });
     }
 

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Update="buildTransitive\Shorthand.UmbracoCodeFirst.SourceGenerators.props" Pack="true" PackagePath="buildTransitive\Shorthand.UmbracoCodeFirst.SourceGenerators.props" />
   </ItemGroup>
 
 </Project>

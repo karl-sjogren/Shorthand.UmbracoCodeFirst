@@ -10,8 +10,10 @@ export type DefinitionSummary = {
   kind: string;
 };
 
-export function isLinkInteraction(event: Event): boolean {
-  return event.composedPath().some((target) => (target as Element).tagName === "A");
+export function isInteractiveInteraction(event: Event): boolean {
+  return event.composedPath().some((target) =>
+    ["A", "BUTTON", "UUI-BUTTON"].includes((target as Element).tagName),
+  );
 }
 
 export function formatEditorAliases(

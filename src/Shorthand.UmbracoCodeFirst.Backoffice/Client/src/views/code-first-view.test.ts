@@ -26,6 +26,11 @@ vi.mock("@umbraco-cms/backoffice/external/lit", () => {
 
 vi.mock("../api/client.gen.js", () => ({ client: {} }));
 
+vi.mock("@umbraco-cms/backoffice/modal", () => ({
+  UmbModalToken: class {},
+  umbOpenModal: vi.fn().mockResolvedValue(undefined),
+}));
+
 import CodeFirstView from "./code-first-view";
 
 function renderStatus(status: string, message?: string): string {
@@ -45,6 +50,58 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it("places available navigation and source actions in the row popover", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionTable: (headline: string, definitions: StatusItem[], showProperties: boolean) => string;
+    };
+    const definition = {
+      alias: "article",
+      kind: "DocumentType",
+      name: "Article",
+      folder: "/",
+      status: "Unchanged",
+      backofficeUrl: "/umbraco/section/settings/workspace/document-type/edit/123",
+      generatedSourceId: "source-id",
+    } as StatusItem;
+
+    // Act
+    const output = view.renderDefinitionTable("Documents", [definition], true);
+    const noActions = view.renderDefinitionTable("Documents", [{
+      ...definition, backofficeUrl: undefined, generatedSourceId: undefined,
+    }], true);
+
+    // Assert
+    expect(output).toContain("<td>Article</td>");
+    expect(output).toContain("<uui-popover-container");
+    expect(output).toContain(`href=${definition.backofficeUrl}`);
+    expect(output).toContain("codeFirst_openInUmbraco");
+    expect(output).toContain("codeFirst_viewGeneratedSource");
+    expect(noActions).not.toContain("<uui-popover-container");
+  });
+
+  it("only offers generated code when the definition has a source ID", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionTable: (headline: string, definitions: StatusItem[], showProperties: boolean, isTemplate: boolean) => string;
+    };
+    const template = {
+      alias: "landingPage",
+      kind: "Template",
+      name: "Landing Page",
+      folder: "/",
+      status: "Unchanged",
+    } as StatusItem;
+
+    // Act
+    const unavailable = view.renderDefinitionTable("Templates", [template], false, true);
+    const available = view.renderDefinitionTable("Templates", [{ ...template, generatedSourceId: "source-id" }], false, true);
+
+    // Assert
+    expect(unavailable).not.toContain("codeFirst_viewGeneratedSource");
+    expect(available).toContain("codeFirst_viewGeneratedSource");
+  });
+
   it("renders template aliases and synchronization outcomes", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {
@@ -166,10 +223,7 @@ describe("code-first status messages", () => {
 });
 
 describe("expanded definition details", () => {
-  it.each([
-    [true, 5],
-    [false, 4],
-  ])("spans every column when showProperties is %s", (showProperties, columns) => {
+  it("spans every column of an expanded content type", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {
       expandedAlias: string;
@@ -192,11 +246,40 @@ describe("expanded definition details", () => {
     } as unknown as StatusItem;
 
     // Act
-    const table = view.renderDefinitionTable("Definitions", [definition], showProperties);
+    const table = view.renderDefinitionTable("Definitions", [definition], true);
 
     // Assert
-    expect(table).toContain(`<td colspan=${columns}>`);
+    expect(table).toContain("<td colspan=6>");
+    expect(table).toContain("tabindex=0");
     expect(table).not.toContain("<uui-table-cell colspan=");
+  });
+
+  it("does not expand or keyboard-focus data type rows, even if an alias matches an expanded type", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      expandedAlias: string;
+      renderDefinitionTable: (headline: string, definitions: StatusItem[], showProperties: boolean) => string;
+    };
+    view.expandedAlias = "shared";
+    const definition = {
+      alias: "shared",
+      kind: "DataType",
+      name: "Shared",
+      folder: "/",
+      status: "Unchanged",
+      backofficeUrl: "/umbraco/section/settings/workspace/data-type/edit/123",
+      generatedSourceId: "source-id",
+    } as StatusItem;
+
+    // Act
+    const table = view.renderDefinitionTable("Data types", [definition], false);
+
+    // Assert
+    expect(table).toContain("tabindex=-1");
+    expect(table).not.toContain("expandable-row");
+    expect(table).not.toContain("details-row");
+    expect(table).toContain("codeFirst_openInUmbraco");
+    expect(table).toContain("codeFirst_viewGeneratedSource");
   });
 
   it.each(["icon-barcode", "my-custom-icon"])(

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
+using Shorthand.UmbracoCodeFirst.Backoffice.GeneratedSources;
 using Shorthand.UmbracoCodeFirst.Backoffice.Synchronization;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
@@ -14,6 +15,7 @@ namespace Shorthand.UmbracoCodeFirst.Backoffice.Composers;
 public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
     public void Compose(IUmbracoBuilder builder) {
         builder.Services.AddSingleton<ICodeFirstDefinitionRegistry>(_ => CodeFirstDefinitionRegistryDiscovery.Discover());
+        builder.Services.AddSingleton<ICodeFirstGeneratedSourceService, CodeFirstGeneratedSourceService>();
         builder.Services.AddSingleton<ISynchronizationReportStore, SynchronizationReportStore>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<ICodeFirstOwnershipStore, CodeFirstOwnershipStore>();

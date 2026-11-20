@@ -7,6 +7,16 @@ name).
 
 ## Generated output
 
+In Debug builds the generator also emits `CodeFirstSourceCatalog.g.cs`, which embeds the exact
+generated files and the original declaration files (including Razor templates) for the backoffice
+source viewer. These are build-time snapshots; complete original files may include unrelated
+sensitive information. Shared files are stored once and presented in full for each applicable
+definition. The catalog is absent in Release or when the configuration
+is unknown. For a separate models project, its build configuration controls catalog generation,
+independently of the host project's configuration. Debug assemblies therefore contain generated
+and original source even when deployed to a non-Development environment; avoid distributing them if that source
+is sensitive. The viewer itself additionally requires a Development host and Settings access.
+
 ### Registry – `CodeFirstRegistry.g.cs`
 
 `Shorthand.UmbracoCodeFirst.Generated.GeneratedCodeFirstDefinitionRegistry` implements
