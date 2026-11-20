@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/karl-sjogren/Shorthand.UmbracoCodeFirst/develop/resources/logo.svg" alt="Umbraco Code First logo" width="240">
+
 # Umbraco CodeFirst
 
 This package provides analyzers and source generators for Umbraco CodeFirst development.

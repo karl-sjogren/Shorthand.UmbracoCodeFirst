@@ -1,5 +1,6 @@
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { css, html, customElement, state } from "@umbraco-cms/backoffice/external/lit";
+import logoUrl from "../../../../../resources/logo.svg";
 import { client } from "../api/client.gen.js";
 import type {
   CleanupResponse,
@@ -63,9 +64,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
     return html`
       <uui-box class="page-header">
         <div class="header-content">
-          <div class="header-icon">
-            <uui-icon name="icon-code"></uui-icon>
-          </div>
+          <img class="header-logo" src=${logoUrl} alt="" />
           <div class="header-copy">
             <h1>${this.localize.term("codeFirst_pageTitle")}</h1>
             <p>${this.localize.term("codeFirst_pageDescription")}</p>
@@ -712,16 +711,15 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
       font-weight: 700;
     }
 
-    .header-icon {
-      display: grid;
+    .header-logo {
+      display: block;
       flex: 0 0 auto;
-      place-items: center;
-      width: 3rem;
-      height: 3rem;
-      border-radius: 50%;
-      color: var(--uui-color-interactive);
-      background: var(--uui-color-surface-alt);
-      font-size: 1.5rem;
+      box-sizing: border-box;
+      width: 7rem;
+      height: auto;
+      padding: var(--uui-size-2);
+      border-radius: var(--uui-border-radius);
+      background: #171b20;
     }
 
     .header-copy h1 {

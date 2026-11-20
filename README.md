@@ -1,3 +1,5 @@
+<img src="resources/logo.svg" alt="Umbraco Code First logo" width="240">
+
 # Shorthand.UmbracoCodeFirst [![codecov](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst/graph/badge.svg?token=Y1SnvwGAFf)](https://codecov.io/github/karl-sjogren/Shorthand.UmbracoCodeFirst)
 
 Code-first definitions for Umbraco Document Types, Media Types, Member Types, Data Types, and templates.

@@ -1,3 +1,5 @@
+<img src="../resources/logo.svg" alt="Umbraco Code First logo" width="200">
+
 # Shorthand.UmbracoCodeFirst documentation
 
 Shorthand.UmbracoCodeFirst lets you describe Umbraco Data Types and Document Types as partial C#
