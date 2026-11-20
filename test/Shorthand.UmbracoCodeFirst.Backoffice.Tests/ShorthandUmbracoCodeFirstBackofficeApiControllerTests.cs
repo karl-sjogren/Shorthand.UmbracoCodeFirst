@@ -1,9 +1,11 @@
 using Shorthand.UmbracoCodeFirst.Backoffice.Controllers;
+using Shorthand.UmbracoCodeFirst.Backoffice.Models;
 using Shorthand.UmbracoCodeFirst.Contracts;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
+using System.Reflection;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Tests;
 
@@ -60,6 +62,10 @@ public class ShorthandUmbracoCodeFirstBackofficeApiControllerTests {
                 A.Fake<ITemplateService>());
 
         // Assert
+        var informationalVersion = typeof(CodeFirstStatusResponse).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        informationalVersion.ShouldNotBeNullOrWhiteSpace();
+        response.Version.ShouldBe(informationalVersion.Split('+')[0]);
         response.DataTypes.Single().BackofficeUrl.ShouldBe(
             $"/umbraco/section/settings/workspace/data-type/edit/{dataTypeKey:D}");
         response.DocumentTypes.Single().BackofficeUrl.ShouldBe(

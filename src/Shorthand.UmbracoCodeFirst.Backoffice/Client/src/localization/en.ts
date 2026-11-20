@@ -6,6 +6,9 @@ export default {
     pageDescription:
       "Review the Umbraco types generated and synchronized from your C# models.",
     lastSynchronized: "Last synchronized",
+    version: "Version",
+    versionUnknown: "Unknown",
+    repository: "GitHub repository",
     synchronizationComplete: "Synchronization completed",
     synchronizationFailed: "Synchronization completed with failures",
     synchronizationPending: "No synchronization report available",

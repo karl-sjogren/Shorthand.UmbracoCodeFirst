@@ -49,6 +49,7 @@ export type StatusItem = {
 };
 
 export type StatusResponse = {
+  version?: string | null;
   definitionCount: number;
   dataTypeCount: number;
   documentTypeCount: number;

@@ -5,10 +5,25 @@ import {
   getSynchronizationCssClass,
   getSynchronizationState,
   hasSynchronizationFailures,
+  isLinkInteraction,
   sortDefinitions,
 } from "./code-first-view.helpers";
 
 describe("code-first view helpers", () => {
+  it("recognizes link interactions without mistaking other row interactions for links", () => {
+    // Arrange
+    const linkEvent = { composedPath: () => [{ tagName: "SPAN" }, { tagName: "A" }, { tagName: "TR" }] } as unknown as Event;
+    const rowEvent = { composedPath: () => [{ tagName: "TD" }, { tagName: "TR" }] } as unknown as Event;
+
+    // Act
+    const link = isLinkInteraction(linkEvent);
+    const row = isLinkInteraction(rowEvent);
+
+    // Assert
+    expect(link).toBe(true);
+    expect(row).toBe(false);
+  });
+
   it("formats UI and schema aliases in display order", () => {
     // Arrange
     const schema = "Umbraco.TextBox";

@@ -12,6 +12,7 @@ import {
   formatEditorAliases,
   getSynchronizationCssClass,
   getSynchronizationState,
+  isLinkInteraction,
   sortDefinitions,
 } from "./code-first-view.helpers.js";
 
@@ -85,6 +86,16 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                     </span>
                   `
                 : ""}
+              <span>
+                ${this.localize.term("codeFirst_version")}:
+                ${this.status.version || this.localize.term("codeFirst_versionUnknown")}
+              </span>
+              <a
+                href="https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst"
+                target="_blank"
+                rel="noopener noreferrer"
+                >${this.localize.term("codeFirst_repository")}</a
+              >
             </div>
             ${this.status.synchronizationError
               ? html`<p class="status-error">${this.status.synchronizationError}</p>`
@@ -329,9 +340,11 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                   ? "definition-row failed-row"
                   : "definition-row"}
                 tabindex=${isTemplate ? -1 : 0}
-                @click=${() => { if (!isTemplate) this.toggleDefinition(definition.alias); }}
+                @click=${(event: MouseEvent) => {
+                  if (!isTemplate && !isLinkInteraction(event)) this.toggleDefinition(definition.alias);
+                }}
                 @keydown=${(event: KeyboardEvent) => {
-                  if (!isTemplate && (event.key === "Enter" || event.key === " ")) {
+                  if (!isTemplate && !isLinkInteraction(event) && (event.key === "Enter" || event.key === " ")) {
                     event.preventDefault();
                     this.toggleDefinition(definition.alias);
                   }
@@ -341,7 +354,6 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                   ${definition.backofficeUrl
                     ? html`<a
                         href=${definition.backofficeUrl}
-                        @click=${(event: Event) => event.stopPropagation()}
                         >${definition.name}</a
                       >`
                     : definition.name}

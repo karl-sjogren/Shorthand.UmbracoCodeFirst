@@ -10,6 +10,10 @@ export type DefinitionSummary = {
   kind: string;
 };
 
+export function isLinkInteraction(event: Event): boolean {
+  return event.composedPath().some((target) => (target as Element).tagName === "A");
+}
+
 export function formatEditorAliases(
   editorAlias?: string,
   editorUiAlias?: string,
