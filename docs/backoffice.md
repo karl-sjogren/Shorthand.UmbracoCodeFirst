@@ -40,9 +40,10 @@ from the assembly.
 
 ## Localization
 
-All user-facing strings go through Umbraco's localization system. English is registered
-(`Client/src/localization/en.ts`); further languages can be added as additional localization
-registrations in `Client/src/entrypoints/manifest.ts`.
+Backoffice interface strings use Umbraco's localization system. English and Swedish are registered
+(`Client/src/localization/en.ts` and `sv.ts`); further languages can be added as additional
+localization registrations in `Client/src/entrypoints/manifest.ts`. Definition content and
+diagnostic messages supplied by the server are displayed as received.
 
 ## API
 

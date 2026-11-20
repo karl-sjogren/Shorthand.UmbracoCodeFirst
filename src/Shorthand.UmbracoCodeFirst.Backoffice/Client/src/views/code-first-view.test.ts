@@ -3,7 +3,7 @@ import type { StatusItem } from "../types/code-first.types";
 
 vi.mock("@umbraco-cms/backoffice/lit-element", () => ({
   UmbLitElement: class {
-    localize = { term: (key: string) => key };
+    localize = { term: (key: string) => key, lang: () => "en" };
   },
 }));
 
@@ -50,6 +50,42 @@ function renderStatus(status: string, message?: string): string {
 }
 
 describe("code-first status messages", () => {
+  it("formats synchronization dates using the backoffice language", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      localize: { lang: () => string };
+      formatCompletedAt: (value: string) => string;
+    };
+    view.localize.lang = () => "sv-SE";
+    const timestamp = "2026-11-11T00:00:00Z";
+
+    // Act
+    const formatted = view.formatCompletedAt(timestamp);
+
+    // Assert
+    expect(formatted).toBe(new Intl.DateTimeFormat("sv-SE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp)));
+  });
+
+  it.each([
+    ["Created", "codeFirst_statusCreated"],
+    ["updated", "codeFirst_statusUpdated"],
+    ["Unchanged", "codeFirst_statusUnchanged"],
+    ["Skipped", "codeFirst_statusSkipped"],
+    ["Failed", "codeFirst_statusFailed"],
+    ["Pending", "codeFirst_statusPending"],
+    ["CustomStatus", "CustomStatus"],
+    ["constructor", "constructor"],
+  ])("localizes the %s status and preserves unknown values", (status, expected) => {
+    // Act
+    const table = renderStatus(status);
+
+    // Assert
+    expect(table).toContain(expected);
+  });
+
   it.each([
     ["1.2.3", "1.2.3"],
     [undefined, "codeFirst_versionUnknown"],
@@ -255,6 +291,49 @@ describe("code-first status messages", () => {
 });
 
 describe("expanded definition details", () => {
+  it("localizes known cleanup kinds and preserves unknown kinds", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      cleanup: unknown;
+      renderCleanup: () => string;
+    };
+    view.cleanup = {
+      items: [
+        { kind: "DocumentType", name: "Article", alias: "article" },
+        { kind: "CustomKind", name: "Other", alias: "other" },
+      ],
+    };
+
+    // Act
+    const cleanup = view.renderCleanup();
+
+    // Assert
+    expect(cleanup).toContain("codeFirst_kindDocumentType");
+    expect(cleanup).toContain("CustomKind");
+  });
+
+  it("localizes affirmative settings", () => {
+    // Arrange
+    const view = new CodeFirstView() as unknown as {
+      renderDefinitionSettings: (definition: StatusItem) => string;
+    };
+    const definition = {
+      allowAsRoot: true,
+      allowInLibrary: true,
+      allowedTemplateAliases: [],
+      allowedChildAliases: [],
+      compositionAliases: [],
+      groups: [],
+      tabs: [],
+    } as unknown as StatusItem;
+
+    // Act
+    const settings = view.renderDefinitionSettings(definition);
+
+    // Assert
+    expect(settings.match(/codeFirst_yes/g)).toHaveLength(2);
+  });
+
   it("spans every column of an expanded content type", () => {
     // Arrange
     const view = new CodeFirstView() as unknown as {

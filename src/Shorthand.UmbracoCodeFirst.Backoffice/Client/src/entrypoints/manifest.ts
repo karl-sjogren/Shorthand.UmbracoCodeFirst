@@ -44,6 +44,15 @@ export const manifests: Array<UmbExtensionManifest> = [
     },
   },
   {
+    name: "Shorthand Umbraco Code First Swedish Localization",
+    alias: "Shorthand.UmbracoCodeFirst.Localization.Sv",
+    type: "localization",
+    js: () => import("../localization/sv.js"),
+    meta: {
+      culture: "sv",
+    },
+  },
+  {
     name: "Shorthand Umbraco Code First Backoffice Entrypoint",
     alias: "Shorthand.UmbracoCodeFirst.Backoffice.Entrypoint",
     type: "backofficeEntryPoint",

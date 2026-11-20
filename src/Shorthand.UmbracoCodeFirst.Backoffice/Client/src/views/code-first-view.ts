@@ -19,6 +19,25 @@ import {
 } from "./code-first-view.helpers.js";
 import { GENERATED_SOURCE_MODAL } from "./generated-source-modal.token.js";
 
+const statusLocalizationKeys: Record<string, string> = {
+  created: "codeFirst_statusCreated",
+  updated: "codeFirst_statusUpdated",
+  unchanged: "codeFirst_statusUnchanged",
+  skipped: "codeFirst_statusSkipped",
+  failed: "codeFirst_statusFailed",
+  pending: "codeFirst_statusPending",
+};
+
+const kindLocalizationKeys: Record<string, string> = {
+  DataType: "codeFirst_kindDataType",
+  DocumentType: "codeFirst_kindDocumentType",
+  MediaType: "codeFirst_kindMediaType",
+  MemberType: "codeFirst_kindMemberType",
+  Property: "codeFirst_kindProperty",
+  Group: "codeFirst_kindGroup",
+  Tab: "codeFirst_kindTab",
+};
+
 @customElement("shorthand-code-first-view")
 export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   @state()
@@ -54,7 +73,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
 
   override render() {
     if (this.error) {
-      return html`<uui-box headline="Code-first status">
+      return html`<uui-box headline=${this.localize.term("codeFirst_statusHeadline")}>
         <p>${this.error}</p>
       </uui-box>`;
     }
@@ -255,7 +274,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                       ${items.map(
                         (item) => html`
                           <uui-table-row>
-                            <uui-table-cell>${item.kind}</uui-table-cell>
+                            <uui-table-cell>${this.localizeKnownValue(item.kind, kindLocalizationKeys)}</uui-table-cell>
                             <uui-table-cell>${item.name}</uui-table-cell>
                             <uui-table-cell>${item.alias}</uui-table-cell>
                             <uui-table-cell>${item.parentAlias ?? ""}</uui-table-cell>
@@ -314,7 +333,12 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
   }
 
   private formatCompletedAt(value: string): string {
-    return formatCompletedAt(value);
+    return formatCompletedAt(value, this.localize.lang());
+  }
+
+  private localizeKnownValue(value: string, keys: Record<string, string>, ignoreCase = false): string {
+    const lookup = ignoreCase ? value.toLowerCase() : value;
+    return Object.prototype.hasOwnProperty.call(keys, lookup) ? this.localize.term(keys[lookup]) : value;
   }
 
   private renderDefinitionTable(
@@ -381,7 +405,7 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                           >!</span
                         >`
                       : ""}
-                    ${definition.status}
+                    ${this.localizeKnownValue(definition.status, statusLocalizationKeys, true)}
                   </span>
                   ${definition.message
                     ? html`<small class=${this.isFailed(definition)
@@ -543,10 +567,10 @@ export default class ShorthandCodeFirstViewElement extends UmbLitElement {
                 </dd>`
             : ""}
           ${definition.allowAsRoot
-            ? html`<dt>${this.localize.term("codeFirst_allowedAsRoot")}</dt><dd>Yes</dd>`
+            ? html`<dt>${this.localize.term("codeFirst_allowedAsRoot")}</dt><dd>${this.localize.term("codeFirst_yes")}</dd>`
             : ""}
           ${definition.allowInLibrary
-            ? html`<dt>${this.localize.term("codeFirst_allowedInLibrary")}</dt><dd>Yes</dd>`
+            ? html`<dt>${this.localize.term("codeFirst_allowedInLibrary")}</dt><dd>${this.localize.term("codeFirst_yes")}</dd>`
             : ""}
           ${definition.variations
             ? html`<dt>${this.localize.term("codeFirst_variations")}</dt><dd>${definition.variations}</dd>`

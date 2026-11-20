@@ -25,5 +25,25 @@ describe("repository help menu item", () => {
         href: "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst",
       },
     });
+
+  });
+});
+
+describe("Swedish localization", () => {
+  it("registers the Swedish culture and loads its translations", async () => {
+    // Arrange
+    const manifest = manifests.find(
+      (item) => item.alias === "Shorthand.UmbracoCodeFirst.Localization.Sv",
+    );
+
+    // Act & Assert
+    expect(manifest).toMatchObject({ type: "localization", meta: { culture: "sv" } });
+    if (!manifest || !("js" in manifest) || typeof manifest.js !== "function") {
+      throw new Error("Swedish localization loader is unavailable");
+    }
+    const load = manifest.js as () => Promise<typeof import("../localization/sv.js")>;
+    const localization = await load();
+    expect(localization.default.codeFirst.menuLabel).toBe("Code First");
+    expect(localization.default.codeFirst.dataTypesHeadline).toBe("Datatyper");
   });
 });
