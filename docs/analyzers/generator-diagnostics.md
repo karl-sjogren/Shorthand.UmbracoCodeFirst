@@ -196,6 +196,14 @@ generates a template registry. The runtime does not merge them. Move all code-fi
 to the referenced models project and set `UmbracoCodeFirstGenerateTemplates` to `false` in the
 site project. See [UCFTemplate](../attributes.md#ucftemplate--razor-view).
 
+## UCF125
+
+Generated composite properties, static getters, and interfaces must not conflict with existing
+members or types. For example, two different composites cannot both contribute a CLR property
+named `Title`, even when their Umbraco aliases differ. Rename one property or remove the
+conflicting composition. A property reached through multiple paths from the same original
+composite is not a conflict.
+
 ## Internal catalog diagnostics
 
 UCF200 and UCF201 are for repository maintainers editing generator input catalogs, not normal

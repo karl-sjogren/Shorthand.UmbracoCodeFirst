@@ -33,12 +33,14 @@ class's own namespace:
   `GetModelContentType`, `GetModelPropertyType<TValue>`
 - a constructor `(IPublishedContent, IPublishedValueFallback)` for documents, or
   `(IPublishedElement, IPublishedValueFallback)` for elements
-- one generated property per `UCFProperty`, implemented with
+- one generated property per directly declared `UCFProperty`, implemented with
   `this.Value<T>(_publishedValueFallback, "alias")` and decorated with
   `[ImplementPropertyType("alias")]`
 
 This follows the shape of Umbraco's ModelsBuilder output without depending on its internals. The
 property declarations in your class are `partial` definitions; do not add your own implementation.
+Composition targets additionally expose a generated interface and static getters, and consumers
+receive properties from same-compilation composites. See [Compositions](compositions.md).
 
 ### Property aliases
 
@@ -46,7 +48,8 @@ Code-first document, element, media and member types expose a generated `Propert
 For each `UCFProperty`, its constant is named after the CLR property and contains the same explicit
 or display-name-derived alias emitted in the registry. For example, `Article.PropertyAliases.Title`
 is a compile-time string constant; `CodeFirstHelper<Article>.Alias(x => x.Title)` returns the same
-alias and supports normal property rename refactoring.
+alias and supports normal property rename refactoring. Document and element consumers also expose
+constants for properties from same-compilation composites.
 
 If a model already declares `PropertyAliases`, UCF116 reports the conflict. UCF117 reports a
 generated property alias used by a UCF attribute in the same compilation: the generator cannot
@@ -86,8 +89,10 @@ Because letters inside a word are lower-cased, supply explicit aliases when you 
 
 ## Composition resolution
 
-`typeof(Target)` arguments of `UCFComposite` are resolved to the target's `UCFDocument` alias.
-A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 reports it.
+`typeof(Target)` arguments of `UCFComposite` are resolved to the target's document or element alias.
+An invalid target falls back to a derived alias; analyzer UCF106 reports it. Only same-compilation
+targets contribute generated model interfaces and properties; referenced targets retain their
+registry aliases but do not contribute a generated consumer contract.
 
 ## Generator diagnostics
 
@@ -106,6 +111,7 @@ A target without `UCFDocument` falls back to a derived alias; analyzer UCF106 re
 | [UCF122](analyzers/generator-diagnostics.md#ucf122) | Error | Multiple template aliases generate the same `UmbracoTemplates` constant. |
 | [UCF123](analyzers/generator-diagnostics.md#ucf123) | Error | A property does not specify exactly one data type alias or valid data type key. |
 | [UCF124](analyzers/generator-diagnostics.md#ucf124) | Error | The site and a referenced template-owning project both generate code-first registries. |
+| [UCF125](analyzers/generator-diagnostics.md#ucf125) | Error | A generated composite property, getter, or interface conflicts with another member or type. |
 
 Other rules include those reported by the [analyzers](analyzers/README.md).
 The internal catalog generators also report [UCF200 and UCF201](analyzers/generator-diagnostics.md#internal-catalog-diagnostics).

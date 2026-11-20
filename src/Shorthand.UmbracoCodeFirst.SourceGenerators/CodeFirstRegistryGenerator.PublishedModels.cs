@@ -19,13 +19,19 @@ public sealed partial class CodeFirstRegistryGenerator {
 
     private static void EmitPublishedModels(
         SourceProductionContext context,
-        ImmutableArray<INamedTypeSymbol> definitions) {
+        ImmutableArray<INamedTypeSymbol> definitions,
+        Compilation compilation) {
+        var graph = BuildCompositionGraph(definitions);
+        RemoveConflictingCompositions(context, graph, compilation);
+        var compositeTargets = new HashSet<INamedTypeSymbol>(
+            graph.Values.SelectMany(static targets => targets), SymbolEqualityComparer.Default);
         foreach (var definition in definitions) {
             if (FindDocumentTypeAttribute(definition) is not AttributeData documentTypeAttribute) {
                 continue;
             }
 
-            var source = BuildPublishedModel(definition, documentTypeAttribute, context);
+            var source = BuildPublishedModel(
+                definition, documentTypeAttribute, context, graph, compositeTargets.Contains(definition));
             if (source.Length == 0) {
                 continue;
             }
@@ -38,7 +44,9 @@ public sealed partial class CodeFirstRegistryGenerator {
     private static string BuildPublishedModel(
         INamedTypeSymbol definition,
         AttributeData documentTypeAttribute,
-        SourceProductionContext context) {
+        SourceProductionContext context,
+        IReadOnlyDictionary<INamedTypeSymbol, ImmutableArray<INamedTypeSymbol>> graph,
+        bool isComposite) {
         var namespaceName = definition.ContainingNamespace.IsGlobalNamespace
             ? null
             : definition.ContainingNamespace.ToDisplayString();
@@ -58,6 +66,10 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.AppendLine("using Umbraco.Cms.Core.Models.PublishedContent;");
         builder.AppendLine("using Umbraco.Cms.Core.PublishedCache;");
         builder.AppendLine("using Umbraco.Cms.Infrastructure.ModelsBuilder;");
+        if(isComposite) {
+            builder.AppendLine("using Umbraco.Extensions;");
+        }
+
         builder.AppendLine();
 
         if (namespaceName is not null) {
@@ -67,14 +79,30 @@ public sealed partial class CodeFirstRegistryGenerator {
             builder.AppendLine();
         }
 
+        var directCompositions = graph[definition];
+        var composedProperties = GetEffectiveCompositions(definition, graph)
+            .SelectMany(GetDeclaredModelProperties)
+            .Where(static property => IsSupportedPublishedPropertyType(property.Type))
+            .ToArray();
+        var declaredProperties = GetDeclaredModelProperties(definition).ToArray();
+        if(isComposite) {
+            AppendCompositeInterface(builder, definition, isElement, directCompositions, declaredProperties);
+        }
+
         builder.Append("[PublishedModel(");
         builder.Append(SymbolDisplay.FormatLiteral(alias, true));
         builder.AppendLine(")]");
         builder.Append("public partial class ");
-        builder.Append(definition.Name);
-        builder.AppendLine(isElement ? " : PublishedElementModel {" : " : PublishedContentModel {");
+        builder.Append(EscapeIdentifier(definition.Name));
+        builder.Append(isElement ? " : PublishedElementModel" : " : PublishedContentModel");
+        foreach(var composition in isComposite ? [definition] : directCompositions) {
+            builder.Append(", ");
+            builder.Append(GetCompositeInterfaceName(composition));
+        }
+
+        builder.AppendLine(" {");
         builder.Indent++;
-        AppendPropertyAliases(builder, definition, context);
+        AppendPropertyAliases(builder, definition, context, declaredProperties.Concat(composedProperties));
         builder.AppendLine("#pragma warning disable 0109");
         AppendGeneratedCodeAttribute(builder);
         builder.Append("public new const string ModelTypeAlias = ");
@@ -94,7 +122,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.AppendLine("[return: MaybeNull]");
         builder.Append("public static IPublishedPropertyType GetModelPropertyType<TValue>(IPublishedContentTypeCache contentTypeCache, ");
         builder.Append("Expression<Func<");
-        builder.Append(definition.Name);
+        builder.Append(EscapeIdentifier(definition.Name));
         builder.AppendLine(", TValue>> selector)");
         builder.AppendLine("    => PublishedModelUtility.GetModelPropertyType(GetModelContentType(contentTypeCache)!, selector);");
         builder.AppendLine();
@@ -105,7 +133,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.AppendLine();
         AppendGeneratedCodeAttribute(builder);
         builder.Append("public ");
-        builder.Append(definition.Name);
+        builder.Append(EscapeIdentifier(definition.Name));
         builder.AppendLine(isElement
             ? "(IPublishedElement content, IPublishedValueFallback publishedValueFallback)"
             : "(IPublishedContent content, IPublishedValueFallback publishedValueFallback)");
@@ -116,9 +144,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         builder.AppendLine("}");
         builder.AppendLine();
 
-        foreach (var property in definition.GetMembers().OfType<IPropertySymbol>()
-                     .Where(static property => FindAttribute(property, _propertyAttributeMetadataName) is not null)
-                     .OrderBy(static property => property.Name, StringComparer.Ordinal)) {
+        foreach (var property in declaredProperties.Concat(composedProperties)) {
             if (!IsSupportedPublishedPropertyType(property.Type)) {
                 context.ReportDiagnostic(Diagnostic.Create(
                     _unsupportedPropertyType,
@@ -150,15 +176,41 @@ public sealed partial class CodeFirstRegistryGenerator {
             builder.Append("[ImplementPropertyType(");
             builder.Append(SymbolDisplay.FormatLiteral(propertyAlias, true));
             builder.AppendLine(")]");
-            builder.Append("public partial ");
+            var isDeclared = SymbolEqualityComparer.Default.Equals(property.ContainingType, definition);
+            builder.Append(isDeclared ? "public partial " : "public ");
             builder.Append(propertyType);
             builder.Append(" ");
-            builder.Append(property.Name);
-            builder.Append(" => this.Value<");
-            builder.Append(propertyType);
-            builder.Append(">(_publishedValueFallback, ");
-            builder.Append(SymbolDisplay.FormatLiteral(propertyAlias, true));
-            builder.AppendLine(");");
+            builder.Append(EscapeIdentifier(property.Name));
+            if(!isDeclared || isComposite) {
+                builder.Append(" => ");
+                builder.Append(property.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                builder.Append(".");
+                builder.Append(EscapeIdentifier("Get" + property.Name));
+                builder.AppendLine("(this, _publishedValueFallback);");
+            } else {
+                builder.Append(" => this.Value<");
+                builder.Append(propertyType);
+                builder.Append(">(_publishedValueFallback, ");
+                builder.Append(SymbolDisplay.FormatLiteral(propertyAlias, true));
+                builder.AppendLine(");");
+            }
+
+            if(isDeclared && isComposite) {
+                builder.AppendLine();
+                AppendGeneratedCodeAttribute(builder);
+                builder.AppendLine("[return: MaybeNull]");
+                builder.Append("public static ");
+                builder.Append(propertyType);
+                builder.Append(" ");
+                builder.Append(EscapeIdentifier("Get" + property.Name));
+                builder.Append("(");
+                builder.Append(GetCompositeInterfaceName(definition));
+                builder.Append(" that, IPublishedValueFallback publishedValueFallback) => that.Value<");
+                builder.Append(propertyType);
+                builder.Append(">(publishedValueFallback, ");
+                builder.Append(SymbolDisplay.FormatLiteral(propertyAlias, true));
+                builder.AppendLine(");");
+            }
         }
 
         builder.Indent--;
@@ -169,4 +221,35 @@ public sealed partial class CodeFirstRegistryGenerator {
     private static bool IsSupportedPublishedPropertyType(ITypeSymbol type) =>
         type.TypeKind is not (TypeKind.Pointer or TypeKind.FunctionPointer)
         && type.SpecialType != SpecialType.System_Void;
+
+    private static void AppendCompositeInterface(
+        IndentedStringBuilder builder,
+        INamedTypeSymbol definition,
+        bool isElement,
+        ImmutableArray<INamedTypeSymbol> compositions,
+        IEnumerable<IPropertySymbol> properties) {
+        builder.Append("public partial interface ");
+        builder.Append(EscapeIdentifier("I" + definition.Name));
+        builder.Append(isElement ? " : IPublishedElement" : " : IPublishedContent");
+        foreach(var composition in compositions) {
+            builder.Append(", ");
+            builder.Append(GetCompositeInterfaceName(composition));
+        }
+
+        builder.AppendLine(" {");
+        builder.Indent++;
+        foreach(var property in properties.Where(static property => IsSupportedPublishedPropertyType(property.Type))) {
+            AppendGeneratedCodeAttribute(builder);
+            builder.AppendLine("[MaybeNull]");
+            builder.Append(property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat
+                .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier)));
+            builder.Append(" ");
+            builder.Append(EscapeIdentifier(property.Name));
+            builder.AppendLine(" { get; }");
+        }
+
+        builder.Indent--;
+        builder.AppendLine("}");
+        builder.AppendLine();
+    }
 }

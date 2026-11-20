@@ -11,14 +11,18 @@ using Shorthand.UmbracoCodeFirst.Synchronization;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Elements;
+using Shorthand.UmbracoCodeFirst.Umbraco.Models.DocumentTypes;
+using Shorthand.UmbracoCodeFirst.Umbraco.Models.Elements;
 using Shorthand.UmbracoCodeFirst.Umbraco.Tests.Models;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.Editors;
+using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.PublishedCache;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Strings;
+using Umbraco.Cms.Core.Web;
 using Xunit.Sdk;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
@@ -590,9 +594,51 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         var publishedTypes = services.GetRequiredService<IPublishedContentTypeCache>();
         CodeBlock.GetModelContentType(publishedTypes).ShouldNotBeNull().Alias.ShouldBe(CodeBlock.ModelTypeAlias);
         CodeBlock.GetModelPropertyType(publishedTypes, model => model.Code).ShouldNotBeNull().Alias.ShouldBe("code");
+        Article.GetModelPropertyType(publishedTypes, model => model.SeoCompositeTitle)
+            .ShouldNotBeNull().Alias.ShouldBe(Article.PropertyAliases.SeoCompositeTitle);
+        CoolElement.GetModelPropertyType(publishedTypes, model => model.CopyrightYear)
+            .ShouldNotBeNull().Alias.ShouldBe(CoolElement.PropertyAliases.CopyrightYear);
         var blockList = (await dataTypes.GetAllAsync()).Single(item => item.Name == "Blog Post Content");
         JsonSerializer.SerializeToElement(blockList.ConfigurationData["blocks"]).EnumerateArray()
             .ShouldContain(block => block.GetProperty("contentElementTypeKey").GetGuid() == element.Key);
+    }
+
+    [Fact]
+    public async Task AppRegistry_ComposedPublishedModel_ReadsPublishedValue_Async() {
+        // Arrange
+        if(!fixture.IsEnabled) {
+            throw SkipException.ForSkip("Umbraco integration tests are disabled.");
+        }
+
+        using var scope = fixture.Services.CreateScope();
+        var services = scope.ServiceProvider;
+        var synchronizer = new CodeFirstSynchronizer(
+            new GeneratedCodeFirstDefinitionRegistry(),
+            services.GetRequiredService<ICodeFirstDefinitionStore>(),
+            new SynchronizationReportStore(),
+            TimeProvider.System,
+            services.GetRequiredService<ILogger<CodeFirstSynchronizer>>());
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+        report.FailedCount.ShouldBe(0);
+        var contentService = services.GetRequiredService<IContentService>();
+        var content = contentService.Create("Composite article", -1, Article.ModelTypeAlias);
+        content.SetValue(Article.PropertyAliases.Title, "Article title");
+        content.SetValue(Article.PropertyAliases.SeoCompositeTitle, "Published SEO title");
+        content.SetValue(Article.PropertyAliases.Sparkles, "Published sparkles");
+        contentService.SaveAndPublish(content, []).Success.ShouldBeTrue();
+
+        // Act
+        using var context = services.GetRequiredService<IUmbracoContextFactory>().EnsureUmbracoContext();
+        var published = (await context.UmbracoContext.Content!.GetByIdAsync(content.Key)).ShouldNotBeNull();
+        var model = new Article(published, services.GetRequiredService<IPublishedValueFallback>());
+        ISeoComposite composite = model;
+
+        // Assert
+        model.SeoCompositeTitle.ShouldBe("Published SEO title");
+        composite.SeoCompositeTitle.ShouldBe("Published SEO title");
+        model.Sparkles.ShouldBe("Published sparkles");
+        Article.GetModelPropertyType(services.GetRequiredService<IPublishedContentTypeCache>(), item => item.SeoCompositeTitle)
+            .ShouldNotBeNull().Alias.ShouldBe("seoCompositeTitle");
     }
 
     [Fact]

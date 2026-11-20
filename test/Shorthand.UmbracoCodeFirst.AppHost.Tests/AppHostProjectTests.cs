@@ -7,7 +7,7 @@ public class AppHostProjectTests {
         const string expectedName = "Shorthand.UmbracoCodeFirst.AppHost";
 
         // Act
-        var assembly = typeof(Projects.Shorthand_UmbracoCodeFirst_Umbraco).Assembly;
+        var assembly = typeof(Projects.Shorthand_UmbracoCodeFirst_AppHost).Assembly;
 
         // Assert
         assembly.GetName().Name.ShouldBe(expectedName);

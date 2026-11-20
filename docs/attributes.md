@@ -358,7 +358,8 @@ Unsealed, so a derived attribute can fix both values.
 
 ## `UCFComposite` – class
 
-`UCFComposite(typeof(OtherDocumentType))` composes another code-first Document Type. Repeatable.
+`UCFComposite(typeof(OtherType))` composes another code-first Document Type or Element Type of the
+same kind. Repeatable.
 See [Compositions](compositions.md).
 
 ## Derived attributes

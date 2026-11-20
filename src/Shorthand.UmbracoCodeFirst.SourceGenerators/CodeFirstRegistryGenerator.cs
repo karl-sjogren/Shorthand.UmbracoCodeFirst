@@ -95,7 +95,7 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
 
                 ReportUnresolvedPropertyAliasArguments(productionContext, distinctDefinitions, input.Left.Right);
                 EmitRegistry(productionContext, distinctDefinitions, input.Left.Right, templateCompilation, templateDefinitions);
-                EmitPublishedModels(productionContext, distinctDefinitions);
+                EmitPublishedModels(productionContext, distinctDefinitions, input.Left.Right);
                 EmitOtherPropertyAliases(productionContext, distinctDefinitions);
                 EmitDataTypeAliases(productionContext, distinctDefinitions);
             });

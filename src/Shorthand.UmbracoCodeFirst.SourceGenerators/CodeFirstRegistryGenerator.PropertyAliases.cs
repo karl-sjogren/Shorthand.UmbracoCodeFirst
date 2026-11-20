@@ -86,9 +86,9 @@ public sealed partial class CodeFirstRegistryGenerator {
     private static void AppendPropertyAliases(
         IndentedStringBuilder builder,
         INamedTypeSymbol definition,
-        SourceProductionContext context) {
-        var properties = definition.GetMembers().OfType<IPropertySymbol>()
-            .Where(static property => FindAttribute(property, _propertyAttributeMetadataName) is not null)
+        SourceProductionContext context,
+        IEnumerable<IPropertySymbol>? effectiveProperties = null) {
+        var properties = (effectiveProperties ?? GetDeclaredModelProperties(definition))
             .OrderBy(static property => property.Name, StringComparer.Ordinal)
             .ToArray();
         if(properties.Length == 0) {
