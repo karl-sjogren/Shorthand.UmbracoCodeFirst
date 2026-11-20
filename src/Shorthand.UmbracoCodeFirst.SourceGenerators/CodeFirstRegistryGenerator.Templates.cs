@@ -10,7 +10,6 @@ using Microsoft.CodeAnalysis.Text;
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
 
 public sealed partial class CodeFirstRegistryGenerator {
-#pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _invalidTemplate = new(
         "UCF120",
         "Invalid template declaration",
@@ -42,7 +41,6 @@ public sealed partial class CodeFirstRegistryGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
-#pragma warning restore RS2008
 
     private static bool IsRootView(string path, string projectDirectory, string viewsDirectory) {
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path)

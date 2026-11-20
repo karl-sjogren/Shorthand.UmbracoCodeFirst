@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
 
 public sealed partial class CodeFirstRegistryGenerator {
-#pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _unsupportedPropertyType = new(
         "UCF001",
         "Unsupported published model property type",
@@ -15,7 +14,6 @@ public sealed partial class CodeFirstRegistryGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
-#pragma warning restore RS2008
 
     private static void EmitPublishedModels(
         SourceProductionContext context,

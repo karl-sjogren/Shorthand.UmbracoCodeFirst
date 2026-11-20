@@ -6,7 +6,6 @@ internal static class CodeFirstDiagnosticDescriptors {
     internal const string DocumentationBaseUrl =
         "https://github.com/karl-sjogren/Shorthand.UmbracoCodeFirst/blob/develop/docs/analyzers";
 
-#pragma warning disable RS2008
     public static readonly DiagnosticDescriptor InvalidAlias = new(
         CodeFirstDiagnosticIds.InvalidAlias,
         "Invalid code-first alias",
@@ -132,5 +131,4 @@ internal static class CodeFirstDiagnosticDescriptors {
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: DocumentationBaseUrl + "/UCF119.md");
-#pragma warning restore RS2008
 }

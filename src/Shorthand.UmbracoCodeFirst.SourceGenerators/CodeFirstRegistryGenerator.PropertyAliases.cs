@@ -8,7 +8,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
 
 public sealed partial class CodeFirstRegistryGenerator {
-#pragma warning disable RS2008
     private static readonly DiagnosticDescriptor _propertyAliasesConflict = new(
         "UCF116",
         "Property alias constants conflict",
@@ -32,7 +31,6 @@ public sealed partial class CodeFirstRegistryGenerator {
         "CodeFirst",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
-#pragma warning restore RS2008
 
     private static void EmitOtherPropertyAliases(
         SourceProductionContext context,

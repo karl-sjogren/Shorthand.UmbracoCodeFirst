@@ -81,6 +81,9 @@ This repo is a small Umbraco app template built around a layered, local-developm
   - `EnforceCodeStyleInBuild` is enabled
   - `ImplicitUsings` is enabled
 - Use the repo's existing patterns for tests and infrastructure instead of inventing a parallel setup. The tests are under `test/`, and the repo intentionally wires in test helpers and coverage support via the shared props files.
+- Maintain the owning project's `AnalyzerReleases.Unshipped.md` when adding, changing, or removing
+  diagnostics, and move entries into `AnalyzerReleases.Shipped.md` on release. Follow the numeric
+  prerelease version mapping documented in `docs/development.md`; do not suppress RS2008.
 - Structure test cases into Arrange, Act, and Assert sections, each marked with `// Arrange`,
   `// Act`, and `// Assert` comments. Keep setup, the operation under test, and checks in their
   respective sections; use a single `// Act & Assert` comment when a statement does both.

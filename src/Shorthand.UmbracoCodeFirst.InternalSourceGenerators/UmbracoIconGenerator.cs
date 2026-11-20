@@ -9,6 +9,14 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators;
 public sealed class UmbracoIconGenerator : IIncrementalGenerator {
     private const string _fileName = "umbraco-icons.json";
 
+    private static readonly DiagnosticDescriptor _invalidCatalog = new(
+        "UCF201",
+        "Invalid Umbraco icon catalog",
+        "{0}",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly string _generatedCodeAttribute =
         $"[global::System.CodeDom.Compiler.GeneratedCode(\"Shorthand.UmbracoCodeFirst.InternalSourceGenerators\", \"{typeof(UmbracoIconGenerator).Assembly.GetName().Version}\")]";
 
@@ -88,13 +96,7 @@ public sealed class UmbracoIconGenerator : IIncrementalGenerator {
     private static void Emit(SourceProductionContext context, IconCatalogResult result) {
         if(!result.IsValid) {
             context.ReportDiagnostic(Diagnostic.Create(
-                new DiagnosticDescriptor(
-                    "UCF201",
-                    "Invalid Umbraco icon catalog",
-                    "{0}",
-                    "CodeFirst",
-                    DiagnosticSeverity.Error,
-                    isEnabledByDefault: true),
+                _invalidCatalog,
                 Location.None,
                 result.Error));
             return;

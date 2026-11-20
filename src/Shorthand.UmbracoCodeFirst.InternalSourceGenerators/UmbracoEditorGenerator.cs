@@ -8,6 +8,14 @@ namespace Shorthand.UmbracoCodeFirst.InternalSourceGenerators;
 public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
     private const string _fileName = "umbraco-property-editors.json";
 
+    private static readonly DiagnosticDescriptor _invalidMetadata = new(
+        "UCF200",
+        "Invalid Umbraco editor metadata",
+        "{0}",
+        "CodeFirst",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly string _generatedCodeAttribute =
         $"[global::System.CodeDom.Compiler.GeneratedCode(\"Shorthand.UmbracoCodeFirst.InternalSourceGenerators\", \"{typeof(UmbracoEditorGenerator).Assembly.GetName().Version}\")]";
 
@@ -102,13 +110,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
     private static void Emit(SourceProductionContext context, MetadataResult result) {
         if(!result.IsValid) {
             context.ReportDiagnostic(Diagnostic.Create(
-                new DiagnosticDescriptor(
-                    "UCF200",
-                    "Invalid Umbraco editor metadata",
-                    "{0}",
-                    "CodeFirst",
-                    DiagnosticSeverity.Error,
-                    isEnabledByDefault: true),
+                _invalidMetadata,
                 Location.None,
                 result.Error));
             return;

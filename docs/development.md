@@ -13,6 +13,24 @@ Warnings are errors and code style is enforced in builds (`Directory.Build.props
 managed centrally in `Directory.Packages.props`; the solution file is `.slnx`. CI
 (`.github/workflows/build.yml`) restores, builds and tests with coverage.
 
+## Analyzer release tracking
+
+The analyzer, source generator, and internal source generator projects each have
+`AnalyzerReleases.Shipped.md` and `AnalyzerReleases.Unshipped.md` files. Add new diagnostics, or
+changes to a diagnostic's category, default severity, or enabled status, to the owning project's
+unshipped file; record removals there too. When publishing an analyzer package, move its unshipped
+entries into a new release section in its shipped file. The
+`Microsoft.CodeAnalysis.Analyzers` build targets automatically include both files as analyzer
+additional inputs.
+
+Roslyn's release file format accepts numeric versions only. The existing `0.0.2.79` section is a
+baseline snapshot of the rules published by `0.0.2-alpha-79`, not a claim that the rules were
+introduced in that specific prerelease. For subsequent prereleases, use the numeric form
+`major.minor.patch.runNumber` (for example, `0.0.2.80` for `0.0.2-alpha-80`). If a final release
+needs a section after prereleases, use a revision greater than their run numbers (for example,
+`0.0.2.2147483647` for `0.0.2`). The internal generator is not published as an analyzer package,
+so its rules remain unshipped.
+
 ## Test projects
 
 Every production project has a `ProjectName.Tests` project under `test/`.
