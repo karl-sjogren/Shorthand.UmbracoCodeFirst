@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="325 172 725 369" role="img" aria-labelledby="title description">
+  <title id="title">UCF</title>
+  <desc id="description">Angular neon UCF lettering with a cyan, violet and pink gradient.</desc>
+  <defs>
+    <linearGradient id="top" x1="361" y1="0" x2="1016" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20faf7"/>
+      <stop offset=".37" stop-color="#39e6f9"/>
+      <stop offset=".56" stop-color="#5dc8f8"/>
+      <stop offset=".75" stop-color="#eb53ef"/>
+      <stop offset="1" stop-color="#9864f5"/>
+    </linearGradient>
+    <linearGradient id="bottom" x1="361" y1="0" x2="1016" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8f78f6"/>
+      <stop offset=".17" stop-color="#ee4cf1"/>
+      <stop offset=".32" stop-color="#f44df0"/>
+      <stop offset=".47" stop-color="#4ec9f3"/>
+      <stop offset=".58" stop-color="#a464f4"/>
+      <stop offset=".68" stop-color="#ed4bed"/>
+      <stop offset=".83" stop-color="#a35bf1"/>
+      <stop offset="1" stop-color="#875df4"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="210" x2="0" y2="505" gradientUnits="userSpaceOnUse">
+      <stop offset=".2" stop-color="black"/>
+      <stop offset="1" stop-color="white"/>
+    </linearGradient>
+    <mask id="bottom-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="1376" height="768">
+      <rect width="1376" height="768" fill="url(#fade)"/>
+    </mask>
+    <filter id="glow" x="-.1" y="-.2" width="1.2" height="1.4" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <path id="mark" d="M361 208H441V399L462 424H512L531 400V208H612V235L585 273V236H558V409L526 451H446L416 411L415 236H388L387 416L434 478L540 477L585 419V299L650 208H790L806 231L793 257L776 235H664L612 308V405L665 477H775L811 426V208H1014V288H891V321L995 322L942 402H891V505H808L838 461L839 477L865 476V375L928 374L943 348H865V261H986V235L838 236V434L789 504H651L602 440L553 505H420L361 427Z M678 261H760L783 290L768 316L747 288H692L665 325V387L693 424H747L770 394L785 417L760 451H680L639 397V316Z" fill-rule="evenodd"/>
+  </defs>
+  <use href="#mark" fill="url(#top)" opacity=".55" filter="url(#glow)"/>
+  <use href="#mark" fill="url(#bottom)" opacity=".4" filter="url(#glow)" mask="url(#bottom-fade)"/>
+  <use href="#mark" fill="url(#top)"/>
+  <use href="#mark" fill="url(#bottom)" mask="url(#bottom-fade)"/>
+  <use href="#mark" fill="none" stroke="#dcf7ff" stroke-width="2" opacity=".38" stroke-linejoin="round"/>
+</svg>
