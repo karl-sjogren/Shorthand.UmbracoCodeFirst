@@ -94,6 +94,10 @@ Specify package versions through your normal NuGet configuration.
 The path is relative to the models project, or may be absolute. It must exist; an empty directory
 is allowed. The default local `Views` directory may be absent. All `.cshtml` files below the
 directory are considered recursively.
+Only views marked with `UCFTemplate` become code-first templates. When the directory is outside
+the models project, its views are scanned without being Razor-compiled in that project; the site
+project remains responsible for compiling them. Other views, such as layouts and view components,
+are still copied as content where needed.
 Build output maps the directory to `Views` by default. Set
 `UmbracoCodeFirstViewsTargetDirectory` when the Umbraco deployment root should use another
 directory name.

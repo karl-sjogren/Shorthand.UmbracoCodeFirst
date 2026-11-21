@@ -1,9 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
     <UmbracoCodeFirstViewsDirectory>..\Shorthand.UmbracoCodeFirst.PackageConsumer.Tests\Views</UmbracoCodeFirstViewsDirectory>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Remove="appsettings-schema*.json;umbraco-package-schema.json" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Shorthand.UmbracoCodeFirst.PackageConsumer.Tests\PackageConsumerDefinitions.cs" Link="PackageConsumerDefinitions.cs" />
     <PackageVersion Include="Shorthand.UmbracoCodeFirst" Version="$(CodeFirstPackageVersion)" />

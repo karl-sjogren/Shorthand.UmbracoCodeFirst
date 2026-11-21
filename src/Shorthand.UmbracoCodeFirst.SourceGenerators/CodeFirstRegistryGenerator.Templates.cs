@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Shorthand.UmbracoCodeFirst.SourceGenerators;
@@ -81,15 +82,24 @@ public sealed partial class CodeFirstRegistryGenerator {
         ImmutableArray<AdditionalText> files,
         string? projectDirectory,
         string? viewsDirectory,
-        bool enabled) {
+        bool enabled,
+        AnalyzerConfigOptionsProvider options) {
         var definitions = new List<TemplateDefinition>();
         if(!enabled || projectDirectory is null || projectDirectory.Length == 0) {
             return definitions;
         }
 
         var templateDirectory = viewsDirectory is { Length: > 0 } ? viewsDirectory : Path.Combine(projectDirectory, "Views");
-        foreach(var file in files.GroupBy(file => file.Path, StringComparer.Ordinal).Select(group => group.First())) {
-            if(!TryGetRelativeViewPath(file.Path, projectDirectory, templateDirectory, out var relativePath, out var alias)) {
+        var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+        foreach(var file in files) {
+            var originalPath = file.Path;
+            if(file.Path.EndsWith(".cshtml.ucftemplate", StringComparison.OrdinalIgnoreCase)
+                && !options.GetOptions(file).TryGetValue("build_metadata.AdditionalFiles.CodeFirstOriginalPath", out originalPath)) {
+                continue;
+            }
+
+            if(!seenPaths.Add(originalPath)
+                || !TryGetRelativeViewPath(originalPath, projectDirectory, templateDirectory, out var relativePath, out var alias)) {
                 continue;
             }
 
@@ -115,9 +125,9 @@ public sealed partial class CodeFirstRegistryGenerator {
                 continue;
             }
 
-            var location = Location.Create(file.Path, declarations[0].Span, text.Lines.GetLinePositionSpan(declarations[0].Span));
+            var location = Location.Create(originalPath, declarations[0].Span, text.Lines.GetLinePositionSpan(declarations[0].Span));
             if(declarations.Count != 1) {
-                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, file.Path, "use exactly one UCFTemplate attribute"));
+                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, originalPath, "use exactly one UCFTemplate attribute"));
                 continue;
             }
 
@@ -129,7 +139,7 @@ public sealed partial class CodeFirstRegistryGenerator {
                 || attribute.ArgumentList.Arguments[0].Expression is not LiteralExpressionSyntax literal
                 || !literal.IsKind(SyntaxKind.StringLiteralExpression)
                 || string.IsNullOrWhiteSpace(literal.Token.ValueText)) {
-                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, file.Path,
+                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, originalPath,
                     "specify one non-empty string literal as the template name on a single line"));
                 continue;
             }
@@ -137,14 +147,14 @@ public sealed partial class CodeFirstRegistryGenerator {
             var aliasSegments = alias.Split('/');
             if(alias.Length > 100 || aliasSegments.Any(segment =>
                 segment.Length == 0 || !Regex.IsMatch(segment, @"^[A-Za-z][A-Za-z0-9_]*$"))) {
-                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, file.Path,
+                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, originalPath,
                     "every relative path segment must start with a letter and contain only letters, digits or underscores (maximum 100 characters for the full alias)"));
                 continue;
             }
 
             alias = string.Join("_", aliasSegments);
             if(alias.Length > 100) {
-                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, file.Path,
+                context.ReportDiagnostic(Diagnostic.Create(_invalidTemplate, location, originalPath,
                     "the flattened template alias must contain at most 100 characters"));
                 continue;
             }

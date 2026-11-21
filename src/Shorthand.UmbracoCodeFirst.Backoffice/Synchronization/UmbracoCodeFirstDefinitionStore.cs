@@ -188,7 +188,8 @@ internal sealed class UmbracoCodeFirstDefinitionStore(
     private async Task<SynchronizationStatus> ApplyDataTypeAsync(CodeFirstDefinition definition) {
         var configurationJson = definition.EditorConfiguration is { } editorConfiguration
             && (editorConfiguration.BlockTypes is not null || editorConfiguration.BlockGroups is not null
-                || editorConfiguration.TypedSettings is not null)
+                || editorConfiguration.TypedSettings is not null
+                || CodeFirstElementPickerConfiguration.HasSettings(editorConfiguration))
                 ? BlockEditorConfigurationResolver.Resolve(definition, contentTypeService, ownershipStore)
                 : definition.EffectiveConfigurationJson;
         var existing = await FindOwnedDataTypeAsync(definition.Alias);

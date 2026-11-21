@@ -41,6 +41,10 @@ public static class CodeFirstBlockReferences {
                 }
             }
         }
+
+        foreach(var reference in CodeFirstElementPickerConfiguration.GetReferences(configuration)) {
+            yield return reference;
+        }
     }
 
     public static Guid CreateKey(params string[] parts) {

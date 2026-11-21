@@ -14,6 +14,38 @@ internal static class BlockEditorConfigurationResolver {
         var configuration = definition.EditorConfiguration!;
         var json = JsonNode.Parse(configuration.Json)?.AsObject()
             ?? throw new InvalidOperationException("The block editor configuration must be a JSON object.");
+        if(CodeFirstElementPickerConfiguration.HasSettings(configuration)) {
+            if(json.ContainsKey("filter")) {
+                if(json.ContainsKey("allowedContentTypes")) {
+                    throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both 'filter' and 'allowedContentTypes'.");
+                }
+
+                var keys = CodeFirstElementPickerConfiguration.FilterValues(configuration).Select(value =>
+                    Guid.TryParse(value, out var key) ? key : ResolveElementKey(new CodeFirstElementReference(value)));
+                json.Remove("filter");
+                json["allowedContentTypes"] = string.Join(",", keys);
+            }
+
+            if(json.ContainsKey("minNumber") || json.ContainsKey("maxNumber")) {
+                if(json.ContainsKey("validationLimit")) {
+                    throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both picker limits and 'validationLimit'.");
+                }
+
+                var limit = new JsonObject();
+                if(json.TryGetPropertyValue("minNumber", out var min) && min is not null) {
+                    limit["min"] = min.DeepClone();
+                }
+
+                if(json.TryGetPropertyValue("maxNumber", out var max) && max is not null) {
+                    limit["max"] = max.DeepClone();
+                }
+
+                json.Remove("minNumber");
+                json.Remove("maxNumber");
+                json["validationLimit"] = limit;
+            }
+        }
+
         if(configuration.BlockTypes is not null && json.ContainsKey("blocks")) {
             throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both typed blocks and raw blocks JSON.");
         }

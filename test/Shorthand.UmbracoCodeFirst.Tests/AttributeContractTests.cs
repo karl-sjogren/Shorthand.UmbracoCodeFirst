@@ -199,6 +199,20 @@ public class AttributeContractTests {
             """{"crops":[{"alias":"thumb","height":200,"width":300}],"enableLocalFocalPoint":true,"filter":"cc07b313-0843-4aa8-bbda-871c8da728c8,4c52d8ab-54e6-40cd-999c-7a5f24903e4d","ignoreUserStartNodes":false,"multiple":true,"startNodeId":"11111111-2222-3333-4444-555555555555","validationLimit":{"max":1,"min":0}}""");
     }
 
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_SerializesElementPickerCollection() {
+        // Arrange
+
+        // Act
+        var configuration = CodeFirstEditorConfiguration.FromType(
+            typeof(TestElementPickerConfiguration), UmbracoEditors.ElementPicker.Alias);
+
+        // Assert
+        configuration.Json.ShouldBe("""{"filter":["first","second"],"maxNumber":1}""");
+        CodeFirstElementPickerConfiguration.GetReferences(configuration)
+            .Select(CodeFirstBlockReferences.GetAlias).ShouldBe(["first", "second"]);
+    }
+
     [Theory]
     [InlineData(typeof(CSharpCodeEditorConfiguration), """{"language":"csharp"}""")]
     [InlineData(typeof(CustomCodeEditorConfiguration), """{"language":"custom-language"}""")]
@@ -332,6 +346,13 @@ public class AttributeContractTests {
             EnableLocalFocalPoint = true;
             IgnoreUserStartNodes = false;
             Crops = [new("thumb", 300, 200)];
+        }
+    }
+
+    private sealed class TestElementPickerConfiguration : UmbracoEditors.ElementPicker.Configuration {
+        public TestElementPickerConfiguration() {
+            Filter = new List<string> { "first", "second" };
+            MaxNumber = 1;
         }
     }
 

@@ -89,6 +89,16 @@ try {
     }
     dotnet test $fixture --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true'
     if ($LASTEXITCODE -ne 0) { throw "Split package consumer test failed with exit code $LASTEXITCODE." }
+    $publishDirectory = Join-Path (Split-Path $fixture -Parent) 'bin\Release\net10.0\publish'
+    New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
+    dotnet publish $fixture --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true' '-p:IsPublishable=true' --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { throw "Split package consumer publish failed with exit code $LASTEXITCODE." }
+    $publishViews = Join-Path $publishDirectory 'Views'
+    foreach ($view in @('packageConsumer.cshtml', 'Features\Nested\packageConsumerNested.cshtml', 'Components\Example\Default.cshtml')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $publishViews $view))) {
+            throw "Published view '$view' is missing."
+        }
+    }
 
     $output = dotnet build $fixture --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" '-p:CodeFirstSplitConsumer=true' '-p:UmbracoCodeFirstGenerateTemplates=true' --verbosity quiet 2>&1 | Out-String
     if ($LASTEXITCODE -eq 0 -or $output -notmatch 'UCF124') {
@@ -102,8 +112,10 @@ try {
         throw "A models library unexpectedly produced a Razor warning: $output"
     }
     $views = Join-Path ([System.IO.Path]::GetTempPath()) "codefirst-views-$([Guid]::NewGuid().ToString('N'))"
+    $alternateViews = Join-Path ([System.IO.Path]::GetTempPath()) "codefirst-views-$([Guid]::NewGuid().ToString('N'))"
     $mainView = Join-Path $views 'packageConsumer.cshtml'
     $extraView = Join-Path $views 'extra.cshtml'
+    $alternateView = Join-Path $alternateViews 'packageConsumer.cshtml'
     try {
         dotnet msbuild $models "-p:CodeFirstPackageVersion=$version" '-p:UmbracoCodeFirstViewsDirectory=' '-target:ShorthandUmbracoCodeFirstCollectTemplates' --verbosity quiet
         if ($LASTEXITCODE -ne 0) { throw "A missing default views directory should be allowed." }
@@ -124,6 +136,38 @@ try {
         $aliasesPath = Join-Path $generatedDirectory 'UmbracoTemplates.g.cs'
         $registryPath = Join-Path $generatedDirectory 'CodeFirstRegistry.g.cs'
         $initialRegistry = Get-Content $registryPath -Raw
+        $inputs = (dotnet msbuild $models "-p:CodeFirstPackageVersion=$version" "-p:UmbracoCodeFirstViewsDirectory=$views" '-p:Configuration=Release' '-target:ShorthandUmbracoCodeFirstCollectTemplates' '-getItem:AdditionalFiles,UpToDateCheckInput' | Out-String) | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { throw "Could not inspect external view inputs." }
+        $discovery = @($inputs.Items.AdditionalFiles | Where-Object { $_.CodeFirstOriginalPath -eq $mainView })
+        if ($discovery.Count -ne 1 -or -not (Test-Path -LiteralPath $discovery[0].FullPath) -or
+            @($inputs.Items.AdditionalFiles | Where-Object { $_.FullPath -eq $mainView }).Count -ne 0 -or
+            @($inputs.Items.UpToDateCheckInput | Where-Object { $_.FullPath -eq $mainView }).Count -ne 1) {
+            throw "External views were not isolated from Razor or tracked for up-to-date checks."
+        }
+        $discoveryTime = (Get-Item -LiteralPath $discovery[0].FullPath).LastWriteTimeUtc
+        dotnet build $models --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" "-p:UmbracoCodeFirstViewsDirectory=$views" --verbosity quiet
+        if ($LASTEXITCODE -ne 0 -or (Get-Item -LiteralPath $discovery[0].FullPath).LastWriteTimeUtc -ne $discoveryTime) {
+            throw "An unchanged external view was recopied."
+        }
+
+        New-Item -ItemType Directory -Path $alternateViews | Out-Null
+        $alternateContent = (Get-Content $mainView -Raw).Replace('Package consumer template', 'Package consumer templatu')
+        [System.IO.File]::WriteAllText($alternateView, $alternateContent)
+        (Get-Item $alternateView).LastWriteTimeUtc = (Get-Item $mainView).LastWriteTimeUtc
+        dotnet build $models --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" "-p:UmbracoCodeFirstViewsDirectory=$alternateViews" --verbosity quiet
+        if ($LASTEXITCODE -ne 0 -or (Get-Content $registryPath -Raw) -notmatch 'Package consumer templatu') {
+            throw "Switching external views directories did not update template definitions."
+        }
+        dotnet build $models --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" "-p:UmbracoCodeFirstViewsDirectory=$views" --verbosity quiet
+        if ($LASTEXITCODE -ne 0 -or (Get-Content $registryPath -Raw) -ne $initialRegistry) {
+            throw "Switching back to the original views directory did not restore its template definitions."
+        }
+
+        Set-Content -LiteralPath $extraView -Value '@model Unavailable.WebProject.Type'
+        dotnet build $models --configuration Release --no-restore "-p:CodeFirstPackageVersion=$version" "-p:UmbracoCodeFirstViewsDirectory=$views" --verbosity quiet
+        if ($LASTEXITCODE -ne 0 -or (Get-Content $aliasesPath -Raw) -match 'const string Extra') {
+            throw "An unmarked external view was compiled or registered."
+        }
 
         Add-Content -LiteralPath $mainView -Value '<p>Changed</p>'
         Set-Content -LiteralPath $extraView -Value '@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Extra")]'
@@ -142,6 +186,8 @@ try {
         if (Test-Path -LiteralPath $extraView) { Remove-Item -LiteralPath $extraView }
         if (Test-Path -LiteralPath $mainView) { Remove-Item -LiteralPath $mainView }
         if (Test-Path -LiteralPath $views) { Remove-Item -LiteralPath $views }
+        if (Test-Path -LiteralPath $alternateView) { Remove-Item -LiteralPath $alternateView }
+        if (Test-Path -LiteralPath $alternateViews) { Remove-Item -LiteralPath $alternateViews }
     }
 } finally {
     foreach ($name in $packages) {

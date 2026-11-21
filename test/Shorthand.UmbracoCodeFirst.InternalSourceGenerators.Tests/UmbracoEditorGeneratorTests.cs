@@ -140,6 +140,12 @@ public class UmbracoEditorGeneratorTests {
         var generatedTypes = CSharpSyntaxTree.ParseText(generatedSource, cancellationToken: TestContext.Current.CancellationToken)
             .GetRoot(TestContext.Current.CancellationToken)
             .DescendantNodes().OfType<ClassDeclarationSyntax>();
+        var elementPicker = generatedTypes.Single(type => type.Identifier.ValueText == "ElementPicker");
+        var elementPickerConfiguration = elementPicker.Members.OfType<ClassDeclarationSyntax>()
+            .Single(type => type.Identifier.ValueText == "Configuration");
+        elementPickerConfiguration.Members.OfType<PropertyDeclarationSyntax>()
+            .Single(property => property.Identifier.ValueText == "Filter").Type.ToString()
+            .ShouldBe("global::System.Collections.Generic.ICollection<string>?");
         var properties = generatedTypes
             .Where(type => type.Identifier.ValueText == "Configuration")
             .SelectMany(type => type.Members.OfType<PropertyDeclarationSyntax>())

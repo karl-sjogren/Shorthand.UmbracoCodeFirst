@@ -55,14 +55,15 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
             .Where(static symbol => symbol is not null)
             .Select(static (symbol, _) => symbol!);
         var templates = context.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+            .Where(static file => file.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
+                || file.Path.EndsWith(".cshtml.ucftemplate", StringComparison.OrdinalIgnoreCase))
             .Collect()
             .Combine(context.AnalyzerConfigOptionsProvider.Select(static (options, _) => {
                 options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var directory);
                 options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstViewsDirectory", out var viewsDirectory);
                 options.GlobalOptions.TryGetValue("build_property.UmbracoCodeFirstGenerateTemplates", out var enabled);
                 options.GlobalOptions.TryGetValue("build_property.Configuration", out var configuration);
-                return (directory, viewsDirectory, enabled: !string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase), configuration);
+                return (directory, viewsDirectory, enabled: !string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase), configuration, options);
             }));
         context.RegisterSourceOutput(
             definitions.Collect().Combine(context.CompilationProvider).Combine(templates),
@@ -73,8 +74,8 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     .OrderBy(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), StringComparer.Ordinal)
                     .ToImmutableArray();
 
-                var (directory, viewsDirectory, enabled, configuration) = input.Right.Right;
-                var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, directory, viewsDirectory, enabled);
+                var (directory, viewsDirectory, enabled, configuration, options) = input.Right.Right;
+                var templateDefinitions = ReadTemplates(productionContext, input.Right.Left, directory, viewsDirectory, enabled, options);
                 if(distinctDefinitions.Length == 0 && templateDefinitions.Count == 0) {
                     return;
                 }

@@ -18,7 +18,7 @@ then rebuild.
 Each entry has a stable `id`, display `name`, `description`, schema `alias`, `uiAlias`,
 documented `returnType`, `documentationUrl`, and a `configuration.properties` array. The array is
 empty for editors with no documented Data Type options. Supported configuration property types are
-`string`, `bool`, `int`, `decimal`, `string[]`, `int[]`, `decimal[]`, and `json`. The `json` type is
+`string`, `bool`, `int`, `decimal`, `string[]`, `stringCollection`, `int[]`, `decimal[]`, and `json`. The `json` type is
 intentional for editor-owned arrays and objects such as picker roots, crop presets, block definitions,
 and rich-text toolbar settings; it preserves the editor's native shape while keeping the generated
 configuration API discoverable. Return types are descriptors rather than
@@ -100,6 +100,27 @@ when multiplicity cannot be established statically, including externally managed
 This replaces the former Media Picker `MinNumber`, `MaxNumber`, raw JSON `Crops` and `StartNode`
 members. Use `ValidationLimit`, typed `Crops` and `StartNodeId` instead. Raw
 `UCFDataType.ConfigurationJson` remains available.
+
+## Element Picker
+
+`UmbracoEditors.ElementPicker.Configuration` accepts `MinNumber`, `MaxNumber`, and `Filter`.
+Set `Filter` to a collection of code-first element aliases or Umbraco element type keys.
+Aliases are resolved to synchronized, code-first-owned element type keys. For example:
+
+```csharp
+public sealed class SiteSettingsPickerConfiguration : UmbracoEditors.ElementPicker.Configuration {
+    public SiteSettingsPickerConfiguration() {
+        MaxNumber = 1;
+        Filter = [SiteSettings.ModelTypeAlias];
+    }
+}
+```
+
+The picker selects existing elements from Umbraco's element library; the element type must allow
+library use, and an element must exist there before it can be selected. The property value is a
+collection even when the maximum is one.
+Existing `Filter` assignments using a comma-separated string must be changed to a collection;
+legacy string values in `CodeFirstEditorConfiguration` remain supported.
 
 ## Block editors
 

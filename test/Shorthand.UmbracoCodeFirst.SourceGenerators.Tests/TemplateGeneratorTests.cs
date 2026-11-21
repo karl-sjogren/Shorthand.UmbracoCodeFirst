@@ -101,6 +101,27 @@ public class TemplateGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_DiscoveryCopy_UsesOriginalPathForAliasesAndDiagnostics() {
+        // Arrange
+        var root = Path.GetFullPath(Path.Combine("site", "..", "web", "Features"));
+        var original = Path.Combine(root, "Blog", "Page.cshtml");
+        var copy = new InMemoryAdditionalText(
+            Path.Combine("site", "obj", "Blog", "Page.cshtml.ucftemplate"),
+            """@attribute [UCFTemplate("Page")]""");
+        var options = new TestOptionsProvider(Path.Combine("..", "web", "Features"), originalPath: original);
+
+        // Act
+        var result = RunGenerator(options, copy);
+        var invalid = RunGenerator(options, new InMemoryAdditionalText(copy.Path, """@attribute [UCFTemplate("")]"""));
+
+        // Assert
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+        registry.ShouldContain("CodeFirstDefinitionKind.Template, \"Blog_Page\"");
+        registry.ShouldContain("TemplateViewPath: \"Blog/Page.cshtml\"");
+        invalid.Diagnostics.Single().Location.GetLineSpan().Path.ShouldBe(original);
+    }
+
+    [Fact]
     public void GenerateRegistry_UnmarkedAndCommentedViews_AreIgnored_NestedMarkedViews_AreIncluded() {
         // Arrange
         var files = new[] {
@@ -430,8 +451,8 @@ public class TemplateGeneratorTests {
         public override SourceText GetText(CancellationToken cancellationToken = default) => SourceText.From(content);
     }
 
-    private sealed class TestOptionsProvider(string? viewsDirectory = null, bool enabled = true) : AnalyzerConfigOptionsProvider {
-        private readonly AnalyzerConfigOptions _options = new TestOptions(viewsDirectory, enabled);
+    private sealed class TestOptionsProvider(string? viewsDirectory = null, bool enabled = true, string? originalPath = null) : AnalyzerConfigOptionsProvider {
+        private readonly AnalyzerConfigOptions _options = new TestOptions(viewsDirectory, enabled, originalPath);
 
         public override AnalyzerConfigOptions GlobalOptions => _options;
 
@@ -440,12 +461,13 @@ public class TemplateGeneratorTests {
         public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => _options;
     }
 
-    private sealed class TestOptions(string? viewsDirectory, bool enabled) : AnalyzerConfigOptions {
+    private sealed class TestOptions(string? viewsDirectory, bool enabled, string? originalPath) : AnalyzerConfigOptions {
         public override bool TryGetValue(string key, out string value) {
             value = key switch {
                 "build_property.MSBuildProjectDirectory" => Path.GetFullPath("site"),
                 "build_property.UmbracoCodeFirstViewsDirectory" => viewsDirectory!,
                 "build_property.UmbracoCodeFirstGenerateTemplates" => enabled ? "true" : "false",
+                "build_metadata.AdditionalFiles.CodeFirstOriginalPath" => originalPath!,
                 _ => null!,
             };
             return value is not null;

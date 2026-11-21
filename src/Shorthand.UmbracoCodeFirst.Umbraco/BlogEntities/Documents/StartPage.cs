@@ -1,5 +1,6 @@
 using Shorthand.UmbracoCodeFirst.Attributes;
 using Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.DataTypes;
+using Umbraco.Cms.Core.Models.PublishedContent;
 
 namespace Shorthand.UmbracoCodeFirst.Umbraco.BlogEntities.Documents;
 
@@ -18,4 +19,8 @@ public partial class StartPage {
     [UCFDescription("The main heading for the start page.")]
     [ContentTab]
     public partial string MainHeading { get; }
+
+    [UCFProperty("Site settings", UmbracoBlogSiteSettingsPickerDataType.Alias, SortOrder = 1, Mandatory = true)]
+    [ContentTab]
+    public partial IEnumerable<IPublishedElement> SiteSettings { get; }
 }

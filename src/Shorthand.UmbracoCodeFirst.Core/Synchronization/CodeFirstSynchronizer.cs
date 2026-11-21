@@ -65,9 +65,19 @@ public sealed class CodeFirstSynchronizer(
                 var blockConfiguration = definition.EditorConfiguration;
                 var hasTypedBlocks = definition.Kind == CodeFirstDefinitionKind.DataType
                     && (blockConfiguration?.BlockTypes is not null || blockConfiguration?.BlockGroups is not null
-                        || blockConfiguration?.TypedSettings is not null);
+                        || blockConfiguration?.TypedSettings is not null
+                        || CodeFirstElementPickerConfiguration.HasSettings(blockConfiguration));
                 if(hasTypedBlocks) {
                     ValidateBlockReferences(definition, registry.Definitions);
+                    if(CodeFirstElementPickerConfiguration.HasSettings(blockConfiguration)
+                        && blockConfiguration!.BlockTypes is null && blockConfiguration.BlockGroups is null
+                        && blockConfiguration.TypedSettings is null
+                        && !CodeFirstBlockReferences.GetReferences(blockConfiguration).Any()) {
+                        var directResult = await SynchronizeDefinitionAsync(definition, cancellationToken);
+                        items.Add(ToItem(definition, directResult));
+                        continue;
+                    }
+
                     if(store is not ICodeFirstBlockDefinitionStore blockStore) {
                         throw new InvalidOperationException("The definition store does not support typed block configuration.");
                     }
@@ -138,8 +148,20 @@ public sealed class CodeFirstSynchronizer(
         CodeFirstDefinition definition,
         IReadOnlyList<CodeFirstDefinition> definitions) {
         var configuration = definition.EditorConfiguration!;
+        var pickerFilter = false;
+        var pickerAllowedTypes = false;
+        var pickerLimits = false;
+        var pickerValidationLimit = false;
         foreach(var json in new[] { configuration.Json, definition.ConfigurationJson }.Where(value => !string.IsNullOrWhiteSpace(value))) {
             using var document = JsonDocument.Parse(json!);
+            if(CodeFirstElementPickerConfiguration.HasSettings(configuration)) {
+                var root = document.RootElement;
+                pickerFilter |= root.TryGetProperty("filter", out _);
+                pickerAllowedTypes |= root.TryGetProperty("allowedContentTypes", out _);
+                pickerLimits |= root.TryGetProperty("minNumber", out _) || root.TryGetProperty("maxNumber", out _);
+                pickerValidationLimit |= root.TryGetProperty("validationLimit", out _);
+            }
+
             if(configuration.BlockTypes is not null && document.RootElement.TryGetProperty("blocks", out _)) {
                 throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both typed blocks and raw blocks JSON.");
             }
@@ -153,6 +175,14 @@ public sealed class CodeFirstSynchronizer(
                     throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both typed and raw '{setting.Key}' configuration.");
                 }
             }
+        }
+
+        if(pickerFilter && pickerAllowedTypes) {
+            throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both 'filter' and 'allowedContentTypes'.");
+        }
+
+        if(pickerLimits && pickerValidationLimit) {
+            throw new InvalidOperationException($"Data type '{definition.Alias}' specifies both picker limits and 'validationLimit'.");
         }
 
         foreach(var reference in CodeFirstBlockReferences.GetReferences(configuration)) {

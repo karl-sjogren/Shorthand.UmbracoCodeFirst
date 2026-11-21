@@ -79,6 +79,126 @@ public class CodeFirstSynchronizerTests {
     }
 
     [Fact]
+    public async Task SynchronizeAsync_ElementPicker_PreparesBeforeItsReferencedElement_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "picker", "Picker", "Umbraco.ElementPicker", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.ElementPicker",
+                    """{"filter":["element","otherElement","a76b4594-6a30-45d7-ac42-4bcf878f0258"],"maxNumber":1}""")),
+            new(CodeFirstDefinitionKind.DocumentType, "element", "Element", null,
+                [new("nested", "Nested", "picker")], Settings: new(IsElement: true)),
+            new(CodeFirstDefinitionKind.DocumentType, "otherElement", "Other element", null,
+                [], Settings: new(IsElement: true)),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(0);
+        store.Calls.ShouldBe(["prepare:picker", "apply:element", "apply:otherElement", "apply:picker"]);
+    }
+
+    [Theory]
+    [InlineData("""{"filter":[" first ","","second"]}""", new[] { "first", "second" })]
+    [InlineData("""{"filter":" first, ,second "}""", new[] { "first", "second" })]
+    [InlineData("""{"filter":[]}""", new string[0])]
+    [InlineData("""{"filter":null}""", new string[0])]
+    public void ElementPickerFilter_ParsesCollectionAndLegacyString(string json, string[] expected) {
+        // Arrange
+        var configuration = new CodeFirstEditorConfiguration("Umbraco.ElementPicker", json);
+
+        // Act
+        var values = CodeFirstElementPickerConfiguration.FilterValues(configuration);
+
+        // Assert
+        values.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("""{"filter":42}""")]
+    [InlineData("""{"filter":["valid",null]}""")]
+    [InlineData("""{"filter":[42]}""")]
+    public void ElementPickerFilter_RejectsInvalidValues(string json) {
+        // Arrange
+        var configuration = new CodeFirstEditorConfiguration("Umbraco.ElementPicker", json);
+
+        // Act & Assert
+        Should.Throw<InvalidOperationException>(() => CodeFirstElementPickerConfiguration.FilterValues(configuration));
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_ElementPicker_MissingElementFailsBeforePreparing_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "picker", "Picker", "Umbraco.ElementPicker", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.ElementPicker", """{"filter":["missing"]}""")),
+        ]);
+        var store = new BlockRecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        store.Calls.ShouldBeEmpty();
+        report.Items.Single().Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("missing");
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_ElementPicker_KeyFilterDoesNotRequireElementDependency_Async() {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "picker", "Picker", "Umbraco.ElementPicker", [],
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.ElementPicker",
+                    """{"filter":"a76b4594-6a30-45d7-ac42-4bcf878f0258","maxNumber":1}""")),
+        ]);
+        var store = new RecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.FailedCount.ShouldBe(0);
+        store.AppliedAliases.ShouldBe(["picker"]);
+    }
+
+    [Theory]
+    [InlineData("""{"filter":"a76b4594-6a30-45d7-ac42-4bcf878f0258"}""", """{"allowedContentTypes":""}""")]
+    [InlineData("""{"maxNumber":1}""", """{"validationLimit":{"max":2}}""")]
+    public async Task SynchronizeAsync_ElementPicker_ConflictingSettingsAcrossConfigurationsFail_Async(
+        string editorJson, string definitionJson) {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.DataType, "picker", "Picker", "Umbraco.ElementPicker", [],
+                ConfigurationJson: definitionJson,
+                EditorConfiguration: new CodeFirstEditorConfiguration("Umbraco.ElementPicker", editorJson)),
+        ]);
+        var store = new RecordingStore();
+        var synchronizer = new CodeFirstSynchronizer(
+            registry, store, new SynchronizationReportStore(), TimeProvider.System,
+            NullLogger<CodeFirstSynchronizer>.Instance);
+
+        // Act
+        var report = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        report.Items.Single().Status.ShouldBe(SynchronizationStatus.Failed);
+        report.Items.Single().Message.ShouldNotBeNull().ShouldContain("specifies both");
+        store.AppliedAliases.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SynchronizeAsync_BlockReferenceMissing_ReportsFailureWithoutPreparing_Async() {
         // Arrange
         var registry = new TestRegistry([

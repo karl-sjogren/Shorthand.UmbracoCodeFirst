@@ -80,6 +80,8 @@ public class PackageConsumerStartupTests : IDisposable {
 #if CODEFIRST_SPLIT
             registry.GetType().Assembly.GetName().Name.ShouldBe("Shorthand.UmbracoCodeFirst.PackageConsumer.Models");
             typeof(PackageConsumerStartupTests).Assembly.GetType("Shorthand.UmbracoCodeFirst.UmbracoTemplates").ShouldBeNull();
+            registry.GetType().Assembly.GetCustomAttributes<Microsoft.AspNetCore.Razor.Hosting.RazorCompiledItemAttribute>()
+                .ShouldBeEmpty();
 #else
             registry.GetType().Assembly.ShouldBe(typeof(PackageConsumerStartupTests).Assembly);
 #endif
@@ -99,6 +101,14 @@ public class PackageConsumerStartupTests : IDisposable {
                 await view.View.RenderAsync(new ViewContext(
                     actionContext, view.View, viewData, tempData, output, new HtmlHelperOptions()));
                 output.ToString().ShouldContain("<h1>Package consumer template</h1>");
+                var componentView = services.GetRequiredService<IRazorViewEngine>()
+                    .GetView(null, "~/Views/Components/Example/Default.cshtml", true);
+                componentView.Success.ShouldBeTrue();
+                viewData.Model = new PackageConsumerViewModel();
+                using var componentOutput = new StringWriter();
+                await componentView.View.RenderAsync(new ViewContext(
+                    actionContext, componentView.View, viewData, tempData, componentOutput, new HtmlHelperOptions()));
+                componentOutput.ToString().ShouldContain("<p>Component view</p>");
             }
 
             await first.StopAsync(token);
@@ -143,8 +153,12 @@ public class PackageConsumerStartupTests : IDisposable {
         definitions.ShouldContain(definition => definition.Name == "Package consumer text");
         definitions.ShouldContain(definition => definition.Kind == CodeFirstDefinitionKind.Template
             && definition.Alias == "packageConsumer" && definition.Name == "Package consumer template");
+        definitions.ShouldNotContain(definition => definition.Kind == CodeFirstDefinitionKind.Template
+            && definition.Alias == "Components_Example_Default");
         firstReport.CompletedAt.ShouldNotBe(DateTimeOffset.MinValue);
         firstReport.Error.ShouldBeNull();
+        firstReport.Items.Where(item => item.Status == SynchronizationStatus.Failed)
+            .Select(item => $"{item.Alias}: {item.Message}").ShouldBeEmpty();
         firstReport.FailedCount.ShouldBe(0);
         firstReport.Items.ShouldContain(item =>
             item.Name == "Package consumer text" && item.Status == SynchronizationStatus.Created);

@@ -7,6 +7,7 @@
     <CompilerVisibleProperty Include="UmbracoCodeFirstGenerateTemplates" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstTemplateInputs" />
     <CompilerVisibleProperty Include="Configuration" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="CodeFirstOriginalPath" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -15,14 +16,18 @@
     <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' == ''">$(MSBuildProjectDirectory)\Views</_UmbracoCodeFirstViewsDirectory>
     <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">$(UmbracoCodeFirstViewsDirectory)</_UmbracoCodeFirstViewsDirectory>
     <_UmbracoCodeFirstViewsDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(_UmbracoCodeFirstViewsDirectory)'))</_UmbracoCodeFirstViewsDirectory>
+    <_UmbracoCodeFirstRelativeViewsDirectory>$([System.IO.Path]::GetRelativePath('$(MSBuildProjectDirectory)', '$(_UmbracoCodeFirstViewsDirectory)'))</_UmbracoCodeFirstRelativeViewsDirectory>
+    <_UmbracoCodeFirstExternalViews Condition="'$(_UmbracoCodeFirstRelativeViewsDirectory)' == '..' or $(_UmbracoCodeFirstRelativeViewsDirectory.StartsWith('..$([System.IO.Path]::DirectorySeparatorChar)')) or $([System.IO.Path]::IsPathRooted('$(_UmbracoCodeFirstRelativeViewsDirectory)'))">true</_UmbracoCodeFirstExternalViews>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false'">
     <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)**/*.cshtml" />
     <AdditionalFiles Include="@(_UmbracoCodeFirstTemplateFiles)"
+                     Condition="'$(_UmbracoCodeFirstExternalViews)' != 'true'"
                      Exclude="@(AdditionalFiles->'%(FullPath)')"
                      TargetPath="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)" />
     <Content Include="@(_UmbracoCodeFirstTemplateFiles)"
+             Condition="'$(_UmbracoCodeFirstExternalViews)' != 'true'"
              Exclude="@(Content->'%(FullPath)')"
              Link="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
              TargetPath="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
@@ -30,6 +35,15 @@
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest"
              ExcludeFromDefaultItemExcludes="true" />
+    <None Include="@(_UmbracoCodeFirstTemplateFiles)"
+          Condition="'$(_UmbracoCodeFirstExternalViews)' == 'true'"
+          Exclude="@(None->'%(FullPath)')"
+          Link="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
+          TargetPath="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <UpToDateCheckInput Include="@(_UmbracoCodeFirstTemplateFiles)"
+                        Condition="'$(_UmbracoCodeFirstExternalViews)' == 'true'" />
   </ItemGroup>
 
   <Target Name="ShorthandUmbracoCodeFirstValidateRazorSettings"
@@ -55,6 +69,22 @@
            Text="UmbracoCodeFirstViewsDirectory '$(_UmbracoCodeFirstViewsDirectory)' does not exist." />
     <PropertyGroup>
       <UmbracoCodeFirstTemplateInputs>@(_UmbracoCodeFirstTemplateFiles->'%(FullPath)')</UmbracoCodeFirstTemplateInputs>
+      <_UmbracoCodeFirstDiscoveryDirectory>$(IntermediateOutputPath)UmbracoCodeFirstTemplates\$([MSBuild]::StableStringHash('$(_UmbracoCodeFirstViewsDirectory)', 'Sha256'))\</_UmbracoCodeFirstDiscoveryDirectory>
     </PropertyGroup>
+    <!-- Razor compiles .cshtml AdditionalFiles even when they are not Content items. -->
+    <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false' and '$(_UmbracoCodeFirstExternalViews)' == 'true'">
+      <_UmbracoCodeFirstTemplateFiles>
+        <CodeFirstOriginalPath>%(_UmbracoCodeFirstTemplateFiles.FullPath)</CodeFirstOriginalPath>
+      </_UmbracoCodeFirstTemplateFiles>
+      <_UmbracoCodeFirstDiscoveryFiles Include="@(_UmbracoCodeFirstTemplateFiles->'$(_UmbracoCodeFirstDiscoveryDirectory)%(RecursiveDir)%(Filename)%(Extension).ucftemplate')" />
+    </ItemGroup>
+    <Copy Condition="'@(_UmbracoCodeFirstDiscoveryFiles)' != ''"
+          SourceFiles="@(_UmbracoCodeFirstTemplateFiles)"
+          DestinationFiles="@(_UmbracoCodeFirstDiscoveryFiles)"
+          SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <AdditionalFiles Include="@(_UmbracoCodeFirstDiscoveryFiles)" />
+      <FileWrites Include="@(_UmbracoCodeFirstDiscoveryFiles)" />
+    </ItemGroup>
   </Target>
 </Project>

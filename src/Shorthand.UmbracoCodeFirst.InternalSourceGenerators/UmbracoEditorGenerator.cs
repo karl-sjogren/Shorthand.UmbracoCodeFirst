@@ -234,6 +234,7 @@ public sealed class UmbracoEditorGenerator : IIncrementalGenerator {
                 "int" => "int",
                 "decimal" => "decimal",
                 "string[]" => "string[]",
+                "stringCollection" => "global::System.Collections.Generic.ICollection<string>",
                 "int[]" => "int[]",
                 "decimal[]" => "decimal[]",
                 "json" => "global::System.Text.Json.JsonElement",
