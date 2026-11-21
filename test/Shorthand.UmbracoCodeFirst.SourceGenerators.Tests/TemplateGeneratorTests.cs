@@ -240,6 +240,24 @@ public class TemplateGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_FlattenedNestedAliasCollidesWithRoot_ReportsBoth() {
+        // Arrange
+        var files = new[] {
+            new InMemoryAdditionalText(Path.Combine("site", "Views", "Stuff", "MoreStuff", "SomePage2.cshtml"),
+                """@attribute [UCFTemplate("Nested")]"""),
+            new InMemoryAdditionalText(Path.Combine("site", "Views", "Stuff_MoreStuff_SomePage2.cshtml"),
+                """@attribute [UCFTemplate("Root")]"""),
+        };
+
+        // Act
+        var result = RunGenerator(files);
+
+        // Assert
+        result.Diagnostics.Count(diagnostic => diagnostic.Id == "UCF121").ShouldBe(2);
+        result.GeneratedSources.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void GenerateRegistry_UnsafeFilename_ReportsDiagnostic() {
         // Arrange
         var view = new InMemoryAdditionalText(Path.Combine("site", "Views", "Bad-name.cshtml"), """@attribute [UCFTemplate("Page")]""");

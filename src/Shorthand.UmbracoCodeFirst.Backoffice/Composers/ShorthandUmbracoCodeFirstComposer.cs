@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.Extensions.Options;
 using Shorthand.UmbracoCodeFirst.Backoffice.Cleanup;
 using Shorthand.UmbracoCodeFirst.Backoffice.Contracts;
 using Shorthand.UmbracoCodeFirst.Backoffice.GeneratedSources;
@@ -9,12 +11,22 @@ using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Core.Notifications;
+using Umbraco.Cms.Core.IO;
+using Umbraco.Cms.Core.Persistence.Repositories;
+using Umbraco.Cms.Core.Scoping;
 
 namespace Shorthand.UmbracoCodeFirst.Backoffice.Composers;
 
 public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
     public void Compose(IUmbracoBuilder builder) {
         builder.Services.AddSingleton<ICodeFirstDefinitionRegistry>(_ => CodeFirstDefinitionRegistryDiscovery.Discover());
+        builder.Services.AddSingleton<ICodeFirstTemplatePaths, CodeFirstTemplatePaths>();
+        Decorate<IViewHelper>(builder.Services, (inner, services) =>
+            new CodeFirstTemplateViewHelper(inner, services.GetRequiredService<ICodeFirstTemplatePaths>()));
+        Decorate<ITemplateRepository>(builder.Services, (inner, services) =>
+            new CodeFirstTemplateRepository(inner, services.GetRequiredService<ICodeFirstTemplatePaths>(),
+                services.GetRequiredService<ICoreScopeProvider>()));
+        builder.Services.AddSingleton<IConfigureOptions<RazorViewEngineOptions>, ConfigureCodeFirstTemplateViews>();
         builder.Services.AddSingleton<ICodeFirstGeneratedSourceService, CodeFirstGeneratedSourceService>();
         builder.Services.AddSingleton<ISynchronizationReportStore, SynchronizationReportStore>();
         builder.Services.AddSingleton(TimeProvider.System);
@@ -25,5 +37,16 @@ public sealed class ShorthandUmbracoCodeFirstComposer : IComposer {
         builder.Services.AddSingleton<ICodeFirstSynchronizer, SynchronizationCoordinator>();
         builder.Services.AddSingleton<ICodeFirstCleanupService, CodeFirstCleanupService>();
         builder.AddNotificationAsyncHandler<UmbracoApplicationStartingNotification, StartupSynchronizationHandler>();
+    }
+
+    private static void Decorate<T>(IServiceCollection services, Func<T, IServiceProvider, T> decorate) where T : class {
+        var original = services.Last(descriptor => descriptor.ServiceType == typeof(T));
+        services.Remove(original);
+        services.Add(ServiceDescriptor.Describe(typeof(T), provider => {
+            var inner = original.ImplementationInstance
+                ?? original.ImplementationFactory?.Invoke(provider)
+                ?? ActivatorUtilities.CreateInstance(provider, original.ImplementationType!);
+            return decorate((T)inner, provider);
+        }, original.Lifetime));
     }
 }

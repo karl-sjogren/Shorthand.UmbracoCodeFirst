@@ -128,8 +128,12 @@ Code-first templates update their display name, but removing a declaration does 
 Umbraco template or its view. Duplicate aliases are rejected case-insensitively. A missing or
 empty physical view fails synchronization instead of creating a default view.
 
-Umbraco's template service reads the view and, outside production mode, may rewrite the file on
-creation or display-name updates, including adding a UTF-8 BOM. View content is otherwise preserved.
+For nested code-first templates the original nested view is authoritative for synchronization,
+backoffice reads, and rendering. Synchronization does not create an alias-named root view or rewrite
+the nested view. A pre-existing root view with the flattened alias is a conflict: inspect it and
+remove it manually if it is an unwanted generated copy. Existing unowned templates are still skipped.
+For root-level templates, Umbraco's template service may rewrite the file outside production mode,
+including adding a UTF-8 BOM. View content is otherwise preserved.
 The deployment must include the physical view in `Views`, even when Razor views are precompiled.
 Template content participates in the cluster definition fingerprint; deploy identical views to all
 participating instances. See [`UCFTemplate`](attributes.md#ucftemplate--razor-view).

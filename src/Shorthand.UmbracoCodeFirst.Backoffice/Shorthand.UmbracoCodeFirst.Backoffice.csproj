@@ -51,6 +51,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Shorthand.UmbracoCodeFirst.Backoffice.Tests" />
     <InternalsVisibleTo Include="Shorthand.UmbracoCodeFirst.Umbraco.Tests" />
   </ItemGroup>
 

@@ -52,6 +52,9 @@ case when referencing it. Every relative path segment must start with an ASCII l
 letters, digits or underscores, and the complete alias is limited to 100 characters.
 Nested views are registered using a flattened underscore alias such as
 `Features_Blog_Default`, while retaining `Features/Blog/Default.cshtml` as the physical view path.
+Umbraco renders and reads the nested file directly; code-first synchronization does not create a
+flattened `Views/Features_Blog_Default.cshtml` copy. If an earlier version created that copy,
+inspect it and remove it manually before rebuilding. Genuine alias collisions remain errors.
 
 Template registration does not automatically associate a document type. Configure both settings:
 
