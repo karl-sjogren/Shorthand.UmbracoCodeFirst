@@ -27,7 +27,28 @@ public class TemplateGeneratorTests {
     }
 
     [Fact]
-    public void GenerateRegistry_UnmarkedNestedAndCommentedViews_AreIgnored() {
+    public void GenerateRegistry_NestedMarkedView_EmitsHierarchicalAlias() {
+        // Arrange
+        var view = new InMemoryAdditionalText(
+            Path.Combine("site", "Views", "Features", "Blog", "Default.cshtml"),
+            """@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Blog default")]""");
+
+        // Act
+        var result = RunGenerator(view);
+
+        // Assert
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+        registry.ShouldContain("CodeFirstDefinitionKind.Template, \"Features_Blog_Default\"");
+        registry.ShouldContain("TemplateViewPath: \"Features/Blog/Default.cshtml\"");
+        var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
+        aliases.ShouldContain("public static class Features");
+        aliases.ShouldContain("public static class Blog");
+        aliases.ShouldContain("public const string Default = \"Features_Blog_Default\";");
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void GenerateRegistry_UnmarkedAndCommentedViews_AreIgnored_NestedMarkedViews_AreIncluded() {
         // Arrange
         var files = new[] {
             new InMemoryAdditionalText(Path.Combine("site", "Views", "Plain.cshtml"), "<h1>Plain</h1>"),
@@ -47,14 +68,18 @@ public class TemplateGeneratorTests {
         var result = RunGenerator(files);
 
         // Assert
-        result.GeneratedSources.ShouldBeEmpty();
+        var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
+        aliases.ShouldContain("public static class Nested");
+        aliases.ShouldContain("public const string Page = \"Nested_Page\";");
+        aliases.ShouldNotContain("Plain");
+        aliases.ShouldNotContain("Comment");
         result.Diagnostics.ShouldBeEmpty();
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void GenerateRegistry_ConfiguredExternalViews_UsesOnlyRootViews(bool absolutePath) {
+    public void GenerateRegistry_ConfiguredExternalViews_UsesRecursiveViews(bool absolutePath) {
         // Arrange
         var root = Path.GetFullPath(Path.Combine("site", "..", "web", "Views"));
         var directory = absolutePath ? root : Path.Combine("..", "web", "Views");
@@ -70,7 +95,8 @@ public class TemplateGeneratorTests {
         // Assert
         var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
         aliases.ShouldContain("public const string Page = \"page\";");
-        aliases.ShouldNotContain("Nested");
+        aliases.ShouldContain("public static class Nested");
+        aliases.ShouldContain("public const string Nested = \"Nested_nested\";");
         aliases.ShouldNotContain("Local");
         var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
         registry.ShouldContain("CodeFirstDefinitionKind.Template, \"page\", \"Page\"");

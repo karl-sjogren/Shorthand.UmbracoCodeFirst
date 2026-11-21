@@ -38,7 +38,7 @@ Not inherited; one per class.
 
 ## `UCFTemplate` – Razor view
 
-Mark a root-level view such as `Views/landingPage.cshtml`:
+Mark a view such as `Views/landingPage.cshtml` or `Views/Features/Blog/Default.cshtml`:
 
 ```cshtml
 @attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Landing Page")]
@@ -48,9 +48,10 @@ Mark a root-level view such as `Views/landingPage.cshtml`:
 
 The required display name must be a non-empty C# string literal, and the directive must be on
 one line. The filename stem is the template alias (`landingPage` here); use the exact same
-case when referencing it. Filenames must start with an ASCII letter and contain only ASCII
-letters, digits or underscores, up to 100 characters. Only files directly in `Views` are
-supported; nested views and partials are not registered.
+case when referencing it. Every relative path segment must start with an ASCII letter and contain only ASCII
+letters, digits or underscores, and the complete alias is limited to 100 characters.
+Nested views are registered using a flattened underscore alias such as
+`Features_Blog_Default`, while retaining `Features/Blog/Default.cshtml` as the physical view path.
 
 Template registration does not automatically associate a document type. Configure both settings:
 
@@ -62,10 +63,12 @@ public partial class LandingPage;
 ```
 
 `UmbracoTemplates` is generated in `Shorthand.UmbracoCodeFirst` from marked views in the
-current project's `Views` directory by default. Its constant names capitalize the first character of each filename stem and
-preserve the remaining characters; their values are the exact filename aliases. An alias named
-`umbracoTemplates` uses the constant `TemplateUmbracoTemplates`. Identifier collisions report
-UCF122.
+configured views directory by default. Root view constants capitalize the first character of
+the filename stem and preserve the remaining characters. Nested views use hierarchical static
+classes: `Features/Blog/Default.cshtml` exposes
+`UmbracoTemplates.Features.Blog.Default`. Constant values are the exact slash-separated aliases.
+An root alias named `umbracoTemplates` uses the constant `TemplateUmbracoTemplates`.
+Identifier and hierarchy collisions report UCF122.
 
 To keep code-first models in a project referenced by the Umbraco site, install/reference both
 `Shorthand.UmbracoCodeFirst` and `Shorthand.UmbracoCodeFirst.SourceGenerators` in the models
@@ -83,8 +86,8 @@ project, and set its Views directory:
 
 Specify package versions through your normal NuGet configuration.
 The path is relative to the models project, or may be absolute. It must exist; an empty directory
-is allowed. The default local `Views` directory may be absent. Only its immediate `.cshtml` files
-are considered.
+is allowed. The default local `Views` directory may be absent. All `.cshtml` files below the
+directory are considered recursively.
 
 Reference the models project from the site and disable template generation in the site:
 
@@ -112,9 +115,9 @@ import the build targets in each consuming project, adjusting paths for your sol
 </ItemGroup>
 ```
 
-The physical view must also be present in the deployed `Views` directory; for Razor SDK projects
-you can set `CopyRazorGenerateFilesToPublishDirectory` to `true`. A compiled view alone is not
-sufficient for Umbraco template registration. See [Synchronization](synchronization.md#templates)
+The package build targets automatically include all configured `.cshtml` files as content and
+preserve their relative paths below `Views` for build and publish output. A compiled view alone
+is not sufficient for Umbraco template registration. See [Synchronization](synchronization.md#templates)
 for ownership and file behavior.
 
 ## `UCFCollection` – class

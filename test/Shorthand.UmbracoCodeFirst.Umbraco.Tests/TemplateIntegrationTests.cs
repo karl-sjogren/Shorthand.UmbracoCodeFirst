@@ -32,9 +32,9 @@ public class TemplateIntegrationTests(UmbracoIntegrationFixture fixture) : IClas
         var services = scope.ServiceProvider;
         var views = services.GetRequiredService<FileSystems>().MvcViewsFileSystem.ShouldNotBeNull();
         var templateService = services.GetRequiredService<ITemplateService>();
-        var alias = "ucfTemplate" + Guid.NewGuid().ToString("N");
+        var alias = "Features_Blog_ucfTemplate" + Guid.NewGuid().ToString("N");
         var manualAlias = "ucfManual" + Guid.NewGuid().ToString("N");
-        var path = alias + ".cshtml";
+        var path = "Features/Blog/" + alias + ".cshtml";
         var manualPath = manualAlias + ".cshtml";
         const string content = "@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate(\"Test\")]\n<h1>Template content</h1>";
         views.FileExists(path).ShouldBeFalse();
@@ -64,7 +64,7 @@ public class TemplateIntegrationTests(UmbracoIntegrationFixture fixture) : IClas
             var registry = new TestRegistry([
                 new(CodeFirstDefinitionKind.DocumentType, alias, "Template document", null, [],
                     new CodeFirstTypeSettings(DefaultTemplateAlias: alias, AllowedTemplateAliases: [alias])),
-                new(CodeFirstDefinitionKind.Template, alias, "Test", null, []),
+                new(CodeFirstDefinitionKind.Template, alias, "Test", null, [], TemplateViewPath: path),
                 new(CodeFirstDefinitionKind.Template, manualAlias, "Changed", null, []),
             ]);
             var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
@@ -75,16 +75,16 @@ public class TemplateIntegrationTests(UmbracoIntegrationFixture fixture) : IClas
             // Act
             var first = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
             var second = await synchronizer.SynchronizeAsync(TestContext.Current.CancellationToken);
-            var template = (await templateService.GetAsync(alias)).ShouldNotBeNull();
-            var document = services.GetRequiredService<IContentTypeService>().Get(alias).ShouldNotBeNull();
             var updated = await store.ApplyAsync(
                 new CodeFirstDefinition(CodeFirstDefinitionKind.Template, alias, "Renamed", null, []),
                 TestContext.Current.CancellationToken);
 
             // Assert
             first.FailedCount.ShouldBe(0);
-            first.Items.Single(item => item.Kind == CodeFirstDefinitionKind.Template && item.Alias == alias)
-                .Status.ShouldBe(SynchronizationStatus.Created);
+            var templateItem = first.Items.Single(item => item.Kind == CodeFirstDefinitionKind.Template && item.Alias == alias);
+            templateItem.Status.ShouldBe(SynchronizationStatus.Created);
+            var template = (await templateService.GetAsync(alias)).ShouldNotBeNull();
+            var document = services.GetRequiredService<IContentTypeService>().Get(alias).ShouldNotBeNull();
             first.Items.Single(item => item.Alias == manualAlias).Status.ShouldBe(SynchronizationStatus.Skipped);
             second.FailedCount.ShouldBe(0);
             second.Items.Single(item => item.Kind == CodeFirstDefinitionKind.Template && item.Alias == alias)

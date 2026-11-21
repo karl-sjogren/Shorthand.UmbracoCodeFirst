@@ -68,6 +68,8 @@ public sealed partial class CodeFirstRegistryGenerator {
             builder.Append(SymbolDisplay.FormatLiteral(template.Name, true));
             builder.Append(", null, [], TemplateContentHash: ");
             builder.Append(SymbolDisplay.FormatLiteral(template.ContentHash, true));
+            builder.Append(", TemplateViewPath: ");
+            builder.Append(SymbolDisplay.FormatLiteral(template.RelativePath, true));
             builder.AppendLine("),");
         }
 

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Cryptography;
 using Shorthand.UmbracoCodeFirst.Metadata;
 using Shorthand.UmbracoCodeFirst.Synchronization;
 using Umbraco.Cms.Core.IO;
@@ -41,7 +42,8 @@ internal sealed class CodeFirstTemplateDefinitionStore(
 
         var views = fileSystems.MvcViewsFileSystem
             ?? throw new InvalidOperationException("The Umbraco views filesystem is unavailable.");
-        var path = definition.Alias + ".cshtml";
+        var path = definition.TemplateViewPath
+            ?? (definition.Alias + ".cshtml");
         if(!views.FileExists(path)) {
             throw new InvalidOperationException($"The view 'Views/{path}' for template '{definition.Alias}' does not exist.");
         }
@@ -71,7 +73,13 @@ internal sealed class CodeFirstTemplateDefinitionStore(
             return SynchronizationStatus.Created;
         }
 
-        if(string.Equals(existing.Name, definition.Name, StringComparison.Ordinal)) {
+        using var sha256 = SHA256.Create();
+        var contentHash = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(content)));
+        var existingContentHash = existing.Content is null
+            ? null
+            : Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(existing.Content)));
+        if(string.Equals(existing.Name, definition.Name, StringComparison.Ordinal)
+            && string.Equals(existingContentHash, contentHash, StringComparison.Ordinal)) {
             return SynchronizationStatus.Unchanged;
         }
 

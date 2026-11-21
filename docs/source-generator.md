@@ -1,7 +1,7 @@
 # Source generator
 
 `CodeFirstRegistryGenerator` (project `Shorthand.UmbracoCodeFirst.SourceGenerators`) is an
-incremental generator. It runs over `partial` code-first classes and marked root-level Razor views and
+incremental generator. It runs over `partial` code-first classes and marked Razor views below the configured views directory and
 emits registry, model and alias sources. Output is deterministic (definitions are ordered by fully qualified
 name).
 
@@ -24,7 +24,7 @@ is sensitive. The viewer itself additionally requires a Development host and Set
 Each definition carries:
 
 - Kind (`DataType` / `DocumentType`), alias, name
-- Templates: filename-derived alias, display name and a content hash for cluster coordination
+- Templates: relative-path-derived alias, display name and a content hash for cluster coordination
 - Data Types: editor alias, editor UI alias, configuration JSON
 - Document Types: `CodeFirstTypeSettings`, the property list (`CodeFirstPropertyDefinition` with
   alias, name, Data Type alias, description, group/tab alias+name+sort, sort order, mandatory,
@@ -75,9 +75,10 @@ not been bound yet), so ordering of files does not matter.
 
 ### Template aliases – `UmbracoTemplates.g.cs`
 
-Marked root-level views generate `Shorthand.UmbracoCodeFirst.UmbracoTemplates` constants.
-The identifier is the filename alias with its first character capitalized, and the value retains
-the exact filename case. The generator can consume a configurable external Views directory, so
+Marked views generate `Shorthand.UmbracoCodeFirst.UmbracoTemplates` constants.
+Root views use the filename stem; nested views use a hierarchical C# shape such as
+`UmbracoTemplates.Features.Blog.Default`, whose value is the flattened alias
+`Features_Blog_Default`. The generator can consume a configurable external Views directory, so
 the models project owns both the constants and template registry entries while the site owns the
 physical views. See [UCFTemplate](attributes.md#ucftemplate--razor-view) for configuration and
 the single-registry requirement.

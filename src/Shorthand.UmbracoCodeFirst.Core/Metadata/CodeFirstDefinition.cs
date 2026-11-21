@@ -64,7 +64,8 @@ public sealed record CodeFirstDefinition(
     IReadOnlyList<string>? CompositionAliases = null,
     string? FolderPath = null,
     CodeFirstEditorConfiguration? EditorConfiguration = null,
-    string? TemplateContentHash = null) {
+    string? TemplateContentHash = null,
+    string? TemplateViewPath = null) {
     public string? EffectiveConfigurationJson =>
         EditorConfiguration?.Json ?? ConfigurationJson;
 

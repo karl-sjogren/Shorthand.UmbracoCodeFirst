@@ -135,7 +135,7 @@ Change the container to `public partial class Container` and do not use `file` o
 
 ## UCF120
 
-A marked root-level view needs one non-empty string literal and a valid filename:
+A marked view needs one non-empty string literal and valid relative path segments:
 
 ```razor
 @* Views/article.cshtml: UCF120 *@
@@ -147,12 +147,12 @@ A marked root-level view needs one non-empty string literal and a valid filename
 @attribute [UCFTemplate("Article")]
 ```
 
-Filenames must start with an ASCII letter, contain only letters, digits or underscores and be at
-most 100 characters long.
+Every relative path segment must start with an ASCII letter, contain only letters, digits or
+underscores and contribute to a flattened alias of at most 100 characters.
 
 ## UCF121
 
-Marked root-level views cannot have aliases differing only by case. On a case-sensitive filesystem:
+Marked views cannot have aliases differing only by case. On a case-sensitive filesystem:
 
 ```text
 Views/article.cshtml   @attribute [UCFTemplate("Article")]

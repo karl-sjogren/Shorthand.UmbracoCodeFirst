@@ -31,8 +31,16 @@
            Text="UmbracoCodeFirstViewsDirectory '$(_UmbracoCodeFirstViewsDirectory)' does not exist." />
     <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false'">
       <_UmbracoCodeFirstExistingAdditionalFiles Include="@(AdditionalFiles->'%(FullPath)')" />
-      <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)*.cshtml" />
+      <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)**/*.cshtml" />
       <AdditionalFiles Include="@(_UmbracoCodeFirstTemplateFiles)" Exclude="@(_UmbracoCodeFirstExistingAdditionalFiles)" />
+      <_UmbracoCodeFirstExistingContent Include="@(Content->'%(FullPath)')" />
+      <Content Include="@(_UmbracoCodeFirstTemplateFiles)"
+               Exclude="@(_UmbracoCodeFirstExistingContent)"
+               Link="Views\%(RecursiveDir)%(Filename)%(Extension)"
+               ExcludeFromSingleFile="true"
+               CopyToOutputDirectory="PreserveNewest"
+               CopyToPublishDirectory="PreserveNewest"
+               ExcludeFromDefaultItemExcludes="true" />
     </ItemGroup>
     <PropertyGroup>
       <UmbracoCodeFirstTemplateInputs>@(_UmbracoCodeFirstTemplateFiles->'%(FullPath)')</UmbracoCodeFirstTemplateInputs>

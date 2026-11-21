@@ -122,7 +122,7 @@ description markers are removed during synchronization.
 
 ## Templates
 
-Marked root-level Razor views are registered before document types. An existing unowned template
+Marked Razor views below the configured views directory are registered before document types. An existing unowned template
 is left unchanged and reported as skipped; it can still be explicitly allowed by a document type.
 Code-first templates update their display name, but removing a declaration does not delete the
 Umbraco template or its view. Duplicate aliases are rejected case-insensitively. A missing or
