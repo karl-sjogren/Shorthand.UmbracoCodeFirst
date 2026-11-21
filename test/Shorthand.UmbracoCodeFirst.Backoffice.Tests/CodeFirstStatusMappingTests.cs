@@ -47,6 +47,24 @@ public class CodeFirstStatusMappingTests {
         result.DocumentTypes.Single().Status.ShouldBe("Created");
     }
 
+    [Theory]
+    [InlineData("SomePage.cshtml", "/")]
+    [InlineData("Stuff/MoreStuff/SomePage2.cshtml", "Stuff/MoreStuff")]
+    [InlineData("Stuff\\MoreStuff\\SomePage2.cshtml", "Stuff/MoreStuff")]
+    [InlineData(null, "/")]
+    public void Map_TemplateFolder_UsesRelativeViewDirectory(string? viewPath, string expectedFolder) {
+        // Arrange
+        var registry = new TestRegistry([
+            new(CodeFirstDefinitionKind.Template, "page", "Page", null, [], TemplateViewPath: viewPath),
+        ]);
+
+        // Act
+        var result = CodeFirstStatusMapping.Map(registry, new SynchronizationReportStore());
+
+        // Assert
+        result.Templates.Single().Folder.ShouldBe(expectedFolder);
+    }
+
     [Fact]
     public void Map_Collection_ReportsSummaryAndFailure() {
         // Arrange

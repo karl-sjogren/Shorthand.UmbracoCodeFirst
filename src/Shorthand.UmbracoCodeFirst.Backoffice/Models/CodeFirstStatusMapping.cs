@@ -41,7 +41,7 @@ internal static class CodeFirstStatusMapping {
                     definition.Kind.ToString(),
                     definition.Alias,
                     definition.Name,
-                    string.IsNullOrWhiteSpace(definition.FolderPath) ? "/" : definition.FolderPath,
+                    GetFolder(definition),
                     definition.Settings?.Description,
                     definition.Settings?.Icon,
                     definition.Settings?.AllowAsRoot == true,
@@ -119,5 +119,15 @@ internal static class CodeFirstStatusMapping {
             TemplateCount = definitions.Count(definition => definition.Kind == nameof(CodeFirstDefinitionKind.Template)),
             Templates = definitions.Where(definition => definition.Kind == nameof(CodeFirstDefinitionKind.Template)).ToArray(),
         };
+    }
+
+    private static string GetFolder(CodeFirstDefinition definition) {
+        if(definition.Kind == CodeFirstDefinitionKind.Template && !string.IsNullOrWhiteSpace(definition.TemplateViewPath)) {
+            var path = definition.TemplateViewPath.Replace('\\', '/');
+            var separator = path.LastIndexOf('/');
+            return separator > 0 ? path[..separator] : "/";
+        }
+
+        return string.IsNullOrWhiteSpace(definition.FolderPath) ? "/" : definition.FolderPath;
     }
 }

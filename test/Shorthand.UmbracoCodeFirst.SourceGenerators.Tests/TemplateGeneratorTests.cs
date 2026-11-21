@@ -95,6 +95,8 @@ public class TemplateGeneratorTests {
         // Assert
         var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
         aliases.ShouldContain("<c>Features\\Elements\\ImageBlock\\Default.cshtml</c>");
+        var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+        registry.ShouldContain("TemplateViewPath: \"Elements/ImageBlock/Default.cshtml\"");
         result.Diagnostics.ShouldBeEmpty();
     }
 
