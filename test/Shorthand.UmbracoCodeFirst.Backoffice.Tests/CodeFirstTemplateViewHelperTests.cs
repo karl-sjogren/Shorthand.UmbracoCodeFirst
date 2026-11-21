@@ -104,4 +104,34 @@ public class CodeFirstTemplateViewHelperTests {
         unownedPath.ShouldBeNull();
         paths.GetVerifiedPath("Stuff_Page").ShouldBeNull();
     }
+
+    [Theory]
+    [InlineData("Page", "Page.cshtml")]
+    [InlineData("Blog_Page", "Blog/Page.cshtml")]
+    [InlineData("Implicit", null)]
+    public void TemplatePaths_CustomViews_MapsOwnedTemplates(string alias, string? path) {
+        // Arrange
+        var registry = A.Fake<ICodeFirstDefinitionRegistry>();
+        A.CallTo(() => registry.Definitions).Returns([
+            new(CodeFirstDefinitionKind.Template, alias, "Page", null, [], TemplateViewPath: path),
+        ]);
+        var keyValues = A.Fake<IKeyValueService>();
+        var key = Guid.NewGuid();
+        A.CallTo(() => keyValues.GetValue(CodeFirstTemplatePaths.OwnershipKey(alias))).Returns(key.ToString("D"));
+        var fileSystems = new FileSystems(NullLoggerFactory.Instance, A.Fake<IIOHelper>(),
+            Options.Create(new GlobalSettings()), A.Fake<IHostingEnvironment>());
+        var customViews = A.Fake<IFileSystem>();
+        var paths = new CodeFirstTemplatePaths(registry, keyValues, fileSystems, customViews);
+        var owned = A.Fake<ITemplate>();
+        A.CallTo(() => owned.Alias).Returns(alias);
+        A.CallTo(() => owned.Key).Returns(key);
+
+        // Act
+        var ownedPath = paths.GetOwnedPath(owned);
+
+        // Assert
+        ownedPath.ShouldBe(path ?? alias + ".cshtml");
+        paths.Views.ShouldBeSameAs(customViews);
+        paths.UsesCustomViews.ShouldBeTrue();
+    }
 }

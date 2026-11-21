@@ -98,6 +98,13 @@ Build output maps the directory to `Views` by default. Set
 `UmbracoCodeFirstViewsTargetDirectory` when the Umbraco deployment root should use another
 directory name.
 
+When running a site from its project directory, Umbraco reads templates from the site's `Views`
+directory, not the build output. If the configured source directory is elsewhere within the site's
+content root, set `Shorthand:UmbracoCodeFirst:TemplateViewsDirectory` to its path relative to that
+root. For example, use `"TemplateViewsDirectory": "Features"` in `appsettings.Development.json`
+for a site's `Features` directory. This setting also directs template rendering to that source
+directory. Do not set it in deployments that use the default output `Views` directory.
+
 Reference the models project from the site and disable template generation in the site:
 
 ```xml

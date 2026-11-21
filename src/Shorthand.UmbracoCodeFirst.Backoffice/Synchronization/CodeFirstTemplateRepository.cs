@@ -28,22 +28,32 @@ internal sealed class CodeFirstTemplateRepository(
     public void Save(ITemplate entity) => inner.Save(entity);
 
     public void Delete(ITemplate entity) {
-        if(paths.GetOwnedPath(entity) is not null && paths.Views.FileExists(entity.Alias + ".cshtml")) {
-            throw new InvalidOperationException($"A root view conflicts with nested template '{entity.Alias}'.");
+        if(paths.GetOwnedPath(entity) is not null && paths.GetOwnedFilePath(entity.Alias + ".cshtml", _ => entity) is null) {
+            throw new InvalidOperationException($"A root view conflicts with code-first template '{entity.Alias}'.");
         }
 
         inner.Delete(entity);
         paths.Forget(entity.Alias);
     }
 
-    public Stream GetFileContentStream(string filepath) => inner.GetFileContentStream(MapPath(filepath));
-    public void SetFileContent(string filepath, Stream content) => inner.SetFileContent(MapPath(filepath), content);
-    public long GetFileSize(string filepath) => inner.GetFileSize(MapPath(filepath));
+    public Stream GetFileContentStream(string filepath) =>
+        MapPath(filepath) is { } path ? paths.Views.OpenFile(path) : inner.GetFileContentStream(filepath);
 
-    private string MapPath(string filepath) => paths.GetOwnedFilePath(filepath, alias => {
+    public void SetFileContent(string filepath, Stream content) {
+        if(MapPath(filepath) is { } path) {
+            paths.Views.AddFile(path, content, true);
+        } else {
+            inner.SetFileContent(filepath, content);
+        }
+    }
+
+    public long GetFileSize(string filepath) =>
+        MapPath(filepath) is { } path ? paths.Views.GetSize(path) : inner.GetFileSize(filepath);
+
+    private string? MapPath(string filepath) => paths.GetOwnedFilePath(filepath, alias => {
         using var scope = scopeProvider.CreateCoreScope(autoComplete: true);
         return inner.Get(alias);
-    }) ?? filepath;
+    });
 
     private ITemplate MapRequired(ITemplate template) => Map(template)!;
 

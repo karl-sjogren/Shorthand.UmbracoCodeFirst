@@ -15,20 +15,24 @@ internal interface ICodeFirstTemplatePaths {
     string? GetPathForSave(ITemplate template);
     string? GetOwnedFilePath(string path, Func<string, ITemplate?> getTemplate);
     IFileSystem Views { get; }
+    bool UsesCustomViews { get; }
 }
 
 internal sealed class CodeFirstTemplatePaths(
     ICodeFirstDefinitionRegistry registry,
     IKeyValueService keyValueService,
-    FileSystems fileSystems) : ICodeFirstTemplatePaths {
+    FileSystems fileSystems,
+    IFileSystem? customViews = null) : ICodeFirstTemplatePaths {
     internal const string OwnershipKeyPrefix = "shorthand.umbraco-codefirst:template:";
 
     private readonly ConcurrentDictionary<string, string> _paths = new(
         registry.Definitions
-            .Where(definition => definition.Kind == CodeFirstDefinitionKind.Template && IsNested(definition.TemplateViewPath))
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.Template
+                && (customViews is not null || IsNested(definition.TemplateViewPath)))
             .GroupBy(definition => definition.Alias, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() == 1)
-            .Select(group => new KeyValuePair<string, string>(group.Key, group.Single().TemplateViewPath!)),
+            .Select(group => new KeyValuePair<string, string>(group.Key,
+                group.Single().TemplateViewPath ?? group.Single().Alias + ".cshtml")),
         StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<string, Guid> _verified = new(StringComparer.OrdinalIgnoreCase);
@@ -37,8 +41,8 @@ internal sealed class CodeFirstTemplatePaths(
         path is not null && (path.Contains('/', StringComparison.Ordinal) || path.Contains('\\', StringComparison.Ordinal));
 
     public void Register(CodeFirstDefinition definition) {
-        if(IsNested(definition.TemplateViewPath)) {
-            _paths[definition.Alias] = definition.TemplateViewPath!;
+        if(UsesCustomViews || IsNested(definition.TemplateViewPath)) {
+            _paths[definition.Alias] = definition.TemplateViewPath ?? definition.Alias + ".cshtml";
         }
     }
 
@@ -71,14 +75,24 @@ internal sealed class CodeFirstTemplatePaths(
             : GetOwnedPath(template);
 
     public string? GetOwnedFilePath(string path, Func<string, ITemplate?> getTemplate) {
-        if(!path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
-            || path.Contains('/', StringComparison.Ordinal)
-            || path.Contains('\\', StringComparison.Ordinal)) {
+        if(!path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase) || DefaultViews.FileExists(path)) {
             return null;
         }
 
-        var alias = path[..^7];
-        if(!_paths.ContainsKey(alias) || Views.FileExists(path)) {
+        string alias;
+        if(IsNested(path)) {
+            var matches = _paths.Where(pair => string.Equals(pair.Value.Replace('\\', '/'), path.Replace('\\', '/'),
+                StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
+            if(matches.Length != 1) {
+                return null;
+            }
+
+            alias = matches[0].Key;
+        } else {
+            alias = path[..^7];
+        }
+
+        if(!_paths.ContainsKey(alias)) {
             return null;
         }
 
@@ -86,8 +100,11 @@ internal sealed class CodeFirstTemplatePaths(
         return template is null ? null : GetOwnedPath(template);
     }
 
-    public IFileSystem Views => fileSystems.MvcViewsFileSystem
+    private IFileSystem DefaultViews => fileSystems.MvcViewsFileSystem
         ?? throw new InvalidOperationException("The Umbraco views filesystem is unavailable.");
+
+    public IFileSystem Views => customViews ?? DefaultViews;
+    public bool UsesCustomViews => customViews is not null;
 
     internal static string OwnershipKey(string alias) => OwnershipKeyPrefix + alias.ToLowerInvariant();
 }

@@ -18,7 +18,7 @@ internal sealed class CodeFirstTemplateViewLocationExpander(
         }
 
         if(path is not null) {
-            context.Values["Shorthand.UmbracoCodeFirst.TemplatePath"] = path;
+            context.Values["Shorthand.UmbracoCodeFirst.TemplatePath"] = paths.Views.GetUrl(path);
         }
     }
 
@@ -26,7 +26,7 @@ internal sealed class CodeFirstTemplateViewLocationExpander(
         ViewLocationExpanderContext context,
         IEnumerable<string> viewLocations) =>
         context.Values.TryGetValue("Shorthand.UmbracoCodeFirst.TemplatePath", out var path) && path is not null
-            ? new[] { "/Views/" + path.Replace('\\', '/') }.Concat(viewLocations)
+            ? new[] { path.Replace('\\', '/') }.Concat(viewLocations)
             : viewLocations;
 }
 

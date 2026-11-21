@@ -11,6 +11,13 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
     private MsSqlContainer? _sqlServer;
     private WebApplication? _application;
     private Func<AssemblyLoadContext, AssemblyName, Assembly?>? _assemblyResolver;
+    private readonly string? _templateViewsDirectory;
+
+    public UmbracoIntegrationFixture() {
+    }
+
+    internal UmbracoIntegrationFixture(string templateViewsDirectory) =>
+        _templateViewsDirectory = templateViewsDirectory;
 
     public bool IsEnabled =>
         string.Equals(
@@ -60,6 +67,9 @@ public sealed class UmbracoIntegrationFixture : IAsyncLifetime {
                     .UseSetting(
                         "Shorthand:UmbracoCodeFirst:DisableStartupSynchronization",
                         "true");
+                if(_templateViewsDirectory is not null) {
+                    builder.Configuration["Shorthand:UmbracoCodeFirst:TemplateViewsDirectory"] = _templateViewsDirectory;
+                }
             });
         await _application.StartAsync(_startupTimeout.Token);
     }

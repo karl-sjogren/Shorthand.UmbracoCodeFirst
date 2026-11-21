@@ -39,14 +39,15 @@ internal sealed class CodeFirstTemplateDefinitionStore(
             throw new InvalidOperationException($"Template alias '{definition.Alias}' is not a valid Umbraco template alias.");
         }
 
-        var views = fileSystems.MvcViewsFileSystem
+        var defaultViews = fileSystems.MvcViewsFileSystem
             ?? throw new InvalidOperationException("The Umbraco views filesystem is unavailable.");
+        var views = templatePaths.Views;
         var path = definition.TemplateViewPath
             ?? (definition.Alias + ".cshtml");
-        var nested = CodeFirstTemplatePaths.IsNested(path);
-        if(nested && views.FileExists(definition.Alias + ".cshtml")) {
+        var mapped = templatePaths.UsesCustomViews || CodeFirstTemplatePaths.IsNested(path);
+        if(mapped && defaultViews.FileExists(definition.Alias + ".cshtml")) {
             throw new InvalidOperationException(
-                $"The root view '{definition.Alias}.cshtml' conflicts with nested template view '{path}'. Inspect and remove the root view before synchronization.");
+                $"The root view '{definition.Alias}.cshtml' conflicts with code-first template view '{path}'. Inspect and remove the root view before synchronization.");
         }
 
         if(!views.FileExists(path)) {
@@ -68,7 +69,7 @@ internal sealed class CodeFirstTemplateDefinitionStore(
         var contentHash = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(content)));
         var contentHashKey = ownershipKey + ":content-hash";
         if(existing is null) {
-            ITemplate created = nested
+            ITemplate created = mapped
                 ? new CodeFirstNewTemplate(shortStringHelper, definition.Name, definition.Alias) {
                     Key = Guid.NewGuid(),
                     Content = content,
@@ -95,7 +96,7 @@ internal sealed class CodeFirstTemplateDefinitionStore(
             }
 
             keyValueService.SetValue(ownershipKey, result.Result.Key.ToString("D"));
-            if(nested) {
+            if(mapped) {
                 keyValueService.SetValue(contentHashKey, contentHash);
                 templatePaths.GetOwnedPath(result.Result);
             }
@@ -103,12 +104,12 @@ internal sealed class CodeFirstTemplateDefinitionStore(
             return SynchronizationStatus.Created;
         }
 
-        if(nested) {
+        if(mapped) {
             existing = await templateService.GetAsync(definition.Alias)
                 ?? throw new InvalidOperationException($"Template '{definition.Alias}' no longer exists.");
         }
 
-        var existingContentHash = nested
+        var existingContentHash = mapped
             ? keyValueService.GetValue(contentHashKey)
             : existing.Content is null
                 ? null
@@ -125,7 +126,7 @@ internal sealed class CodeFirstTemplateDefinitionStore(
             throw new InvalidOperationException($"Could not update template '{definition.Alias}': {updated.Status}.");
         }
 
-        if(nested) {
+        if(mapped) {
             keyValueService.SetValue(contentHashKey, contentHash);
         }
 
