@@ -33,6 +33,26 @@ namespace Shorthand.UmbracoCodeFirst.Umbraco.Tests;
 public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixture)
     : IClassFixture<UmbracoIntegrationFixture> {
     [Fact]
+    public void AppRegistry_TemplateViews_AreCopiedToTestOutput() {
+        // Arrange
+        var templates = new GeneratedCodeFirstDefinitionRegistry().Definitions
+            .Where(definition => definition.Kind == CodeFirstDefinitionKind.Template)
+            .ToArray();
+
+        // Act
+        var missingViews = templates
+            .Where(template => template.TemplateViewPath is null
+                || !System.IO.File.Exists(Path.Combine(AppContext.BaseDirectory, "Views",
+                    template.TemplateViewPath.Replace('/', Path.DirectorySeparatorChar))))
+            .Select(template => template.TemplateViewPath ?? template.Alias)
+            .ToArray();
+
+        // Assert
+        templates.ShouldNotBeEmpty();
+        missingViews.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SynchronizeAsync_GeneratedDefinitions_AreUnchangedAfterReload_Async() {
         // Arrange
         if(!fixture.IsEnabled) {

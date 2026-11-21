@@ -10,8 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\src\Shorthand.UmbracoCodeFirst.Umbraco\Views\*.cshtml"
-             Link="Views\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Shorthand.UmbracoCodeFirst.Umbraco\Views\**\*.cshtml"
+             Link="Views\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
