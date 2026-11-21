@@ -38,13 +38,20 @@ public class PackageConsumerStartupTests : IDisposable {
         // Act & Assert
 #if DEBUG
         var catalog = ((ICodeFirstGeneratedSourceCatalog?)Activator.CreateInstance(catalogType.ShouldNotBeNull())).ShouldNotBeNull();
-        var index = registry.Definitions.ToList().FindIndex(definition => definition.Kind == CodeFirstDefinitionKind.Template);
+        var index = registry.Definitions.ToList().FindIndex(definition =>
+            definition.Kind == CodeFirstDefinitionKind.Template && definition.Alias == "packageConsumer");
         index.ShouldBeGreaterThanOrEqualTo(0);
         var files = catalog.GetSources(index);
         files.ShouldContain(file => file.FileName == "CodeFirstRegistry.g.cs" && file.Content.Contains("packageConsumer", StringComparison.Ordinal));
         files.ShouldContain(file => file.FileName == "UmbracoTemplates.g.cs");
         files.ShouldContain(file => file.IsOriginal && file.FileName == "packageConsumer.cshtml"
             && file.Content.Contains("Package consumer template", StringComparison.Ordinal));
+        var nestedIndex = registry.Definitions.ToList().FindIndex(definition =>
+            definition.Kind == CodeFirstDefinitionKind.Template && definition.Alias == "Features_Nested_packageConsumerNested");
+        nestedIndex.ShouldBeGreaterThanOrEqualTo(0);
+        catalog.GetSources(nestedIndex).ShouldContain(file => file.IsOriginal
+            && file.FileName == "Features/Nested/packageConsumerNested.cshtml"
+            && file.Content.Contains("Package consumer nested template", StringComparison.Ordinal));
         var typeIndex = registry.Definitions.ToList().FindIndex(definition => definition.Kind == CodeFirstDefinitionKind.DataType);
         typeIndex.ShouldBeGreaterThanOrEqualTo(0);
         catalog.GetSources(typeIndex).ShouldContain(file => file.IsOriginal
@@ -143,6 +150,9 @@ public class PackageConsumerStartupTests : IDisposable {
             item.Name == "Package consumer text" && item.Status == SynchronizationStatus.Created);
         firstReport.Items.ShouldContain(item =>
             item.Kind == CodeFirstDefinitionKind.Template && item.Alias == "packageConsumer"
+            && item.Status == SynchronizationStatus.Created);
+        firstReport.Items.ShouldContain(item =>
+            item.Kind == CodeFirstDefinitionKind.Template && item.Alias == "Features_Nested_packageConsumerNested"
             && item.Status == SynchronizationStatus.Created);
         restartReport.CompletedAt.ShouldNotBe(DateTimeOffset.MinValue);
         restartReport.Error.ShouldBeNull();
