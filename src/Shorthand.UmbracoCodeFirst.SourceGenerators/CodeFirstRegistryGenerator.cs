@@ -91,7 +91,7 @@ public sealed partial class CodeFirstRegistryGenerator : IIncrementalGenerator {
                     : null;
                 var templateCompilation = EmitDataTypeAliases(productionContext, distinctDefinitions, input.Left.Right, capturedSources);
                 if(templateDefinitions.Count > 0) {
-                    var source = BuildTemplateAliases(templateDefinitions);
+                    var source = BuildTemplateAliases(templateDefinitions, viewsDirectory);
                     AddGeneratedSource(productionContext, "UmbracoTemplates.g.cs", source, capturedSources);
                     var parseOptions = input.Left.Right.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions;
                     templateCompilation = templateCompilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(source, parseOptions));

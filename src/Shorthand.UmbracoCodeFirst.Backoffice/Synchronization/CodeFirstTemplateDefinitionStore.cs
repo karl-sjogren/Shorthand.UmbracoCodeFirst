@@ -45,7 +45,7 @@ internal sealed class CodeFirstTemplateDefinitionStore(
         var path = definition.TemplateViewPath
             ?? (definition.Alias + ".cshtml");
         if(!views.FileExists(path)) {
-            throw new InvalidOperationException($"The view 'Views/{path}' for template '{definition.Alias}' does not exist.");
+            throw new InvalidOperationException($"The view '{path}' for template '{definition.Alias}' does not exist.");
         }
 
         string content;
@@ -55,7 +55,7 @@ internal sealed class CodeFirstTemplateDefinitionStore(
         }
 
         if(string.IsNullOrWhiteSpace(content)) {
-            throw new InvalidOperationException($"The view 'Views/{path}' for template '{definition.Alias}' is empty.");
+            throw new InvalidOperationException($"The view '{path}' for template '{definition.Alias}' is empty.");
         }
 
         if(existing is null) {

@@ -3,9 +3,33 @@
     <UmbracoJsonSchemaFiles Include="$(MSBuildThisFileDirectory)appsettings-schema.Shorthand.UmbracoCodeFirst.json" />
     <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstViewsDirectory" />
+    <CompilerVisibleProperty Include="UmbracoCodeFirstViewsTargetDirectory" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstGenerateTemplates" />
     <CompilerVisibleProperty Include="UmbracoCodeFirstTemplateInputs" />
     <CompilerVisibleProperty Include="Configuration" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UmbracoCodeFirstViewsTargetDirectory Condition="'$(UmbracoCodeFirstViewsTargetDirectory)' == ''">Views</UmbracoCodeFirstViewsTargetDirectory>
+    <_UmbracoCodeFirstExplicitViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">true</_UmbracoCodeFirstExplicitViewsDirectory>
+    <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' == ''">$(MSBuildProjectDirectory)\Views</_UmbracoCodeFirstViewsDirectory>
+    <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">$(UmbracoCodeFirstViewsDirectory)</_UmbracoCodeFirstViewsDirectory>
+    <_UmbracoCodeFirstViewsDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(_UmbracoCodeFirstViewsDirectory)'))</_UmbracoCodeFirstViewsDirectory>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false'">
+    <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)**/*.cshtml" />
+    <AdditionalFiles Include="@(_UmbracoCodeFirstTemplateFiles)"
+                     Exclude="@(AdditionalFiles->'%(FullPath)')"
+                     TargetPath="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="@(_UmbracoCodeFirstTemplateFiles)"
+             Exclude="@(Content->'%(FullPath)')"
+             Link="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
+             TargetPath="$(UmbracoCodeFirstViewsTargetDirectory)\%(RecursiveDir)%(Filename)%(Extension)"
+             ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             ExcludeFromDefaultItemExcludes="true" />
   </ItemGroup>
 
   <Target Name="ShorthandUmbracoCodeFirstValidateRazorSettings"
@@ -20,7 +44,7 @@
   </Target>
 
   <Target Name="ShorthandUmbracoCodeFirstCollectTemplates"
-          BeforeTargets="GenerateMSBuildEditorConfigFileCore;CoreCompile">
+          BeforeTargets="PrepareForBuild;AssignTargetPaths;GenerateMSBuildEditorConfigFileCore;CoreCompile">
     <PropertyGroup>
       <_UmbracoCodeFirstExplicitViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' != ''">true</_UmbracoCodeFirstExplicitViewsDirectory>
       <_UmbracoCodeFirstViewsDirectory Condition="'$(UmbracoCodeFirstViewsDirectory)' == ''">$(MSBuildProjectDirectory)\Views</_UmbracoCodeFirstViewsDirectory>
@@ -29,19 +53,6 @@
     </PropertyGroup>
     <Error Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false' and '$(_UmbracoCodeFirstExplicitViewsDirectory)' == 'true' and !Exists('$(_UmbracoCodeFirstViewsDirectory)')"
            Text="UmbracoCodeFirstViewsDirectory '$(_UmbracoCodeFirstViewsDirectory)' does not exist." />
-    <ItemGroup Condition="'$(UmbracoCodeFirstGenerateTemplates)' != 'false'">
-      <_UmbracoCodeFirstExistingAdditionalFiles Include="@(AdditionalFiles->'%(FullPath)')" />
-      <_UmbracoCodeFirstTemplateFiles Include="$(_UmbracoCodeFirstViewsDirectory)**/*.cshtml" />
-      <AdditionalFiles Include="@(_UmbracoCodeFirstTemplateFiles)" Exclude="@(_UmbracoCodeFirstExistingAdditionalFiles)" />
-      <_UmbracoCodeFirstExistingContent Include="@(Content->'%(FullPath)')" />
-      <Content Include="@(_UmbracoCodeFirstTemplateFiles)"
-               Exclude="@(_UmbracoCodeFirstExistingContent)"
-               Link="Views\%(RecursiveDir)%(Filename)%(Extension)"
-               ExcludeFromSingleFile="true"
-               CopyToOutputDirectory="PreserveNewest"
-               CopyToPublishDirectory="PreserveNewest"
-               ExcludeFromDefaultItemExcludes="true" />
-    </ItemGroup>
     <PropertyGroup>
       <UmbracoCodeFirstTemplateInputs>@(_UmbracoCodeFirstTemplateFiles->'%(FullPath)')</UmbracoCodeFirstTemplateInputs>
     </PropertyGroup>

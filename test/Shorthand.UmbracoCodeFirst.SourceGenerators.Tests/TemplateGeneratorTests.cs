@@ -48,6 +48,23 @@ public class TemplateGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_ExternalNestedView_UsesConfiguredDirectoryInXmlDocs() {
+        // Arrange
+        var root = Path.GetFullPath(Path.Combine("site", "..", "web", "Features"));
+        var view = new InMemoryAdditionalText(
+            Path.Combine(root, "Elements", "ImageBlock", "Default.cshtml"),
+            """@attribute [Shorthand.UmbracoCodeFirst.Attributes.UCFTemplate("Image block")]""");
+
+        // Act
+        var result = RunGenerator(new TestOptionsProvider(Path.Combine("..", "web", "Features")), view);
+
+        // Assert
+        var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
+        aliases.ShouldContain("<c>Features\\Elements\\ImageBlock\\Default.cshtml</c>");
+        result.Diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void GenerateRegistry_UnmarkedAndCommentedViews_AreIgnored_NestedMarkedViews_AreIncluded() {
         // Arrange
         var files = new[] {

@@ -88,6 +88,9 @@ Specify package versions through your normal NuGet configuration.
 The path is relative to the models project, or may be absolute. It must exist; an empty directory
 is allowed. The default local `Views` directory may be absent. All `.cshtml` files below the
 directory are considered recursively.
+Build output maps the directory to `Views` by default. Set
+`UmbracoCodeFirstViewsTargetDirectory` when the Umbraco deployment root should use another
+directory name.
 
 Reference the models project from the site and disable template generation in the site:
 
