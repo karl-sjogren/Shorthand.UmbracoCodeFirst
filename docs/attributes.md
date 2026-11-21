@@ -66,8 +66,11 @@ public partial class LandingPage;
 configured views directory by default. Root view constants capitalize the first character of
 the filename stem and preserve the remaining characters. Nested views use hierarchical static
 classes: `Features/Blog/Default.cshtml` exposes
-`UmbracoTemplates.Features.Blog.Default`. Constant values are the exact slash-separated aliases.
-An root alias named `umbracoTemplates` uses the constant `TemplateUmbracoTemplates`.
+`UmbracoTemplates.Features.Blog.Default`. Constant values are flattened aliases, with path
+segments joined by underscores. A root alias named `umbracoTemplates` uses the constant
+`TemplateUmbracoTemplates`. If a nested constant or class would have the same name as its
+enclosing class, its identifier is prefixed with `Template`: for example,
+`StartPage/StartPage.cshtml` exposes `UmbracoTemplates.StartPage.TemplateStartPage`.
 Identifier and hierarchy collisions report UCF122.
 
 To keep code-first models in a project referenced by the Umbraco site, install/reference both

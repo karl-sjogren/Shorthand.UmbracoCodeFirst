@@ -47,6 +47,40 @@ public class TemplateGeneratorTests {
         result.Diagnostics.ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData("StartPage/StartPage.cshtml", "StartPage.TemplateStartPage", "StartPage_StartPage")]
+    [InlineData("startPage/StartPage.cshtml", "StartPage.TemplateStartPage", "startPage_StartPage")]
+    [InlineData("Page/Page/Default.cshtml", "Page.TemplatePage.Default", "Page_Page_Default")]
+    [InlineData("Page/Page/TemplatePage.cshtml", "Page.TemplatePage.TemplateTemplatePage", "Page_Page_TemplatePage")]
+    public void GenerateRegistry_MemberMatchingEnclosingClass_EmitsCompilableAlias(string path, string member, string alias) {
+        // Arrange
+        var view = new InMemoryAdditionalText(
+            Path.Combine("site", "Views", path.Replace('/', Path.DirectorySeparatorChar)),
+            """@attribute [UCFTemplate("Page")]""");
+
+        // Act
+        var result = RunGenerator(view);
+        var source = result.GeneratedSources.Single(item => item.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
+        var compilation = CSharpCompilation.Create("Aliases",
+            [
+                CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken),
+                CSharpSyntaxTree.ParseText($"public class Consumer {{ public const string Alias = global::Shorthand.UmbracoCodeFirst.UmbracoTemplates.{member}; }}",
+                    cancellationToken: TestContext.Current.CancellationToken),
+            ],
+            new[] { typeof(object).Assembly.Location, typeof(System.CodeDom.Compiler.GeneratedCodeAttribute).Assembly.Location }
+                .Distinct(StringComparer.Ordinal)
+                .Select(path => MetadataReference.CreateFromFile(path)),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        // Assert
+        result.Diagnostics.ShouldBeEmpty();
+        source.ShouldContain($"= \"{alias}\";");
+        compilation.GetDiagnostics(TestContext.Current.CancellationToken)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        compilation.GetTypeByMetadataName("Consumer")!.GetMembers("Alias").OfType<IFieldSymbol>()
+            .Single().ConstantValue.ShouldBe(alias);
+    }
+
     [Fact]
     public void GenerateRegistry_ExternalNestedView_UsesConfiguredDirectoryInXmlDocs() {
         // Arrange
@@ -113,7 +147,7 @@ public class TemplateGeneratorTests {
         var aliases = result.GeneratedSources.Single(source => source.HintName == "UmbracoTemplates.g.cs").SourceText.ToString();
         aliases.ShouldContain("public const string Page = \"page\";");
         aliases.ShouldContain("public static class Nested");
-        aliases.ShouldContain("public const string Nested = \"Nested_nested\";");
+        aliases.ShouldContain("public const string TemplateNested = \"Nested_nested\";");
         aliases.ShouldNotContain("Local");
         var registry = result.GeneratedSources.Single(source => source.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
         registry.ShouldContain("CodeFirstDefinitionKind.Template, \"page\", \"Page\"");
@@ -286,11 +320,65 @@ public class TemplateGeneratorTests {
     }
 
     [Fact]
+    public void GenerateRegistry_RenamedNestedConstant_ResolvesAttributeSetting() {
+        // Arrange
+        const string source = """
+            using Shorthand.UmbracoCodeFirst;
+            using Shorthand.UmbracoCodeFirst.Attributes;
+            namespace Shorthand.UmbracoCodeFirst.Attributes {
+                public sealed class UCFDocumentAttribute(string name) : global::System.Attribute {
+                    public string DefaultTemplateAlias { get; set; }
+                    public string[] AllowedTemplateAliases { get; set; }
+                }
+            }
+            [UCFDocument("Page", DefaultTemplateAlias = UmbracoTemplates.StartPage.TemplateStartPage,
+                AllowedTemplateAliases = new[] { UmbracoTemplates.StartPage.TemplateStartPage })]
+            public partial class Page;
+            """;
+        var view = new InMemoryAdditionalText(Path.Combine("site", "Views", "StartPage", "StartPage.cshtml"), """@attribute [UCFTemplate("Page")]""");
+        var compilation = CSharpCompilation.Create("Templates",
+            [CSharpSyntaxTree.ParseText(source, cancellationToken: TestContext.Current.CancellationToken)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            [new CodeFirstRegistryGenerator().AsSourceGenerator()], additionalTexts: [view],
+            optionsProvider: new TestOptionsProvider());
+
+        // Act
+        var result = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Results.Single();
+        var registry = result.GeneratedSources.Single(item => item.HintName == "CodeFirstRegistry.g.cs").SourceText.ToString();
+
+        // Assert
+        result.Diagnostics.ShouldBeEmpty();
+        System.Text.RegularExpressions.Regex.IsMatch(registry, "\"StartPage_StartPage\",\\s*new global::System.String\\[\\]").ShouldBeTrue();
+        registry.ShouldContain("""new global::System.String[] { "StartPage_StartPage" }""");
+    }
+
+    [Fact]
     public void GenerateRegistry_TemplateConstantNameCollision_ReportsDiagnostic() {
         // Arrange
         var files = new[] {
             new InMemoryAdditionalText(Path.Combine("site", "Views", "umbracoTemplates.cshtml"), """@attribute [UCFTemplate("One")]"""),
             new InMemoryAdditionalText(Path.Combine("site", "Views", "templateUmbracoTemplates.cshtml"), """@attribute [UCFTemplate("Two")]"""),
+        };
+
+        // Act
+        var result = RunGenerator(files);
+
+        // Assert
+        result.Diagnostics.Count(diagnostic => diagnostic.Id == "UCF122").ShouldBe(2);
+        result.GeneratedSources.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("StartPage/StartPage.cshtml", "StartPage/TemplateStartPage.cshtml")]
+    [InlineData("StartPage/StartPage/Default.cshtml", "StartPage/TemplateStartPage/Default.cshtml")]
+    [InlineData("Page.cshtml", "Page/Default.cshtml")]
+    public void GenerateRegistry_HierarchyIdentifierCollision_ReportsDiagnostic(string first, string second) {
+        // Arrange
+        var files = new[] {
+            new InMemoryAdditionalText(Path.Combine("site", "Views", first.Replace('/', Path.DirectorySeparatorChar)), """@attribute [UCFTemplate("One")]"""),
+            new InMemoryAdditionalText(Path.Combine("site", "Views", second.Replace('/', Path.DirectorySeparatorChar)), """@attribute [UCFTemplate("Two")]"""),
         };
 
         // Act

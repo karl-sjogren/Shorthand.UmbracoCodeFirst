@@ -167,33 +167,9 @@ public sealed partial class CodeFirstRegistryGenerator {
         var uniqueDefinitions = definitions.Where(definition => !duplicateAliases.Contains(definition.Alias))
             .OrderBy(definition => definition.Alias, StringComparer.Ordinal)
             .ToArray();
-        var collisions = uniqueDefinitions
-            .Where(definition => {
-                var relativePathStem = definition.RelativePath.Substring(
-                    0,
-                    definition.RelativePath.Length - Path.GetExtension(definition.RelativePath).Length);
-                return !relativePathStem.Contains('/');
-            })
-            .GroupBy(definition => TemplateIdentifier(definition.Alias), StringComparer.Ordinal)
-            .Where(group => group.Count() > 1)
-            .ToArray();
-        foreach(var collision in collisions) {
-            foreach(var definition in collision) {
-                context.ReportDiagnostic(Diagnostic.Create(_templateIdentifierCollision, definition.Location, collision.Key));
-            }
-        }
-
-        var conflictingIdentifiers = new HashSet<string>(collisions.Select(group => group.Key), StringComparer.Ordinal);
         var hierarchicalConflicts = FindHierarchyConflicts(context, uniqueDefinitions);
         return uniqueDefinitions
-            .Where(definition => {
-                var relativePathStem = definition.RelativePath.Substring(
-                    0,
-                    definition.RelativePath.Length - Path.GetExtension(definition.RelativePath).Length);
-                return !(relativePathStem.Contains('/') == false
-                    && conflictingIdentifiers.Contains(TemplateIdentifier(definition.Alias)))
-                    && !hierarchicalConflicts.Contains(definition);
-            })
+            .Where(definition => !hierarchicalConflicts.Contains(definition))
             .ToArray();
     }
 
@@ -209,7 +185,7 @@ public sealed partial class CodeFirstRegistryGenerator {
             var segments = RelativeAlias(template).Split('/');
             for(var index = 0; index < segments.Length; index++) {
                 var prefix = segments.Take(index).ToArray();
-                if(!prefixes.Any(existing => existing.SequenceEqual(prefix, StringComparer.OrdinalIgnoreCase))) {
+                if(!prefixes.Any(existing => existing.SequenceEqual(prefix, StringComparer.Ordinal))) {
                     prefixes.Add(prefix);
                 }
             }
@@ -220,30 +196,31 @@ public sealed partial class CodeFirstRegistryGenerator {
         }
 
         foreach(var prefix in prefixes) {
-            if(prefix.Length == 0) {
-                continue;
+            var enclosingIdentifier = "UmbracoTemplates";
+            foreach(var segment in prefix) {
+                enclosingIdentifier = TemplateMemberIdentifier(segment, enclosingIdentifier);
             }
 
             var leafAndChildNames = templates
                 .Select(template => RelativeAlias(template).Split('/'))
                 .Where(segments => segments.Length > prefix.Length
-                    && segments.Take(prefix.Length).SequenceEqual(prefix, StringComparer.OrdinalIgnoreCase))
-                .Select(segments => segments[prefix.Length])
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(segment => new {
-                    Segment = segment,
-                    Identifier = TemplateIdentifier(segment),
+                    && segments.Take(prefix.Length).SequenceEqual(prefix, StringComparer.Ordinal))
+                .Select(segments => new {
+                    Segment = segments[prefix.Length],
+                    IsLeaf = segments.Length == prefix.Length + 1,
                 })
+                .Distinct()
                 .ToArray();
 
             foreach(var group in leafAndChildNames
-                .GroupBy(item => item.Identifier, StringComparer.Ordinal)
+                .GroupBy(item => TemplateMemberIdentifier(item.Segment, enclosingIdentifier), StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)) {
                 foreach(var template in templates.Where(template => {
                     var segments = RelativeAlias(template).Split('/');
                     return segments.Length > prefix.Length
-                        && segments.Take(prefix.Length).SequenceEqual(prefix, StringComparer.OrdinalIgnoreCase)
-                        && group.Any(item => string.Equals(item.Segment, segments[prefix.Length], StringComparison.OrdinalIgnoreCase));
+                        && segments.Take(prefix.Length).SequenceEqual(prefix, StringComparer.Ordinal)
+                        && group.Any(item => item.Segment == segments[prefix.Length]
+                            && item.IsLeaf == (segments.Length == prefix.Length + 1));
                 })) {
                     context.ReportDiagnostic(Diagnostic.Create(_templateIdentifierCollision, template.Location, group.Key));
                     conflicts.Add(template);
@@ -258,6 +235,11 @@ public sealed partial class CodeFirstRegistryGenerator {
         var leaf = alias.Substring(alias.LastIndexOf('/') + 1);
         var identifier = char.ToUpperInvariant(leaf[0]) + leaf.Substring(1);
         return identifier == "UmbracoTemplates" ? "TemplateUmbracoTemplates" : identifier;
+    }
+
+    private static string TemplateMemberIdentifier(string segment, string enclosingIdentifier) {
+        var identifier = TemplateIdentifier(segment);
+        return identifier == enclosingIdentifier ? "Template" + identifier : identifier;
     }
 
     private static string GetViewsDirectoryName(string? viewsDirectory) {
@@ -283,7 +265,7 @@ public sealed partial class CodeFirstRegistryGenerator {
         AppendGeneratedCodeAttribute(builder, fullyQualified: true);
         builder.AppendLine("public static class UmbracoTemplates {");
         builder.Indent++;
-        AppendTemplateHierarchy(builder, templates, [], viewsDirectory);
+        AppendTemplateHierarchy(builder, templates, [], viewsDirectory, "UmbracoTemplates");
 
         builder.Indent--;
         builder.AppendLine("}");
@@ -294,7 +276,8 @@ public sealed partial class CodeFirstRegistryGenerator {
         IndentedStringBuilder builder,
         IReadOnlyList<TemplateDefinition> templates,
         IReadOnlyList<string> prefix,
-        string? viewsDirectory) {
+        string? viewsDirectory,
+        string enclosingIdentifier) {
         static string RelativeAlias(TemplateDefinition template) =>
             template.RelativePath.Substring(0, template.RelativePath.Length - Path.GetExtension(template.RelativePath).Length);
         var atPrefix = templates
@@ -320,18 +303,19 @@ public sealed partial class CodeFirstRegistryGenerator {
             builder.Append(template.RelativePath.Replace('/', '\\'));
             builder.AppendLine("</c>.</summary>");
             builder.Append("public const string ");
-            builder.Append(prefix.Count == 0 ? TemplateIdentifier(template.Alias) : TemplateIdentifier(segments[segments.Length - 1]));
+            builder.Append(TemplateMemberIdentifier(segments[segments.Length - 1], enclosingIdentifier));
             builder.Append(" = ");
             builder.Append(SymbolDisplay.FormatLiteral(template.Alias, true));
             builder.AppendLine(";");
         }
 
         foreach(var child in children) {
+            var childIdentifier = TemplateMemberIdentifier(child, enclosingIdentifier);
             builder.Append("public static class ");
-            builder.Append(TemplateIdentifier(child));
+            builder.Append(childIdentifier);
             builder.AppendLine(" {");
             builder.Indent++;
-            AppendTemplateHierarchy(builder, atPrefix, prefix.Concat([child]).ToArray(), viewsDirectory);
+            AppendTemplateHierarchy(builder, atPrefix, prefix.Concat([child]).ToArray(), viewsDirectory, childIdentifier);
             builder.Indent--;
             builder.AppendLine("}");
         }
