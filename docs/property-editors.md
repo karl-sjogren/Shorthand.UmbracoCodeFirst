@@ -222,6 +222,9 @@ custom or version-specific aliases remain ordinary strings. Some toolbar and sta
 require specific extensions: for example, `TiptapStatusbar.WordCount` requires
 `TiptapExtension.WordCount`, which is not enabled by default.
 
+The built-in helpers are generated from `PropertyEditors/umbraco-tiptap-aliases.json`; each
+alias can include a `description` that appears in its XML documentation.
+
 Each instance has its own mutable `Extensions` and nested `ToolbarRows` lists. Both the outer
 `StatusbarGroups` list and its groups are mutable. Existing assignments of read-only statusbar
 collections must be converted to `List<List<string>>`. Add or remove both the toolbar action and
