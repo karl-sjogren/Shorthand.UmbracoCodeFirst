@@ -264,12 +264,18 @@ public class AttributeContractTests {
         customized.Extensions.Add("Example.Extension");
         customized.ToolbarRows.ShouldNotBeNull()[0][1].Remove("Umb.Tiptap.Toolbar.Bold");
         customized.ToolbarRows[0][1].Add("Example.Toolbar");
+        customized.StatusbarGroups = [[TiptapStatusbar.ElementPath]];
+        customized.StatusbarGroups[0].Add("Example.Statusbar");
+        customized.StatusbarGroups.Add([TiptapStatusbar.WordCount]);
 
         // Assert
         defaults.Extensions.ShouldNotBeNull().ShouldContain("Umb.Tiptap.Bold");
         defaults.Extensions.ShouldNotContain("Example.Extension");
         defaults.ToolbarRows.ShouldNotBeNull()[0][1].ShouldContain("Umb.Tiptap.Toolbar.Bold");
         defaults.ToolbarRows[0][1].ShouldNotContain("Example.Toolbar");
+        defaults.StatusbarGroups.ShouldBeNull();
+        customized.StatusbarGroups.Count.ShouldBe(2);
+        customized.StatusbarGroups[0].ShouldContain("Example.Statusbar");
         var otherEditor = new UmbracoEditors.BlockList.Configuration();
         otherEditor.ToolbarRows.ShouldBeNull();
     }
@@ -287,12 +293,27 @@ public class AttributeContractTests {
             .Select(item => item.GetString()).ToArray();
         extensions.ShouldContain("Example.Extension");
         extensions.ShouldNotContain("Umb.Tiptap.Bold");
+        extensions.ShouldContain("Umb.Tiptap.WordCount");
         json.RootElement.GetProperty("maxImageSize").GetInt32().ShouldBe(500);
         json.RootElement.GetProperty("overlaySize").GetString().ShouldBe("medium");
         var group = configuration.TypedSettings.ShouldNotBeNull()["toolbar"][0][1].EnumerateArray()
             .Select(item => item.GetString()).ToArray();
         group.ShouldContain("Example.Toolbar");
         group.ShouldNotContain("Umb.Tiptap.Toolbar.Bold");
+        configuration.TypedSettings["statusbar"].GetRawText()
+            .ShouldBe("""[["Umb.Tiptap.Statusbar.ElementPath","Example.Statusbar"],["Umb.Tiptap.Statusbar.WordCount"]]""");
+    }
+
+    [Fact]
+    public void CodeFirstEditorConfiguration_FromType_DistinguishesEmptyAndUnspecifiedStatusbar() {
+        // Arrange
+        // Act
+        var empty = CodeFirstEditorConfiguration.FromType(typeof(EmptyStatusbarConfiguration), "Umbraco.RichText");
+        var unspecified = CodeFirstEditorConfiguration.FromType(typeof(RawRichTextConfiguration), "Umbraco.RichText");
+
+        // Assert
+        empty.TypedSettings.ShouldNotBeNull()["statusbar"].GetRawText().ShouldBe("[]");
+        unspecified.TypedSettings.ShouldBeNull();
     }
 
     [Fact]
@@ -396,10 +417,20 @@ public class AttributeContractTests {
 
     private sealed class CustomizedRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
         public CustomizedRichTextConfiguration() {
-            Extensions!.Remove("Umb.Tiptap.Bold");
+            Extensions!.Remove(TiptapExtension.Bold);
+            Extensions.Add(TiptapExtension.WordCount);
             Extensions.Add("Example.Extension");
-            ToolbarRows![0][1].Remove("Umb.Tiptap.Toolbar.Bold");
+            ToolbarRows![0][1].Remove(TiptapToolbar.Bold);
             ToolbarRows[0][1].Add("Example.Toolbar");
+            StatusbarGroups = [[TiptapStatusbar.ElementPath]];
+            StatusbarGroups[0].Add("Example.Statusbar");
+            StatusbarGroups.Add([TiptapStatusbar.WordCount]);
+        }
+    }
+
+    private sealed class EmptyStatusbarConfiguration : UmbracoEditors.RichTextEditor.Configuration {
+        public EmptyStatusbarConfiguration() {
+            StatusbarGroups = [];
         }
     }
 

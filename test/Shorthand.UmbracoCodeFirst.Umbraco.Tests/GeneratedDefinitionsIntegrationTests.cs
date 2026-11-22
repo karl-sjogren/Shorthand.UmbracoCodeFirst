@@ -448,10 +448,17 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
         };
         var store = services.GetRequiredService<ICodeFirstDefinitionStore>();
         var dataTypes = services.GetRequiredService<IDataTypeService>();
+        var conflictingDefinition = definition with {
+            Alias = "integrationConflictingRichText",
+            Name = "Integration Conflicting Rich Text",
+            EditorConfiguration = definition.EditorConfiguration! with { Json = """{"statusbar":[]}""" },
+        };
 
         // Act
         var result = await store.ApplyAsync(definition, TestContext.Current.CancellationToken);
         var saved = (await dataTypes.GetAllAsync()).Single(item => item.Name == definition.Name);
+        var conflict = await Should.ThrowAsync<InvalidOperationException>(
+            () => store.ApplyAsync(conflictingDefinition, TestContext.Current.CancellationToken));
 
         // Assert
         result.Status.ShouldBe(SynchronizationStatus.Created);
@@ -460,10 +467,15 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
             .EnumerateArray().Select(item => item.GetString()).ToArray();
         extensions.ShouldNotContain("Umb.Tiptap.Bold");
         extensions.ShouldContain("Umb.Tiptap.Strike");
+        extensions.ShouldContain("Umb.Tiptap.WordCount");
         var toolbar = JsonSerializer.SerializeToElement(saved.ConfigurationData["toolbar"])[0][1]
             .EnumerateArray().Select(item => item.GetString()).ToArray();
         toolbar.ShouldNotContain("Umb.Tiptap.Toolbar.Bold");
         toolbar.ShouldContain("Umb.Tiptap.Toolbar.Strike");
+        var statusbar = JsonSerializer.SerializeToElement(saved.ConfigurationData["statusbar"])[0]
+            .EnumerateArray().Select(item => item.GetString()).ToArray();
+        statusbar.ShouldBe(["Umb.Tiptap.Statusbar.ElementPath", "Umb.Tiptap.Statusbar.WordCount"]);
+        conflict.Message.ShouldContain("both typed and raw 'statusbar'");
     }
 
     [Fact]
@@ -1027,9 +1039,11 @@ public class GeneratedDefinitionsIntegrationTests(UmbracoIntegrationFixture fixt
 
     public sealed class IntegrationCustomizedRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
         public IntegrationCustomizedRichTextConfiguration() {
-            Extensions?.Remove("Umb.Tiptap.Bold");
-            ToolbarRows?[0][1].Remove("Umb.Tiptap.Toolbar.Bold");
-            ToolbarRows?[0][1].Add("Umb.Tiptap.Toolbar.Strike");
+            Extensions?.Remove(TiptapExtension.Bold);
+            Extensions?.Add(TiptapExtension.WordCount);
+            ToolbarRows?[0][1].Remove(TiptapToolbar.Bold);
+            ToolbarRows?[0][1].Add(TiptapToolbar.Strike);
+            StatusbarGroups = [[TiptapStatusbar.ElementPath, TiptapStatusbar.WordCount]];
         }
     }
 

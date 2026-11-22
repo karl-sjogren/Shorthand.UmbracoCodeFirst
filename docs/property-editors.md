@@ -202,9 +202,11 @@ public sealed class ArticleSingleBlockConfiguration : UmbracoEditors.SingleBlock
 public sealed class ArticleRichTextConfiguration : UmbracoEditors.RichTextEditor.Configuration {
     public ArticleRichTextConfiguration() {
         BlockTypes = [new(typeof(TextBlock)) { DisplayInline = true }];
+        Extensions?.Add(TiptapExtension.WordCount);
         Extensions?.Add("My.Tiptap.Extension");
-        ToolbarRows?[0][1].Remove("Umb.Tiptap.Toolbar.Underline");
-        StatusbarGroups = [["Umb.Tiptap.Statusbar.WordCount"]];
+        ToolbarRows?[0][1].Remove(TiptapToolbar.Underline);
+        ToolbarRows?[0][1].Add("My.Tiptap.Toolbar.Button");
+        StatusbarGroups = [[TiptapStatusbar.WordCount, "My.Tiptap.Statusbar.Item"]];
         EditorDimensions = new() { Height = 400 };
         StylesheetPaths = ["/editor.css"];
         MaxImageSize = 1000;
@@ -214,8 +216,16 @@ public sealed class ArticleRichTextConfiguration : UmbracoEditors.RichTextEditor
 ```
 
 Tiptap's configuration class starts with Umbraco's default toolbar, extensions, image size, and
-overlay size. Each instance has its own mutable `Extensions` and nested `ToolbarRows` lists. Add or
-remove both the toolbar action and its extension as needed. Set either list to `null` to leave it
+overlay size. `TiptapToolbar`, `TiptapExtension`, and `TiptapStatusbar` in
+`Shorthand.UmbracoCodeFirst.PropertyEditors` provide the built-in aliases from Umbraco 18.3.2;
+custom or version-specific aliases remain ordinary strings. Some toolbar and statusbar items
+require specific extensions: for example, `TiptapStatusbar.WordCount` requires
+`TiptapExtension.WordCount`, which is not enabled by default.
+
+Each instance has its own mutable `Extensions` and nested `ToolbarRows` lists. Both the outer
+`StatusbarGroups` list and its groups are mutable. Existing assignments of read-only statusbar
+collections must be converted to `List<List<string>>`. Add or remove both the toolbar action and
+its required extensions as needed. Set a collection to `null` to leave it
 unspecified, or clear it to explicitly use an empty list. When using raw `Toolbar` JSON, set
 `ToolbarRows = null` to avoid specifying the toolbar twice.
 

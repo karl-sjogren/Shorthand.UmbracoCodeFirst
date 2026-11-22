@@ -16,7 +16,7 @@ public abstract class CodeFirstBlockEditorConfigurationDefinition : CodeFirstEdi
     public List<List<List<string>>>? ToolbarRows { get; set; }
 
     [JsonIgnore]
-    public IReadOnlyList<IReadOnlyList<string>>? StatusbarGroups { get; set; }
+    public List<List<string>>? StatusbarGroups { get; set; }
 
     [JsonIgnore]
     public CodeFirstRichTextDimensions? EditorDimensions { get; set; }
