@@ -31,6 +31,8 @@
   - `npm run watch` while developing the custom Umbraco backoffice extension
 - Backoffice client tests use Vitest. Keep pure rendering/state helpers testable without importing
   the browser-only Umbraco runtime where possible.
+- The site-only sample extension at `src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client`
+  uses the same npm test, build and watch commands independently of the distributed extension.
 - Local Aspire site lifecycle:
   - If no AppHost is running when smoke testing, start it yourself; stop it afterward if you started
     it. Leave an already-running AppHost running.
@@ -63,6 +65,7 @@ This repo is a small Umbraco app template built around a layered, local-developm
 - `src/Shorthand.UmbracoCodeFirst` is the core library/package.
 - `src/Shorthand.UmbracoCodeFirst.Umbraco` is the actual Umbraco web app. Its `Program.cs` wires `CreateUmbracoBuilder()`, `AddBackOffice()`, `AddWebsite()`, and `BootUmbracoAsync()`; this is the runtime entry point for the site.
 - `src/Shorthand.UmbracoCodeFirst.Backoffice` is a Razor Class Library and custom backoffice extension for Umbraco. The TypeScript client lives under `Client/` and is built into `wwwroot/App_Plugins/ShorthandUmbracoCodeFirstBackoffice`.
+- `src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice` is a non-packable, site-only backoffice extension containing the sample blog collection view.
 - `src/Shorthand.UmbracoCodeFirst.AppHost` is the Aspire-based local orchestrator: it creates an Umbraco app, wires in SQL Server, Azure storage, Redis, and the JS backoffice extension watch process.
 - `src/Shorthand.UmbracoCodeFirst.ServiceDefaults` contains shared .NET Aspire defaults used by the app host and hosted services.
 - `src/Shorthand.UmbracoCodeFirst.SourceGenerators` is present as a dedicated code-generation project, so source generation is part of the repo's expected design even if the generated code hasn't been expanded yet.
@@ -97,5 +100,6 @@ This repo is a small Umbraco app template built around a layered, local-developm
   definitions may be updated, unowned definitions and manual structure must be preserved, and
   skipped or failed outcomes must remain visible in reports.
 - For any backoffice UI work, update the TypeScript client in `src/Shorthand.UmbracoCodeFirst.Backoffice/Client` and rebuild with `npm run build` or `npm run watch`; the generated bundle is not hand-edited.
+- For sample blog collection UI work, edit and rebuild the separate sample backoffice client instead; do not add sample UI to the distributed extension.
 - The app host is the easiest path for running the application locally; it sets unattended Umbraco installation values and spins up the required backing services.
 - CI is defined in `.github/workflows/build.yml` and follows the same pattern as the local commands: restore, build, and run tests with coverage.

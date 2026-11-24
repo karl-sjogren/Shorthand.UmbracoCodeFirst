@@ -12,8 +12,15 @@ internal static partial class IDistributedApplicationBuilderExtensions {
                 .WithNpm(installArgs: ["--force"])
                 .WithRunScript("watch");
 
+            var sampleBackofficeExtension = builder
+                .AddJavaScriptApp("umbraco-codefirst-sample-backoffice-extension", "../Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client")
+                .WithNpm(installArgs: ["--force"])
+                .WithRunScript("watch");
+
             umbracoProject.WithReference(backofficeExtension)
-                .WaitFor(backofficeExtension);
+                .WaitFor(backofficeExtension)
+                .WithReference(sampleBackofficeExtension)
+                .WaitFor(sampleBackofficeExtension);
         }
 
         return builder;

@@ -93,7 +93,9 @@ jobs:
         node-version: lts/*
         check-latest: true
         cache: npm
-        cache-dependency-path: src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
+        cache-dependency-path: |
+          src/Shorthand.UmbracoCodeFirst.Backoffice/Client/package-lock.json
+          src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client/package-lock.json
 
     - name: Install client dependencies
       run: npm ci --force
@@ -114,11 +116,36 @@ jobs:
       run: npm run build
       working-directory: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 
+    - name: Install sample client dependencies
+      run: npm ci --force
+      working-directory: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client
+
+    - name: Run sample client tests
+      run: npm test -- --reporter=default --reporter=github-actions --coverage --coverage.reporter=text --coverage.reporter=cobertura
+      working-directory: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client
+
+    - name: Upload sample frontend coverage
+      uses: actions/upload-artifact@v7
+      with:
+        name: sample-backoffice-client-coverage
+        path: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client/coverage/cobertura-coverage.xml
+        if-no-files-found: error
+
+    - name: Build sample backoffice client
+      run: npm run build
+      working-directory: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client
+
     - name: Upload backoffice client
       uses: actions/upload-artifact@v7
       with:
         name: backoffice-client
         path: ./src/Shorthand.UmbracoCodeFirst.Backoffice/wwwroot/App_Plugins/ShorthandUmbracoCodeFirstBackoffice
+
+    - name: Upload sample backoffice client
+      uses: actions/upload-artifact@v7
+      with:
+        name: sample-backoffice-client
+        path: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/wwwroot/App_Plugins/ShorthandUmbracoCodeFirstUmbracoBackoffice
 
   test-and-coverage-results:
     name: Publish test and coverage results
@@ -144,6 +171,12 @@ jobs:
         name: backoffice-client-coverage
         path: ./src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage
 
+    - name: Download sample frontend coverage
+      uses: actions/download-artifact@v8
+      with:
+        name: sample-backoffice-client-coverage
+        path: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client/coverage
+
     - name: Install .NET
       uses: actions/setup-dotnet@v6
       with:
@@ -165,7 +198,7 @@ jobs:
       if: env.PUBLISH_CODECOV
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: coverage-report/Cobertura.xml,src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/cobertura-coverage.xml
+        files: coverage-report/Cobertura.xml,src/Shorthand.UmbracoCodeFirst.Backoffice/Client/coverage/cobertura-coverage.xml,src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client/coverage/cobertura-coverage.xml
 
   net-build:
     name: .NET build
@@ -182,6 +215,12 @@ jobs:
       with:
         name: backoffice-client
         path: ./src/Shorthand.UmbracoCodeFirst.Backoffice/wwwroot/App_Plugins/ShorthandUmbracoCodeFirstBackoffice
+
+    - name: Download sample backoffice client
+      uses: actions/download-artifact@v8
+      with:
+        name: sample-backoffice-client
+        path: ./src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/wwwroot/App_Plugins/ShorthandUmbracoCodeFirstUmbracoBackoffice
 
     - name: Install .NET
       uses: actions/setup-dotnet@v6

@@ -75,3 +75,8 @@ cd src/Shorthand.UmbracoCodeFirst.Backoffice/Client
 npm install
 npm run build      # or: npm run watch
 ```
+
+The sample site's blog collection view lives separately in
+`src/Shorthand.UmbracoCodeFirst.Umbraco.Backoffice/Client`. It uses the same npm build and watch
+commands, emits its own plugin bundle, and is not included in the distributed backoffice package.
+The Aspire AppHost watches both clients during local development.
