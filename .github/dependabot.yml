@@ -19,6 +19,25 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
+    # Keep the repository's .NET 10 dependencies on 10.x while allowing minor,
+    # patch and security updates. Package consumers may still choose newer versions.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.OpenApi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.Diagnostics.Testing"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.Http.Resilience"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.Logging.Abstractions"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.ServiceDiscovery"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.TimeProvider.Testing"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.Security.Cryptography.Pkcs"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.Text.Json"
+        update-types: ["version-update:semver-major"]
     groups:
       roslynator:
         patterns:
