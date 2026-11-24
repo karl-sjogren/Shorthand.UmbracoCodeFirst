@@ -77,6 +77,8 @@ try {
                 $output -match '\b(?:AD0001|CS8032|CS9057)\b') {
                 throw "Packaged analyzer failed to report UCF108 for $($case.Framework):`n$output"
             }
+            # The failing build is expected; don't let its exit code fail the Actions step.
+            $global:LASTEXITCODE = 0
             Write-Host "Verified package dependencies and OpenAPI registration for $($case.Framework) with Microsoft/System $($case.Version)."
         } finally {
             if ($case.Framework -eq 'net10.0') { Pop-Location }
