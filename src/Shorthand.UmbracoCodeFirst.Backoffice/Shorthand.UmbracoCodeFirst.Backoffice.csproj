@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
     <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -19,7 +20,8 @@
     <PackageReference Include="Umbraco.Cms.Api.Common" />
     <PackageReference Include="Umbraco.Cms.Api.Management" />
     <PackageReference Include="Umbraco.Cms.Web.Common" />
-    <PackageReference Include="Umbraco.Cms.Web.Website" />
+    <!-- Preserve the security-patched minimum without promoting unrelated transitive pins. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
 
     <!--
       Microsoft.AspNetCore.OpenApi is available transitively from the Umbraco packages above, but we

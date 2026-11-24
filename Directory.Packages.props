@@ -6,6 +6,9 @@
       its own fallback to stay in sync with the RuntimeHostConfigurationOption value set from the same property.
     -->
     <UmbracoAppLocalIcuVersion Condition="'$(UmbracoAppLocalIcuVersion)' == ''">72.1.0.3</UmbracoAppLocalIcuVersion>
+    <!-- Analyzer assemblies must also load in the .NET 10 SDK's Roslyn 5.0 host. -->
+    <CodeFirstRoslynVersion Condition="'$(MSBuildProjectName)' == 'Shorthand.UmbracoCodeFirst.Analyzers' Or '$(MSBuildProjectName)' == 'Shorthand.UmbracoCodeFirst.SourceGenerators' Or '$(MSBuildProjectName)' == 'Shorthand.UmbracoCodeFirst.InternalSourceGenerators'">5.0.0</CodeFirstRoslynVersion>
+    <CodeFirstRoslynVersion Condition="'$(CodeFirstRoslynVersion)' == ''">5.12.0</CodeFirstRoslynVersion>
   </PropertyGroup>
   <ItemGroup>
     <GlobalPackageReference Include="DotNet.ReproducibleBuilds" Version="2.0.5" />
@@ -28,19 +31,20 @@
     <PackageVersion Include="FakeItEasy.Analyzer.CSharp" Version="6.1.1" />
     <PackageVersion Include="FakeItEasy" Version="9.0.1" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.5" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.15, 11.0.0)" />
+    <!-- Umbraco 18's OpenAPI registration depends on the ASP.NET Core 10 registration shape. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.15,11.0.0)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.12.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="$(CodeFirstRoslynVersion)" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CodeFirstRoslynVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" Version="1.1.4" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeRefactoring.Testing" Version="1.1.4" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.12.0" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="[10.11.0,11.0.0)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="[10.11.0,11.0.0)" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[10.0.15,11.0.0)" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="[10.11.0,11.0.0)" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="[10.11.0,11.0.0)" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="$(CodeFirstRoslynVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="$(UmbracoAppLocalIcuVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
@@ -63,7 +67,7 @@
   </ItemGroup>
   <!-- Transitive pinnings -->
   <ItemGroup>
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="[10.0.15,11.0.0)" />
-    <PackageVersion Include="System.Text.Json" Version="[10.0.15,11.0.0)" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.15" />
   </ItemGroup>
 </Project>

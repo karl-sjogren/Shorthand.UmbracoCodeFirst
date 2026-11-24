@@ -13,6 +13,14 @@ Warnings are errors and code style is enforced in builds (`Directory.Build.props
 managed centrally in `Directory.Packages.props`; the solution file is `.slnx`. CI
 (`.github/workflows/build.yml`) restores, builds and tests with coverage.
 
+The packaged dependency contract can be checked with `pwsh -File scripts/test-package-dependencies.ps1`
+after a solution restore. It packs all published packages and exercises isolated .NET 10 and 11
+consumers with their respective SDKs.
+The fixture uses ASP.NET Core OpenAPI 10 on both frameworks: Umbraco 18 depends on its
+registration internals, which changed in OpenAPI 11. Other tested Microsoft and System dependencies
+can resolve to version 11. The package ranges permit later versions where possible but do not imply
+that future major versions have been runtime-tested.
+
 ## Analyzer release tracking
 
 The analyzer, source generator, and internal source generator projects each have
